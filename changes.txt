@@ -1,0 +1,80 @@
+rms is a new package that accompanies FE Harrell's book Regression
+Modeling Strategies.  It is a replacement for the Design package for
+R.  It requires the Hmisc package.  rms does not use any C level
+interfaces to other packages as Design did to the survival package.
+Thus rms will be easier to maintain.
+
+rms has cleaned up graphics routines in Design to make graphics
+routines more modular, to use lattice graphics, and to make it easier
+to use ggplot2 graphics.  Defaults for confidence bands are now gray
+scale-shaded polygons.
+
+The most visable change to the user is the replacement of the
+plot.Design function with the Predict, plot.Predict, and bplot
+functions.  plot.Predict is used for bivariate graphics (using lattice),
+and bplot is used for 3-d graphics using base graphics functions
+image, contour, and persp.  Multi-panel lattice graphics are usually
+better than 3-d graphics for showing the effects of multiple
+predictors varying simultaneously.
+
+rms also implements a high-level interface to the quantreg package
+through the new Rq function.
+
+
+Visable to User
+---------------
+plot(fit, x1=NA, x2=NA, ...) changed to
+ p <- Predict(fit, x1=., x2=., ...)
+ plot(p)         # ?plot.Predict for details
+
+plot(fit, .., method='image' or 'contour' or 'persp') changed to
+ p <- Predict(...)
+ bplot(p, ...)   # ?bplot for details
+
+datadensity is no longer a separate function to use after the
+predictions are plotted; the user specifies data= to plot.Predict to
+get a rug plot, for example.
+
+Legend was changed to iLegend
+
+nomogram does not plot by default.  You must use plot(nomogram result)
+to plot, and the plotting arguments are separated into the arguments
+for plot.nomogram.
+
+survplot defaults to conf='bands' and this now produces shaded
+ confidence bands instead of bands made by pairs of lines
+
+Varcov is changed to the more R-base concordant vcov
+
+glmD is renamed Glm
+glsD is renamed Gls
+
+
+Other
+-----
+Removed all uses of single() or storage.mode 'single'
+Removed all use of .newSurvival
+predictDesign changed to predictrms
+ Added ref.zero argument
+There is no longer a generic nomogram function, so nomogram.Design was
+renamed nomogram.
+
+
+To correct:
+ help page for predictrms
+  center.terms not refer to means but adjustment values
+  document ref.zero
+
+To clean up later:
+ When bug fixed in survfit.coxph.null remove n.all stuff
+
+
+To do: After survival is updated, n.all workaround can be removed.
+After Hmisc is updated, makeSteps can be removed from rmsMisc.s and
+from rms-internal.Rd.
+
+Changes since version 2.0-0
+---------------------------
+Separated help file for val.surv from that for val.prob
+Renamed file name for Overview help file from zzzDesignOverview to
+ zzzrmsOverview
