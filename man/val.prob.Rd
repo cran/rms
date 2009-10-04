@@ -161,7 +161,7 @@ This is plotted after the curve legends.
 }
 \item{riskdist}{
 Defaults to \code{"calibrated"} to plot the relative frequency distribution of
-calibrated robabilities after dividing into 101 bins from \code{lim[1]} to
+calibrated probabilities after dividing into 101 bins from \code{lim[1]} to
 \code{lim[2]}.
 Set to \code{"predicted"} to use raw assigned risk, \code{FALSE} to omit risk distribution.
 Values are scaled so that highest bar is \code{0.15*(lim[2]-lim[1])}.
@@ -282,8 +282,8 @@ Stat in Med 5:421--433.
 }
 \seealso{
 \code{\link{validate.lrm}}, \code{\link{lrm.fit}}, \code{\link{lrm}},
-\code{\link[Hmisc]{labcurve}}, \code{\link[Hmisc]{wtd.rank}}, 
-\code{\link[Hmisc]{wtd.loess.noiter}}, \code{\link[Hmisc]{scat1d}}
+\code{\link[Hmisc]{labcurve}},
+\code{\link[Hmisc]{wtd.stats}}, \code{\link[Hmisc]{scat1d}}
 }
 \examples{
 # Fit logistic model on 100 observations simulated from the actual 

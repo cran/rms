@@ -34,6 +34,6 @@ number of significant digits to print
 \item{\dots}{ignored}
 }
 \seealso{
-\code{\link[survival]{print.coxph}}
+\code{\link[survival]{coxph}}
 }
 \keyword{print}

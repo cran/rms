@@ -1,0 +1,13 @@
+Changes in version 2.1-0 (2009-09-30)
+   * Made Predict not return invisibly if predictors not specified
+   * New option nlines for plot.Predict for getting line plots with 2 categorical predictors
+   * Added rename option to rbind.Predict to handle case where predictor name has changed between models
+   * Added ties=mean to approx( ) calls that did not have ties= specified
+   * Added nlevels argument to bplot to pass to contour
+   * Added par argument to iLegend - list to pass to par().
+   * Redirected ... argument to iLegend to image( ).
+   * Fixed groupkm - was printing warning messages wrongly
+   * Added new semiparametric survival prediction calibration curve method in val.surv for external validation; this is the first implementation of smooth calibration curves for survival probability validation with right-censored data
+   * Fixed calibrate confidence limits from groupkm
+   * Added smooth calibration curve using hare (polspline package) for calibrate.cph and calibrate.psm
+   * Added display of predicted risks for cph and psm models even for the stratified KM method (old default)

@@ -12,6 +12,7 @@ survreg.auxinfo <- list(
 exponential = list(
     survival = function(times, lp, parms) exp(-times/exp(lp)),
     hazard = function(times, lp, parms) exp(-lp),
+    quantile = function(p) log(-log(p)),
     Quantile = function(q=.5, lp, parms) {
 		names(parms) <- NULL
 		f <- function(lp, q, parms) -logb(1-q)*exp(lp)
@@ -19,6 +20,7 @@ exponential = list(
 		drop(outer(lp, q, FUN=f, parms=parms))
 		},
     mean = function(lp, parms) exp(lp),
+    
     latex = function(...) '\\exp(-t/\\exp(X\\beta))'
   ),
   
@@ -63,6 +65,7 @@ weibull = list(
 		ifelse(times==0,exp(-lp/scale)/scale,
                         exp((t.trans-lp)/scale)*t.deriv/scale)
 		},
+    quantile = function(p) log(-log(p)),
     Quantile = function(q=.5, lp, parms) {
 		names(parms) <- NULL
 		f <- function(lp, q, parms) lp + exp(parms)*logb(-logb(1-q))
@@ -117,6 +120,7 @@ loglogistic = list(
 		names(t.trans) <- format(times)
 		t.deriv/scale/(1+exp(-(t.trans-lp)/scale))
 		},
+    quantile = qlogis,
     Quantile = function(q=.5, lp, parms) {
 		names(parms) <- NULL
 		f <- function(lp, q, parms) lp + exp(parms)*logb(q/(1-q))
@@ -173,6 +177,7 @@ lognormal = list(
 		z <- (t.trans-lp)/scale
 		t.deriv*dnorm(z)/scale/(1-pnorm(z))
 		},
+    quantile = qnorm,
     Quantile = function(q=.5, lp, parms) {
 		names(parms) <- NULL
 		f <- function(lp, q, parms) lp + exp(parms)*qnorm(q)

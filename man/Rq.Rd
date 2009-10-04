@@ -88,15 +88,26 @@ RqFit(fit, wallow=TRUE, passdots=FALSE)
 \examples{
 \dontrun{
 set.seed(1)
-n     <- 30
-y     <- rnorm(n)
-x1    <- rnorm(n)
-w     <- runif(n)
-x1[2] <- NA
+n <- 100
+x1 <- rnorm(n)
+y <- exp(x1 + rnorm(n)/4)
 dd <- datadist(x1); options(datadist='dd')
-f <- Rq(y ~ pol(x1,2))
-anova(f)
-plot(Predict(f, x1=.))
+fq2 <- Rq(y ~ pol(x1,2))
+anova(fq2)
+fq3 <- Rq(y ~ pol(x1,2), tau=.75)
+anova(fq3)
+pq2 <- Predict(fq2, x1=.)
+pq3 <- Predict(fq3, x1=.)
+p <- rbind(Median=pq2, Q3=pq3)
+plot(p, ~ x1 | .set.)
+# For superpositioning, with true curves superimposed
+a <- function(x, y, ...) {
+ x <- unique(x)
+ col <- trellis.par.get('superpose.line')$col
+ llines(x, exp(x), col=col[1], lty=2)
+ llines(x, exp(x + qnorm(.75)/4), col=col[2], lty=2)
+}
+plot(p, addpanel=a)
 }
 }
 \keyword{models}

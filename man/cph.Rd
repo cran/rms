@@ -287,7 +287,7 @@ cph(formula = formula(data), data=parent.frame(),
   \email{f.harrell@vanderbilt.edu}
 }
 \seealso{
-  \code{\link[survival]{coxph}}, \code{\link[survival]{coxph.fit}},
+  \code{\link[survival]{coxph}}, \code{\link[survival]{survival-internal}},
   \code{\link[survival]{Surv}}, \code{\link{residuals.cph}},
   \code{\link[survival]{cox.zph}}, \code{\link{survfit.cph}},
   \code{\link{survest.cph}}, \code{\link[survival]{survfit.coxph}}, 

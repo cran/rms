@@ -3,7 +3,7 @@ plot.Predict <-
            xlim, ylim, xlab, ylab,
            data=NULL, col.fill=gray(seq(.95, .75, length=5)),
            adj.subtitle, cex.adj, perim=NULL,
-           digits=4, nlevels=3, addpanel, ...)
+           digits=4, nlevels=3, nlines=FALSE, addpanel, ...)
 {
   require(lattice)
   predpres <- length(x$.predictor.)
@@ -31,9 +31,9 @@ plot.Predict <-
   if(!length(x$lower)) conf.int <- FALSE
   
   if(missing(ylim))
-    ylim <- if(conf.int)
-      range(x$yhat, x$lower, x$upper, na.rm=TRUE)
-    else range(pretty(x$yhat), na.rm=TRUE)
+    ylim <- range(pretty(
+             if(conf.int) c(x$yhat, x$lower, x$upper)
+              else x$yhat), na.rm=TRUE)
 
   if(missing(adj.subtitle)) adj.subtitle <- length(adjust) > 0
   sub <- if(adj.subtitle && length(adjust)==1)
@@ -100,7 +100,7 @@ plot.Predict <-
               if(length(data) && length(xd <- data[[names(levs)[pn]]]))
                 {
                   xd <- xd[!is.na(xd)]
-                  scat1d(xd, y=approx(x, y, xout=xd, rule=2)$y,
+                  scat1d(xd, y=approx(x, y, xout=xd, rule=2, ties=mean)$y,
                          col=col[1], frac=0.025, lwd=.3, grid=TRUE)
                 }
             }
@@ -167,8 +167,9 @@ plot.Predict <-
                 }
             } 
           xv <- x[[xvar]]
-          if(is.factor(xv) || is.character(xv) ||
-             length(unique(xv[!is.na(xv)])) <= nlevels)
+          xdiscrete <- is.factor(xv) || is.character(xv) ||
+                       length(unique(xv[!is.na(xv)])) <= nlevels
+          if(xdiscrete)
             {
               f <- paste(xvar, if(conf.int) 'Cbind(yhat,lower,upper)'
               else 'yhat', sep='~')
@@ -208,10 +209,20 @@ plot.Predict <-
                 }
             }
         }
-      
       f <- paste(if(conf.int) 'Cbind(yhat,lower,upper)' else 'yhat',
                  f, sep='~')
       formula <- eval(parse(text=f))
+
+      xv <- x[[xvar]]
+      xscale <- NULL
+      xdiscrete <- (is.factor(xv) || is.character(xv)) && nlines
+      if(xdiscrete)
+        {
+          xv <- as.factor(xv)
+          xlev <- levels(xv)
+          xscale <- list(x=list(at=1:length(xlev), labels=xlev))
+          x[[xvar]] <- as.integer(xv)
+        }
       
       pan <- function(x, y, groups=NULL, subscripts, ...)
         {
@@ -239,22 +250,24 @@ plot.Predict <-
                   yg <- y[z]
                   x1 <- xd[gd==w]
                   x1 <- x1[!is.na(x1)]
-                  scat1d(x1, y=approx(xg, yg, xout=x1, rule=2)$y,
+                  scat1d(x1, y=approx(xg, yg, xout=x1, rule=2, ties=mean)$y,
                          col=col[j], frac=.025, lwd=.3, grid=TRUE)
                 }
             }
           else if(length(xd <- data[[xvar]]))
             {
               xd <- xd[!is.na(xd)]
-              scat1d(xd, y=approx(x, y, xout=xd, rule=2)$y,
+              scat1d(xd, y=approx(x, y, xout=xd, rule=2, ties=mean)$y,
                      col=col[1], frac=.025, lwd=.3, grid=TRUE)
             }
           addpanel(x, y, groups=NULL, subscripts=subscripts, ...)
         }
 
-      r <- list(formula=formula, data=x, subset=subset, type='l',
+      r <- list(formula=formula, data=x, subset=subset,
+                type=if(xdiscrete) 'b' else 'l',
                 method='filled bands', col.fill=col.fill,
                 xlab=xlab, ylab=ylab, ylim=ylim, panel=pan)
+      if(length(xscale)) r$scales <- xscale
       if(!missing(xlim)) r$xlim   <- xlim
       if(!conf.int)      r$method <- NULL
       if(length(gname))  r$groups <- x[[gname]]

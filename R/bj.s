@@ -245,7 +245,7 @@ bj.fit <- function(x, y, control = NULL) {
 bjplot <- function(fit, which=1:dim(X)[[2]])
 {
   if(!all(c('x','y') %in% names(fit)))
-	stop('must specify x=T,y=T to bj to use bjplot')
+	stop('must specify x=TRUE,y=TRUE to bj to use bjplot')
   X <- (fit$x)[,-1,drop=FALSE]
   Y <- fit$y
   xnam <- dimnames(X)[[2]]
@@ -381,7 +381,7 @@ residuals.bj <- function(object,
     
   y <- object$y
   aty <- attributes(y)
-  if('y' %nin% names(object)) stop('did not use y=T with fit')
+  if('y' %nin% names(object)) stop('did not use y=TRUE with fit')
   ncy <- ncol(y)
   r <- y[,-ncy,drop=FALSE] - object$linear.predictors
   if(type=='censored.normalized') r <- r/object$stats['sigma']
@@ -404,7 +404,7 @@ validate.bj <-
 {
 
   if(!(length(fit$x) && length(fit$y)))
-    stop('you must specify x=T and y=T to bj')
+    stop('you must specify x=TRUE and y=TRUE to bj')
   xb <- fit$linear.predictors
   ny <- dim(fit$y)
   nevents <- sum(fit$y[,ny[2]])

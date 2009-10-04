@@ -181,7 +181,7 @@ file with a name of the form \code{"title.tex"} (see the \code{title} argument a
 \code{\link{rms.trans}}, \code{\link{summary.rms}},
 \code{\link[Hmisc]{solvet}}, \code{\link{locator}},
 \code{\link[Hmisc]{dotchart2}}, \code{\link[Hmisc]{latex}},  
-\code{\link[Hmisc]{Dotplot}}, \code{\link{anova.lm}},
+\code{\link[Hmisc]{xYplot}}, \code{\link{anova.lm}},
 \code{\link{contrast.rms}}, \code{\link{pantext}}
 }
 \examples{

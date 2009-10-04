@@ -288,7 +288,7 @@ component of \code{mgp} using \code{mgp.axis.labels(c(xvalue,yvalue))}.
 \code{\link[Hmisc]{units}}, \code{\link[Hmisc]{errbar}},  
 \code{\link{survfit}}, \code{\link[survival]{survreg.distributions}},
 \code{\link[Hmisc]{labcurve}},
-\code{\link[Hmisc]{mgp.axis.labels}}, \code{\link{par}},
+\code{\link[Hmisc]{mgp.axis}}, \code{\link{par}},
 \code{\link[Hmisc]{ps.slide}}
 }
 \examples{
@@ -300,7 +300,7 @@ age <- 50 + 12*rnorm(n)
 label(age) <- "Age"
 sex <- factor(sample(c('male','female'), n, TRUE))
 cens <- 15*runif(n)
-h <- .02*exp(.04*(age-50)+.8*(sex=='Female'))
+h <- .02*exp(.04*(age-50)+.8*(sex=='female'))
 dt <- -log(runif(n))/h
 label(dt) <- 'Follow-up Time'
 e <- ifelse(dt <= cens,1,0)

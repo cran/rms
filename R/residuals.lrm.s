@@ -85,8 +85,8 @@ residuals.lrm <-
           xbar <- sum(x)/n
           if(n<2) {low <- hi <- NA} else
           {
-            se   <- 1.96*sqrt(sum((x-xbar)^2)/(n-1)/n)
-            low  <- xbar-se; hi <- xbar+se
+            se   <- 1.959964*sqrt(sum((x-xbar)^2)/(n-1)/n)
+            low  <- xbar - se; hi <- xbar + se
           }
           c(mean=xbar, lower=low, upper=hi)
         }
@@ -276,7 +276,7 @@ residuals.lrm <-
                       if(is.character(label.curves))
                         {
                           xcoord <- us[1]+(us[2]-us[1])*j/(k+1)
-                          text(xcoord, approx(w, xout=xcoord, rule=2)$y,
+                          text(xcoord, approx(w, xout=xcoord, rule=2, ties=mean)$y,
                                lev2[j])
                         }
                     }

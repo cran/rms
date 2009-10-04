@@ -32,7 +32,7 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
   
   if(individual && (length(fit$x)==0 || length(fit$y)==0 || 
                     attr(fit$y,'type')!='counting')) 
-    stop('must specify x=TRUE, y=TRUE, and start and stop time to cph when individual=T')
+    stop('must specify x=TRUE, y=TRUE, and start and stop time to cph when individual=TRUE')
 
   if(missing(fun)) fun <-
     if(loglog) function(x) logb(-logb(ifelse(x==0 | x==1, NA, x)))
@@ -56,7 +56,7 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
     {
       if(!missing(linear.predictors) | !missing(x))
         stop(paste("may not specify linear.predictors or x when survival estimation",
-                   "is not using underlying survival estimates stored with surv=T"))
+                   "is not using underlying survival estimates stored with surv=TRUE"))
 
       sf <- function(..., type=NULL, vartype=NULL, cphnull=FALSE)
         {
@@ -219,12 +219,12 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
       i
     }
 
-  ##Instead use the baseline survival computed at fit time with cph(...,surv=T)
+  ##Instead use the baseline survival computed at fit time with cph(...,surv=TRUE)
   
   nt <- if(missing(times)) 0 else length(times)
   if(conf.int > 0 && f > 0)
     warning(paste("S.E. and confidence intervals are approximate except",
-                  "at predictor means.\nUse cph(...,x=T,y=T) (and don't use linear.predictors=) for better estimates."))
+                  "at predictor means.\nUse cph(...,x=TRUE,y=TRUE) (and don't use linear.predictors=) for better estimates."))
 
   if(missing(linear.predictors))
     {
@@ -288,7 +288,7 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
       if(diff(range(strata))==0)
         {
           estsurv <- approx(fit$time, fit$surv, xout=times,
-                            method="constant", f=0)$y
+                            method="constant", f=0, ties=mean)$y
           return(estsurv ^ exp(linear.predictors))
         }
       est.surv <- double(n)
@@ -297,7 +297,7 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
           this <- strata==zs
           estsurv <- approx(fit$time[[zs]], fit$surv[[zs]],
                             xout=if(length(times)==1)times else times[this],
-                            method='constant', f=0)$y
+                            method='constant', f=0, ties=mean)$y
           est.surv[this] <-
             estsurv ^ exp(if(length(linear.predictors)==1)
                           linear.predictors else

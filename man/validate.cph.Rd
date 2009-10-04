@@ -108,7 +108,7 @@
   \code{\link{validate}}, \code{\link{predab.resample}},
   \code{\link{fastbw}}, \code{\link{rms}}, \code{\link{rms.trans}},
   \code{\link{calibrate}}, \code{\link[Hmisc]{rcorr.cens}},
-  \code{\link{cph}}, \code{\link[survival]{coxph.fit}} 
+  \code{\link{cph}}, \code{\link[survival]{survival-internal}} 
 }
 \examples{
 n <- 1000

@@ -30,7 +30,7 @@ set tp \code{FALSE} to suppress event frequency statistics
 arguments passed to \code{print.cphfit} : \code{coef}, \code{scale}
 }}
 \seealso{
-\code{\link[survival]{print.coxph}}
+\code{\link[survival]{coxph}}
 }
 \keyword{print}
 

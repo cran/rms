@@ -478,7 +478,7 @@ Survival.cph <- function(object, ...)
         {
           if(length(lp)>1 && length(times)>1)
             stop('may not have length(lp)>1 & length(times>1) when type="polygon"')
-          su <- approx(time, surv, times)$y
+          su <- approx(time, surv, times, ties=mean)$y
           return(su ^ exp(lp))
         }
       for(i in 1:length(times))
@@ -510,7 +510,7 @@ Quantile.cph <- function(object, ...)
       for(j in 1:length(lp))
         {
           s <- surv^exp(lp[j])
-          if(type=="polygon") Q[j,] <- approx(s, time, q)$y
+          if(type=="polygon") Q[j,] <- approx(s, time, q, ties=mean)$y
           else for(i in 1:length(q))
             if(any(s <= q[i])) Q[j,i] <- min(time[s<=q[i]])  #is NA if none
         }
@@ -615,7 +615,7 @@ Mean.cph <- function(object, method=c("exact","approximate"),
           area <- areas[[stratum]]
           if(length(lp.seq)==1 && all(lp==lp.seq))
             ymean <- rep(area,length(lp)) else
-          ymean <- approx(lp.seq, area, xout=lp)$y
+          ymean <- approx(lp.seq, area, xout=lp, ties=mean)$y
           if(any(is.na(ymean)))
             warning("means requested for linear predictor values outside range of linear\npredictor values in original fit")
           names(ymean) <- names(lp)
