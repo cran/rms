@@ -27,7 +27,7 @@ groupkm <- function(x, Srv, m=50, g,
   x <- x[s]; Srv <- Srv[s,]
   x[abs(x) < 1e-10] <- 0 #cut2 doesn't work with tiny x
   e <- Srv[,2]
-  if(nrow(Srv) != length(x))stop("lengths of x and Srv must match")
+  if(nrow(Srv) != length(x)) stop("lengths of x and Srv must match")
   unit <- attr(Srv, "units")
   if(is.null(unit) || unit=="") unit <- "Day"
   if(!missing(cuts)) q <- cut2(x, cuts)
@@ -35,15 +35,16 @@ groupkm <- function(x, Srv, m=50, g,
     if(!missing(g)) q <- cut2(x, g=g)
   else
     q <- cut2(x, m=m)
-  if(any(table(q)) < 2) warning('one interval had < 2 observations')
+  if(any(table(q) < 2)) warning('one interval had < 2 observations')
+
   q <- oldUnclass(q)  #need integer
   g <- length(levels(q))
 
-  km     <- double(g)
-  pred   <- km
+  km      <- double(g)
+  pred    <- km
   std.err <- km
-  events <- integer(g)
-  numobs <- events
+  events  <- integer(g)
+  numobs  <- events
 
 #f <- survfit.km(q, Srv, conf.int=conf.int, conf.type="log-log")
 #if(is.null(f$strata)) {nstrat <- 1; stemp <- rep(1, length(f$time))}
@@ -74,8 +75,8 @@ groupkm <- function(x, Srv, m=50, g,
           tm <- max((1:length(tt))[tt <= u+1e-6])
           km[i] <- ss[tm]
           std.err[i] <- se[tm]
-          numobs[i] <- nobs
-          events[i] <- ne
+          numobs[i]  <- nobs
+          events[i]  <- ne
           n <- length(tt)
           if(u > tt[n]+1e-6 & ss[n]>0)
             {
@@ -115,7 +116,7 @@ groupkm <- function(x, Srv, m=50, g,
         }
       if(!add)plot(pred, y, xlab=xlab, ylab=ylab, type="n", ...)
       lines(pred, y, lty=lty)
-      if(conf.int)errbar(pred, y, hi, low, add=TRUE, ...)
+      if(conf.int) errbar(pred, y, hi, low, add=TRUE, ...)
       if(!is.logical(cex.subtitle))
         {
           nn <- sum(numobs,na.rm=TRUE)

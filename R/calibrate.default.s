@@ -5,10 +5,10 @@ calibrate.default <- function(fit, predy,
 			      sls=.05, pr=FALSE, kint,
 			      smoother="lowess", ...)
 {
-  call <- match.call()
+  call   <- match.call()
   method <- match.arg(method)
-  rule <- match.arg(rule)
-  type <- match.arg(type)
+  rule   <- match.arg(rule)
+  type   <- match.arg(type)
 
   ns <- num.intercepts(fit)
   if(missing(kint)) kint <- floor((ns+1)/2)
@@ -20,7 +20,7 @@ calibrate.default <- function(fit, predy,
   yvar.name <- as.character(formula(fit))[2]
   y <- fit$y
   n <- length(y)
-  if(length(y)==0) stop("fit did not use x=T,y=T")
+  if(length(y)==0) stop("fit did not use x=TRUE,y=TRUE")
   if(model=="lr")
     {
       y <- factor(y)
@@ -29,15 +29,16 @@ calibrate.default <- function(fit, predy,
     }
 
   predicted <- if(model=="lr") 
-                 1/(1+exp(-(fit$linear.predictors-fit$coef[1]+fit$coef[kint])))
+                 1/(1+exp(-(fit$linear.predictors-fit$coefficients[1] +
+                            fit$coefficients[kint])))
                else
                  fit$linear.predictors
  
   if(missing(predy))
     {
-      if(n<11) stop("must have n>10 if do not specify predy")
+      if(n < 11) stop("must have n > 10 if do not specify predy")
       p <- sort(predicted)
-      predy <- seq(p[5],p[n-4],length=50)
+      predy <- seq(p[5], p[n-4], length=50)
       p <- NULL
     }
 
@@ -48,7 +49,7 @@ calibrate.default <- function(fit, predy,
       if(model=="lr")
         {
           x <- 1/(1+exp(-x))
-          y <- y>=kint
+          y <- y >= kint
         }
       smo <- if(is.function(smoother)) smoother(x,y) else lowess(x,y,iter=0)
       cal <- approx(smo, xout=predy, ties=function(x)x[1])$y
@@ -60,15 +61,15 @@ calibrate.default <- function(fit, predy,
     {
     if(length(penalty.matrix) && length(xcol))
       {
-        if(model=='ol') xcol <- xcol[-1]-1   # take off intercept position
+        if(model=='ol') xcol <- xcol[-1] - 1   # take off intercept position
         penalty.matrix <- penalty.matrix[xcol,xcol,drop=FALSE]
       }
     switch(model,
-           lr=lrm.fit(x, y, penalty.matrix=penalty.matrix,tol=1e-13),
+           lr=lrm.fit(x, y, penalty.matrix=penalty.matrix, tol=1e-13),
            ol=c(if(length(penalty.matrix)==0)
                   lm.fit.qr.bare(x, y, intercept=FALSE)
                 else 
-                  lm.pfit(x, y, penalty.matrix=penalty.matrix),fail=FALSE))
+                  lm.pfit(x, y, penalty.matrix=penalty.matrix), fail=FALSE))
   }
 
   z <- predab.resample(fit, method=method, fit=fitit, measure=cal.error,
@@ -78,7 +79,7 @@ calibrate.default <- function(fit, predy,
                        penalty.matrix=penalty.matrix, ...)
 
   z <- cbind(predy, calibrated.orig=.orig.cal,
-             calibrated.corrected=.orig.cal-z[,"optimism"],
+             calibrated.corrected=.orig.cal - z[,"optimism"],
              z)
   structure(z, class="calibrate.default", call=call, kint=kint, model=model,
             lev.name=lev.name, yvar.name=yvar.name, n=n, freq=fit$freq,
@@ -106,11 +107,12 @@ print.calibrate.default <- function(x, ...)
     {  ## for downward compatibility
       s <- !is.na(x[,'predy'] + x[,'calibrated.corrected'])
       err <- predicted - approx(x[s,'predy'],x[s,'calibrated.corrected'], 
-                                xout=predicted)$y
+                                xout=predicted, ties=mean)$y
       cat('\nn=',length(err),    '   Mean absolute error=',
-          format(mean(abs(err),na.rm=TRUE)),'   Mean squared error=',
-          format(mean(err^2,na.rm=TRUE)),   '\n0.9 Quantile of absolute error=',
-          format(quantile(abs(err),.9,na.rm=TRUE)),	   '\n\n',sep='')
+          round(mean(abs(err),na.rm=TRUE),3),'   Mean squared error=',
+          round(mean(err^2,na.rm=TRUE),5),
+          '\n0.9 Quantile of absolute error=',
+          round(quantile(abs(err),.9,na.rm=TRUE),3),	   '\n\n',sep='')
     }
   print.default(x)
   invisible()
@@ -122,7 +124,7 @@ plot.calibrate.default <- function(x, xlab, ylab, xlim, ylim, legend=TRUE,
   at <- attributes(x)
   if(missing(ylab))
     ylab <- if(at$model=="lr") "Actual Probability"
-    else paste("Observed",at$yvar.name)
+    else paste("Observed", at$yvar.name)
   
   if(missing(xlab))
     {
@@ -131,23 +133,23 @@ plot.calibrate.default <- function(x, xlab, ylab, xlim, ylim, legend=TRUE,
           xlab <- paste("Predicted Pr{",at$yvar.name,sep="")
           if(at$non.slopes==1)
             {
-              xlab <- if(at$lev.name=="TRUE") paste(xlab,"}",sep="")
-              else paste(xlab,"=",at$lev.name,"}",sep="")
+              xlab <- if(at$lev.name=="TRUE") paste(xlab, "}", sep="")
+              else paste(xlab,"=", at$lev.name, "}", sep="")
             }
-          else xlab <- paste(xlab,">=",at$lev.name,"}",sep="")
+          else xlab <- paste(xlab,">=", at$lev.name, "}", sep="")
         }
-      else xlab <- paste("Predicted",at$yvar.name)
+      else xlab <- paste("Predicted", at$yvar.name)
     }
   
-  p <- x[,"predy"]
+  p     <- x[,"predy"]
   p.app <- x[,"calibrated.orig"]
   p.cal <- x[,"calibrated.corrected"]
   if(missing(xlim) & missing(ylim))
-    xlim <- ylim <- range(c(p,p.app,p.cal), na.rm=TRUE)
+    xlim <- ylim <- range(c(p, p.app, p.cal), na.rm=TRUE)
   else
     {
       if(missing(xlim)) xlim <- range(p)
-      if(missing(ylim)) ylim <- range(c(p.app,p.cal,na.rm=TRUE))
+      if(missing(ylim)) ylim <- range(c(p.app, p.cal, na.rm=TRUE))
     }
   
   plot(p, p.app, xlim=xlim, ylim=ylim, xlab=xlab, ylab=ylab, type="n", ...)
@@ -155,25 +157,26 @@ plot.calibrate.default <- function(x, xlab, ylab, xlim, ylim, legend=TRUE,
   if(length(predicted))
     {  ## for downward compatibility
       s <- !is.na(p + p.cal)
-      err <- predicted - approx(p[s],p.cal[s],xout=predicted)$y
+      err <- predicted - approx(p[s], p.cal[s], xout=predicted, ties=mean)$y
       cat('\nn=',n <- length(err),    '   Mean absolute error=',
-          format(mae <- mean(abs(err),na.rm=TRUE)),'   Mean squared error=',
-          format(mean(err^2,na.rm=TRUE)),   '\n0.9 Quantile of absolute error=',
-          format(quantile(abs(err),.9,na.rm=TRUE)),	   '\n\n',sep='')
-      if(subtitles) title(sub=paste('Mean absolute error=',format(mae),
-                            ' n=',n,sep=''), cex=.65, adj=1)
+          round(mae <- mean(abs(err), na.rm=TRUE),3),'   Mean squared error=',
+          round(mean(err^2, na.rm=TRUE),5),
+          '\n0.9 Quantile of absolute error=',
+          round(quantile(abs(err), .9, na.rm=TRUE),3),	   '\n\n', sep='')
+      if(subtitles) title(sub=paste('Mean absolute error=', round(mae,3),
+                            ' n=', n, sep=''), cex=.65, adj=1)
       do.call('scat1d', c(list(x=predicted), scat1d.opts))
     }
   
   lines(p, p.app, lty=3)
   lines(p, p.cal, lty=1)
-  abline(a=0,b=1,lty=2)
-  if(subtitles) title(sub=paste("B=",at$B,"repetitions,",at$method),adj=0)
+  abline(a=0, b=1, lty=2)
+  if(subtitles) title(sub=paste("B=", at$B, "repetitions,", at$method), adj=0)
   if(!(is.logical(legend) && !legend))
     {
-      if(is.logical(legend)) legend <- list(x=xlim[1]+.55*diff(xlim), #was .57
-                                            y=ylim[1]+.32*diff(ylim))
-      legend(legend, c("Apparent","Bias-corrected","Ideal"),
+      if(is.logical(legend)) legend <- list(x=xlim[1] + .55*diff(xlim),
+                                            y=ylim[1] + .32*diff(ylim))
+      legend(legend, c("Apparent", "Bias-corrected", "Ideal"),
              lty=c(3,1,2), bty="n")
     }
   invisible()

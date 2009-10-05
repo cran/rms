@@ -32,7 +32,7 @@ datadist <- function(..., data, q.display, q.effect=c(.25,.75),
         n <- D$name[D$assume!="interaction"]
         X <- list()
         if(missing(data))
-          for(nm in n) X[[nm]] <- eval.parent(nm) # was eval(nm,local=F)
+          for(nm in n) X[[nm]] <- eval.parent(nm)
         else
           if(length(names(data)))
             {
@@ -47,10 +47,9 @@ datadist <- function(..., data, q.display, q.effect=c(.25,.75),
       }
     else
       {
-
         if(length(X) & !length(names(X))) names(X) <- argnames[1:length(X)]
 
-        ### NEED TO FIX: R has no database.object
+### NEED TO FIX: R has no database.object
         if(!missing(data))
           {	# This duplicative code is for efficiency for large data frames
             stop('program logic error')
@@ -86,7 +85,7 @@ datadist <- function(..., data, q.display, q.effect=c(.25,.75),
         warning(paste(nam[i],"is a matrix or has incorrect length; ignored"))
       else
         {
-          if(ll && (ll<length(x))) values <- lev   # if # levels=length(x) is ID variable
+          if(ll && (ll < length(x))) values <- lev   # if # levels=length(x) is ID variable
           ## First look for ordered variable with numeric levels (scored() var)
           if(is.ordered(x) && all.is.numeric(lev))
             {
@@ -112,7 +111,8 @@ datadist <- function(..., data, q.display, q.effect=c(.25,.75),
                 clx <- oldClass(x)
                 y <- x[!is.na(x)]
                 n <- length(y)
-                if(n<2)stop(paste("fewer than 2 non-missing observations for",nam[i]))
+                if(n < 2)
+                  stop(paste("fewer than 2 non-missing observations for",nam[i]))
                 values <- sort(unique(y))
                 names(values) <- NULL
                 nunique <- length(values)
@@ -130,7 +130,7 @@ datadist <- function(..., data, q.display, q.effect=c(.25,.75),
                       if(missing(q.display))
                         {
                           q.display <- 10/max(n,200)
-                          q.display <- c(q.display,1-q.display)
+                          q.display <- c(q.display, 1 - q.display)
                         }
                       q <- quantile(oldUnclass(y),q.display)	}  #chron obj. not work here
                     limits[4] <- q[1]; limits[5] <- q[2]

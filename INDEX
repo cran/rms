@@ -71,5 +71,7 @@ validate.ols            Validation of an Ordinary Linear Model
 validate.rpart          Dxy and Mean Squared Error by Cross-validating
                         a Tree Sequence
 val.prob                Validate Predicted Probabilities
+val.surv                Validate Predicted Probabilities Against
+                        Observed Survival Times
 vif                     Variance Inflation Factors
 which.influence         Which Observations are Influential

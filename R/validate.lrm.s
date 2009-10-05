@@ -13,7 +13,7 @@ validate.lrm <- function(fit,method="boot",
 {
   k <- fit$non.slopes
   y <- fit$y
-  if(length(y)==0) stop("fit did not use x=T,y=T")
+  if(length(y)==0) stop("fit did not use x=TRUE,y=TRUE")
   if(!is.factor(y)) y <- factor(y)   ## was category 11Apr02
   fit$y <- oldUnclass(y)-1  #mainly for Brier score (B)
   
@@ -43,7 +43,7 @@ validate.lrm <- function(fit,method="boot",
       else
         {	
           k <- fit$non.slopes
-          null.model <- length(fit$coef)==k
+          null.model <- length(fit$coefficients)==k
           refit <- if(null.model) lrm.fit(y=y) else lrm.fit(x,y,tol=1e-13)
           kr <- refit$non.slopes
           ##Model with no variables = null model
@@ -52,10 +52,10 @@ validate.lrm <- function(fit,method="boot",
           if(Dxy.method=="lrm")Dxy <- stats["Dxy"]
           else
             Dxy <- somers2(x,y)["Dxy"]
-          intercept <- refit$coef[kint]
+          intercept <- refit$coefficients[kint]
           if(null.model) shrink <- 1
           else
-            shrink <- refit$coef[kr+1]
+            shrink <- refit$coefficients[kr+1]
           n <- stats["Obs"]
           D <- (lr-1)/n
           L01 <- -2 * sum( (y>=kint)*x - logb(1 + exp(x)), na.rm=TRUE)

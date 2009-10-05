@@ -2,7 +2,7 @@ bplot <-
   function(x, xlab, ylab, zlab,
            adj.subtitle=TRUE, cex.adj, 
            perim,  method=c("image","persp","contour"),
-           zlim=range(yhat, na.rm=TRUE), ...)
+           zlim=range(yhat, na.rm=TRUE), nlevels=10, ...)
 {
   method  <- match.arg(method)
   fit     <- x
@@ -38,8 +38,8 @@ bplot <-
 
   if(!missing(perim))
     {
-      Ylo <- approx(perim[,1], perim[,2], x)$y
-      Yhi <- approx(perim[,1], perim[,3], x)$y
+      Ylo <- approx(perim[,1], perim[,2], x, ties=mean)$y
+      Yhi <- approx(perim[,1], perim[,3], x, ties=mean)$y
       Ylo[is.na(Ylo)] <-  1e30
       Yhi[is.na(Yhi)] <- -1e30
       yhat[y < Ylo] <- NA
@@ -52,7 +52,7 @@ bplot <-
 
   switch(method,
          contour = contour(xu, yu, zmat,
-           xlab=xlab, ylab=ylab, ...),
+           xlab=xlab, ylab=ylab, nlevels=nlevels, ...),
          persp   = persp(xu, yu, zmat, zlim=zlim, xlab=xlab, ylab=ylab,
            zlab=zlab, box=TRUE, ...),
          image   = image(xu, yu, zmat, xlab=xlab, ylab=ylab, ...))
@@ -63,7 +63,7 @@ bplot <-
 
 iLegend <- function(object, x, y, size = c(1, 1), 
                     horizontal = TRUE, nint = 50, fun.=NULL, at=NULL, 
-                    zlab, zlim, ...)
+                    zlab, zlim, par.=NULL, ...)
 {
   ## Note: fun. is used instead of fun because subplot has arg fun
   if(missing(x)) 
@@ -96,12 +96,16 @@ iLegend <- function(object, x, y, size = c(1, 1),
     {
       f <- function()
         {
-          if(length(dotlist))
-            par(dotlist) ##axis() does not respect mgp
+          if(length(par.))
+            {
+              opar <- do.call('par', par.)
+              on.exit(par(opar))
+            }
+          ##axis() does not respect mgp
 
           image(x=irgz, y=1:lirgz, z=matrix(irgz, lirgz, lirgz),
                 xlab=zlab, ylab='',
-                yaxt="n", xaxt=if(!length(fun.))"s" else "n")
+                yaxt="n", xaxt=if(!length(fun.))"s" else "n", ...)
         
           if(length(fun.))
             mgp.axis(1,
@@ -118,10 +122,15 @@ iLegend <- function(object, x, y, size = c(1, 1),
     {
       f <- function()
         {
+          if(length(par.))
+            {
+              opar <- do.call('par', par.)
+              on.exit(par(opar))
+            }
           image(x = 1:lirgz, y = irgz,
                 z = matrix(irgz, lirgz, lirgz,byrow=TRUE),
                 xlab='', ylab=zlab,
-                xaxt = "n", yaxt=if(!length(fun.))"s" else "n")
+                xaxt = "n", yaxt=if(!length(fun.))"s" else "n", ...)
           
           if(length(fun.))
             mgp.axis(2, if(!length(at)) pretty(irgz) else at,
@@ -132,7 +141,7 @@ iLegend <- function(object, x, y, size = c(1, 1),
   subplot(x = x$x, y = x$y, size = size, fun = f, hadj=0, vadj=1)
 }
   
-invisible(x)  #if(missing(y))x else list(x=x,y=y))
+invisible(x)
 }
 
 perimeter <- function(x, y, xinc=diff(range(x))/10, n=10,
@@ -159,7 +168,7 @@ perimeter <- function(x, y, xinc=diff(range(x))/10, n=10,
     {
       y <- sort(y)
       m <- length(y)
-      if(n>(m-n+1)) c(NA,NA)
+      if(n > (m - n + 1)) c(NA, NA)
       else c(y[n], y[m-n+1])
     }
 
@@ -167,7 +176,7 @@ perimeter <- function(x, y, xinc=diff(range(x))/10, n=10,
   i <- seq(1, length(r), by=2)
   rlo <- r[i]
   rhi <- r[-i]
-  s <- !is.na(rlo+rhi)
+  s <- !is.na(rlo + rhi)
   if(!any(s))
     stop("no intervals had sufficient y observations")
 

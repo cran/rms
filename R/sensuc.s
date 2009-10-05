@@ -11,7 +11,7 @@ sensuc <- function(fit,
   
   X <- fit$x
   Y <- fit$y
-  if(length(X)==0 || length(Y)==0) stop('did not specify x=T, y=T to fit')
+  if(length(X)==0 || length(Y)==0) stop('did not specify x=TRUE, y=TRUE to fit')
   x <- X[,1]
   unq <- sort(unique(x))
   if(length(unq) != 2 || unq[1] != 0 || unq[2] != 1)

@@ -25,8 +25,8 @@ linear predictors.
         type=c("lp", "x", "data.frame",
                  "terms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
-        incl.non.slopes,
-        non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
+        incl.non.slopes, non.slopes, kint=1,
+        na.action=na.keep, expand.na=TRUE,
         center.terms=TRUE, \dots) # for bj
 
 \method{predict}{cph}(object, newdata,
@@ -161,8 +161,8 @@ If \code{expand.na=FALSE}, the \code{na.action} attribute will be added to the r
 object.
 }
 \item{center.terms}{
-set to \code{FALSE} to suppress subtracting the mean from columns of the design
-matrix before computing terms with \code{type="terms"}.
+set to \code{FALSE} to suppress subtracting adjust-to values from
+columns of the design matrix before computing terms with \code{type="terms"}.
 }
 \item{\dots}{ignored}
 }

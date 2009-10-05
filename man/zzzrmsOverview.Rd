@@ -947,7 +947,7 @@ set.seed(3)
 # robcov(f)$var when score residuals implemented
 bootcov(f, B=30)$var
 validate(f, B=10)
-cal <- calibrate(f, u=5, B=10, m=10)
+cal <- calibrate(f, cmethod='KM', u=5, B=10, m=10)
 plot(cal)
 r <- resid(f)
 survplot(r)
@@ -958,7 +958,7 @@ plot(Predict(f, x1=., time=5))
 robcov(f)$var
 bootcov(f, B=10)
 validate(f, B=10)
-cal <- calibrate(f, u=5, B=10, m=10)
+cal <- calibrate(f, cmethod='KM', u=5, B=10, m=10)
 survplot(f, x1=c(2,19))
 options(datadist=NULL)
 }

@@ -89,7 +89,7 @@ Department of Biostatistics, Vanderbilt University\cr
 f.harrell@vanderbilt.edu
 }
 \seealso{
-\code{\link[survival]{cox.zph}}, \code{\link{residuals.cph}}, \code{\link[survival]{coxph.fit}}, \code{\link{cph}}, \code{\link[survival]{coxph}}, \code{\link[survival]{Surv}}
+\code{\link[survival]{cox.zph}}, \code{\link{residuals.cph}}, \code{\link[survival]{survival-internal}}, \code{\link{cph}}, \code{\link[survival]{coxph}}, \code{\link[survival]{Surv}}
 }
 \examples{
 n <- 500

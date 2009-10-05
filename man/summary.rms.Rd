@@ -168,7 +168,7 @@ f.harrell@vanderbilt.edu
 }
 \seealso{
 \code{\link{datadist}}, \code{\link{rms}}, \code{\link{rms.trans}}, \code{\link{rmsMisc}},
-\code{\link[Hmisc]{confbar}}, \code{\link{pretty}}, \code{\link{contrast.rms}}
+\code{\link[Hmisc]{Misc}}, \code{\link{pretty}}, \code{\link{contrast.rms}}
 }
 \examples{
 n <- 1000    # define sample size

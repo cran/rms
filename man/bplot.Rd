@@ -24,14 +24,14 @@ produced with \code{bplot} using \code{method="image"}.
 bplot(x, xlab, ylab, zlab,
       adj.subtitle=TRUE, cex.adj, perim,
       method=c("image", "persp", "contour"),
-      zlim=range(yhat, na.rm=TRUE), \dots)
+      zlim=range(yhat, na.rm=TRUE), nlevels=10, \dots)
 
 perimeter(x, y, xinc=diff(range(x))/10, n=10, lowess.=TRUE)
 
 \method{lines}{perimeter}(x, \dots)
 
 iLegend(object, x, y, size=c(1,1), horizontal=TRUE,
-       nint=50, fun.=NULL, at=NULL, zlab, zlim, \dots)
+       nint=50, fun.=NULL, at=NULL, zlab, zlim, par.=NULL, \dots)
 }
 \arguments{
   \item{x}{
@@ -93,6 +93,10 @@ Use \code{method="persp"} for perspective plots (\code{persp()}),
 If 'type="persp"' controls the range for plotting in the
 \eqn{z}-axis. Computed by default.  Also used by \code{iLegend}.
 }
+\item{nlevels}{passed to \code{contour}}
+\item{par.}{a list of arguments to pass to \code{par}, such as
+       \code{mgp}.  The user can use the argument name \code{par},
+       omitting the period.}
 \item{\dots}{
   optional arguments to pass to \code{persp}, \code{image}, or
   \code{contour}.   Specify a vector to assign different

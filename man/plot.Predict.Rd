@@ -33,7 +33,7 @@
      xlim, ylim, xlab, ylab, 
      data=NULL, col.fill=gray(seq(.95, .75, length=5)),
      adj.subtitle, cex.adj, perim=NULL, digits=4, nlevels=3,
-     addpanel, ...)
+     nlines=FALSE, addpanel, ...)
 
 pantext(object, x, y, cex=.5, adj=0, fontfamily="Courier", lattice=TRUE)
 
@@ -118,6 +118,10 @@ default is 4 significant digits.
   numeric x-axis variable with \code{nlevels} or fewer unique values
   will cause a dot plot to be drawn instead of an x-y plot.
 }
+\item{nlines}{If \code{formula} is given, you can set \code{nlines} to
+  \code{TRUE} to convert the x-axis variable to a factor and then to an
+  integer.  Points are plotted at integer values on the x-axis but
+  labeled with category levels.  Points are connected by lines.}
 \item{addpanel}{an additional panel function to call along with panel
   functions used for \code{xYplot} and \code{Dotplot} displays}
 \item{\dots}{
@@ -170,8 +174,7 @@ f.harrell@vanderbilt.edu
   \code{\link{contrast.rms}}, \code{\link{summary.rms}},
   \code{\link{rms}}, \code{\link{rmsMisc}}, 
   \code{\link[Hmisc]{labcurve}}, \code{\link[Hmisc]{scat1d}},
-  \code{\link[Hmisc]{xYplot}}, \code{\link[Hmisc]{Dotplot}}, 
-  \code{\link[Hmisc]{Overview}}
+  \code{\link[Hmisc]{xYplot}}, \code{\link[Hmisc]{Overview}}
 }
 \examples{
 n <- 1000    # define sample size
@@ -289,6 +292,24 @@ smean <- function(yhat)smearingEst(yhat, exp, res, statistic='mean')
 formals(smean) <- list(yhat=numeric(0), res=r[!is.na(r)])
 #smean$res <- r[!is.na(r)]   # define default res argument to function
 plot(Predict(f, x1=., fun=smean), ylab='Predicted Mean on y-scale')
+
+# Make an 'interaction plot', forcing the x-axis variable to be
+# plotted at integer values but labeled with category levels
+n <- 100
+set.seed(1)
+gender <- c(rep('male', n), rep('female',n))
+m <- sample(c('a','b'), 2*n, TRUE)
+d <-  datadist(gender, m); options(datadist='d')
+anxiety <- runif(2*n) + .2*(gender=='female') + .4*(gender=='female' & m=='b')
+tapply(anxiety, llist(gender,m), mean)
+f <- ols(anxiety ~ gender*m)
+p <- Predict(f, gender=., m=.)
+plot(p)     # horizontal dot chart; usually preferred for categorical predictors
+Key(.5, .5)
+plot(p, ~gender, groups='m', nlines=TRUE)
+plot(p, ~m, groups='gender', nlines=TRUE)
+plot(p, ~gender|m, nlines=TRUE)
+
 options(datadist=NULL)
 
 \dontrun{

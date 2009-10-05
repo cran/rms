@@ -40,7 +40,7 @@ Predict(x, ..., fun,
 
 \method{print}{Predict}(x, \dots)
 
-\method{rbind}{Predict}(\dots)
+\method{rbind}{Predict}(\dots, rename)
 }
 \arguments{
   \item{x}{
@@ -134,6 +134,17 @@ Predict(x, ..., fun,
 	\code{age=.}.  Also, interacting factors can only be set to their
 	reference values using this notation.
   }
+  \item{rename}{
+	If you are concatenating predictor sets using \code{rbind} and one
+	or more of the variables were renamed for one or more of the sets,
+	but these new names represent different versions of the same
+	predictors (e.g., using or not using imputation), you can specify a
+	named character vector to rename predictors to a central name.  For
+	example, specify \code{rename=c(age.imputed='age',
+	  corrected.bp='bp')} to rename from old names \code{age.imputed,
+	  corrected.bp} to \code{age, bp}.  This happens before
+	concatenation of rows.
+	}
 }
 \details{
 When there are no intercepts in the fitted model, plot subtracts
@@ -163,7 +174,7 @@ f.harrell@vanderbilt.edu
 \code{\link{contrast.rms}}, \code{\link{summary.rms}},  
 \code{\link{rms}}, \code{\link{rms.trans}}, \code{\link{survest}},
 \code{\link{survplot}}, \code{\link{rmsMisc}},
-\code{\link[Hmisc]{smearingEst}}, \code{rbind}
+\code{\link[Hmisc]{transace}}, \code{rbind}
 }
 \examples{
 n <- 1000    # define sample size

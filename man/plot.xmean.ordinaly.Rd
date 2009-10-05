@@ -74,7 +74,7 @@ an ordinal outcome. Stat in Med 17:909--44.
 }
 \seealso{
 \code{\link{lrm}}, \code{\link{residuals.lrm}}, \code{\link{cr.setup}},
-\code{\link[Hmisc]{cumcategory}}, \code{\link[Hmisc]{chiSquare}}.
+\code{\link[Hmisc]{summary.formula}}, \code{\link[Hmisc]{biVar}}.
 }
 \examples{
 # Simulate data from a population proportional odds model

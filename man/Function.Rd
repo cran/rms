@@ -67,7 +67,7 @@ Vanderbilt University\cr
 f.harrell@vanderbilt.edu
 }
 \seealso{
-\code{\link{latex.rms}}, \code{\link[Hmisc]{Function.transcan}}, \code{\link{predict.rms}}, \code{\link{rms}}, \code{\link{rms.trans}}
+\code{\link{latex.rms}}, \code{\link[Hmisc]{transcan}}, \code{\link{predict.rms}}, \code{\link{rms}}, \code{\link{rms.trans}}
 }
 \examples{
 set.seed(1331)

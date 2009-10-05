@@ -68,7 +68,7 @@ Department of Biostatistics, Vanderbilt University\cr
 f.harrell@vanderbilt.edu
 }
 \seealso{
-\code{\link{latex.rms}}, \code{\link[Hmisc]{rcspline.restate}}, \code{\link[Hmisc]{latex.default}}
+\code{\link{latex.rms}}, \code{\link[Hmisc]{rcspline.restate}}, \code{\link[Hmisc]{latex}}
 }
 \examples{
 \dontrun{

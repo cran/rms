@@ -54,7 +54,7 @@ Predict <-
       lv <- do.call('rbind.data.frame', res)
       class(lv) <- c('Predict', 'data.frame')
       attr(lv, 'info') <- info
-      return(invisible(lv))
+      return(lv)
     }
 
   f <- sum(assume!=9)	##limit list to main effects factors
@@ -282,13 +282,29 @@ perimeter <- function(x, y, xinc=diff(range(x))/10, n=10,
             class='perimeter')
 }
 
-rbind.Predict <- function(...)
+rbind.Predict <- function(..., rename)
   {
     d <- list(...)
     ns <- length(d)
     if(ns==1) return(d[[1]])
     
     info <- attr(d[[1]], 'info')
+
+    if(!missing(rename))
+      {
+        trans <- function(input, rename)
+          {
+            k <- input %in% names(rename)
+            if(any(k)) input[k] <- rename[input[k]]
+            input
+          }
+        info$varying <- trans(info$varying, rename)
+        names(info$Design$label) <- trans(names(info$Design$label), rename)
+        names(info$Design$units) <- trans(names(info$Design$units), rename)
+        names(info$Design$assume.code) <-
+          trans(names(info$Design$assume.code), rename)
+      }
+    
     info$Design$label <- c(info$Design$label, .set.='Set')
     info$Design$units <- c(info$Design$units, .set.='')
     info$varying <- c(info$varying, '.set.')
@@ -297,6 +313,10 @@ rbind.Predict <- function(...)
     if(!length(sets)) sets <- paste('Set', 1:ns)
     obs.each.set <- sapply(d, function(x) length(x[[1]]))
     .set. <- rep(sets, obs.each.set)
+
+    if(!missing(rename)) for(i in 1:ns)
+      names(d[[i]]) <- trans(names(d[[i]]), rename)
+
     result <- do.call('rbind.data.frame', d)
     result$.set. <- .set.
     attr(result, 'info') <- info
