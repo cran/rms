@@ -1,7 +1,5 @@
 .noGenenerics <- TRUE  # faster loading as new methods not used
 
-. <- NA   ## used by Predict etc.
-
 .First.lib <- function(lib, pkg, ...)
 {
   library.dynam("rms", pkg, lib)

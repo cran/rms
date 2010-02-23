@@ -1,13 +1,12 @@
 \name{Predict}
-\Rdversion{1.1}
 \alias{Predict}
 \alias{print.Predict}
 \alias{rbind.Predict}
 \title{Compute Predicted Values and Confidence Limits}
 \description{
 \code{Predict} allows the user to easily specify which predictors are to
-vary.  When the vector of values over which a predictor should vary is a
-single value that is \code{NA} (usually specified as a single dot), the
+vary.  When the vector of values over which a predictor should vary is
+not specified, the
 range will be all levels of a categorical predictor or equally-spaced
 points between the \code{\link{datadist}} \code{"Low:prediction"} and
 \code{"High:prediction"} values for the variable (\code{datadist} by
@@ -36,7 +35,7 @@ Predict(x, ..., fun,
         np = 200, conf.int = 0.95,
         conf.type = c("mean", "individual"),
         adj.zero = FALSE, ref.zero = FALSE,
-        non.slopes, time = NULL, loglog = FALSE, digits=4, name)
+        non.slopes, time = NULL, loglog = FALSE, digits=4, name, factors=NULL)
 
 \method{print}{Predict}(x, \dots)
 
@@ -50,7 +49,8 @@ Predict(x, ..., fun,
 	it must have been in effect when the the model was fitted.}
   \item{\dots}{
 	One or more variables to vary, or single-valued adjustment values.
-	Specify \code{x=.} to use the default display range, or any range
+	Specify a variable name without an equal sign to use the default
+	display range, or any range 
 	you choose (e.g. \code{seq(0,100,by=2),c(2,3,7,14)}). 
 	The default list of values for which predictions are made
 	is taken as the list of unique values of the variable if they number fewer
@@ -131,9 +131,15 @@ Predict(x, ..., fun,
 	by specifying a vector of character string variable names in the
 	\code{name} argument.  Using this mode you cannot specify a list of
 	variable values to use; prediction is done as if you had said e.g.
-	\code{age=.}.  Also, interacting factors can only be set to their
-	reference values using this notation.
+	\code{age} without the equal sign.  Also, interacting factors can
+	only be set to their reference values using this notation.
   }
+  \item{factors}{
+	an alternate way of specifying \dots, mainly for use by
+	\code{survplot} or \code{gendata}.  This must be a list with one or
+	more values for each variable listed, with \code{NA} values for
+	default ranges.
+	}
   \item{rename}{
 	If you are concatenating predictor sets using \code{rbind} and one
 	or more of the variables were renamed for one or more of the sets,
@@ -200,17 +206,17 @@ ddist <- datadist(age, blood.pressure, cholesterol, sex)
 options(datadist='ddist')
 
 fit <- lrm(y ~ blood.pressure + sex * (age + rcs(cholesterol,4)))
-Predict(fit, age=., cholesterol=., np=4)
-Predict(fit, age=seq(20,80,by=10), sex=., conf.int=FALSE)
+Predict(fit, age, cholesterol, np=4)
+Predict(fit, age=seq(20,80,by=10), sex, conf.int=FALSE)
 Predict(fit, age=seq(20,80,by=10), sex='male')  # works if datadist not used
 
 ddist$limits$age[2] <- 30    # make 30 the reference value for age
 # Could also do: ddist$limits["Adjust to","age"] <- 30
 fit <- update(fit)   # make new reference value take effect
-Predict(fit, age=., ref.zero=TRUE, fun=exp)
+Predict(fit, age, ref.zero=TRUE, fun=exp)
 
 # Make two curves, and plot the predicted curves as two trellis panels
-w <- Predict(fit, age=., sex=.)
+w <- Predict(fit, age, sex)
 require(lattice)
 xyplot(yhat ~ age | sex, data=w, type='l')
 # To add confidence bands we need to use the Hmisc xYplot function in
@@ -242,7 +248,7 @@ Srv <- Surv(t,e)
 f <- psm(Surv(t, e) ~ rcs(age), dist=if(.R.)'lognormal' else 'gaussian')
 med <- Quantile(f)       # Creates function to compute quantiles
                          # (median by default)
-Predict(f, age=., fun=function(x)med(lp=x))
+Predict(f, age, fun=function(x)med(lp=x))
 # Note: This works because med() expects the linear predictor (X*beta)
 #       as an argument.  Would not work if use 
 #       ref.zero=TRUE or adj.zero=TRUE.
@@ -259,8 +265,8 @@ x2 <- runif(300)
 ddist <- datadist(x1,x2); options(datadist='ddist')
 y  <- exp(x1+ x2 - 1 + rnorm(300))
 f  <- ols(log(y) ~ pol(x1,2) + x2)
-p1 <- Predict(f, x1=., conf.type='mean')
-p2 <- Predict(f, x1=., conf.type='individual')
+p1 <- Predict(f, x1, conf.type='mean')
+p2 <- Predict(f, x1, conf.type='individual')
 p  <- rbind(mean=p1, individual=p2)
 plot(p, label.curve=FALSE)   # uses superposition
 plot(p, ~x1 | .set.)         # 2 panels
@@ -269,7 +275,7 @@ r <- resid(f)
 smean <- function(yhat)smearingEst(yhat, exp, res, statistic='mean')
 formals(smean) <- list(yhat=numeric(0), res=r[!is.na(r)])
 #smean$res <- r[!is.na(r)]   # define default res argument to function
-Predict(f, x1=., fun=smean)
+Predict(f, x1, fun=smean)
 }
 options(datadist=NULL)
 }

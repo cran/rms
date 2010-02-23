@@ -33,7 +33,7 @@
      xlim, ylim, xlab, ylab, 
      data=NULL, col.fill=gray(seq(.95, .75, length=5)),
      adj.subtitle, cex.adj, perim=NULL, digits=4, nlevels=3,
-     nlines=FALSE, addpanel, ...)
+     nlines=FALSE, addpanel, scat1d.opts=list(frac=0.025, lwd=0.3), ...)
 
 pantext(object, x, y, cex=.5, adj=0, fontfamily="Courier", lattice=TRUE)
 
@@ -124,6 +124,10 @@ default is 4 significant digits.
   labeled with category levels.  Points are connected by lines.}
 \item{addpanel}{an additional panel function to call along with panel
   functions used for \code{xYplot} and \code{Dotplot} displays}
+\item{scat1d.opts}{a list containing named elements that specifies
+  parameters to \code{\link{scat1d}} when \code{data} is given.  The
+  \code{col} parameter is usually derived from other plotting
+  information and not specified by the user.} 
 \item{\dots}{
   extra arguments to pass to \code{xYplot} or \code{Dotplot}.  Some
   useful ones are \code{label.curves} and \code{abline}.
@@ -208,12 +212,12 @@ plot(Predict(fit), data=llist(blood.pressure,age))
 p <- Predict(fit, name=c('age','cholesterol'))   # Make 2 plots
 plot(p)
 
-p <- Predict(fit, age=seq(20,80,length=100), sex=., conf.int=FALSE)
+p <- Predict(fit, age=seq(20,80,length=100), sex, conf.int=FALSE)
                          # Plot relationship between age and log
                          # odds, separate curve for each sex,
 plot(p)                  # no C.I.
 
-p <- Predict(fit, age=., sex=.)
+p <- Predict(fit, age, sex)
 plot(p, label.curves=FALSE, data=llist(age,sex))
                          # use label.curves=list(keys=c('a','b'))'
                          # to use 1-letter abbreviations
@@ -230,8 +234,8 @@ per <- function(x, y) x >= 30
 plot(p, perim=per)       # suppress output for age < 30 but leave scale alone
 
 # Take charge of the plot setup by specifying a lattice formula
-p <- Predict(fit, age=., blood.pressure=c(120,140,160),
-             cholesterol=c(180,200,215), sex=.)
+p <- Predict(fit, age, blood.pressure=c(120,140,160),
+             cholesterol=c(180,200,215), sex)
 plot(p, ~ age | blood.pressure*cholesterol, subset=sex=='male')
 plot(p, ~ age | cholesterol*blood.pressure, subset=sex=='female')
 plot(p, ~ blood.pressure|cholesterol*round(age,-1), subset=sex=='male')
@@ -243,7 +247,7 @@ plot(p)
 ddist$limits$age[2] <- 30    # make 30 the reference value for age
 # Could also do: ddist$limits["Adjust to","age"] <- 30
 fit <- update(fit)   # make new reference value take effect
-p <- Predict(fit, age=., ref.zero=TRUE, fun=exp)
+p <- Predict(fit, age, ref.zero=TRUE, fun=exp)
 plot(p, ylab='Age=x:Age=30 Odds Ratio',
      abline=list(list(h=1, lty=2, col=2), list(v=30, lty=2, col=2)))
 
@@ -270,7 +274,7 @@ Srv <- Surv(t,e)
 f <- psm(Surv(t, e) ~ rcs(age), dist='lognormal')
 med <- Quantile(f)       # Creates function to compute quantiles
                          # (median by default)
-p <- Predict(f, age=., fun=function(x) med(lp=x))
+p <- Predict(f, age, fun=function(x) med(lp=x))
 plot(p, ylab="Median Survival Time")
 # Note: confidence intervals from this method are approximate since
 # they don't take into account estimation of scale parameter
@@ -291,7 +295,7 @@ r <- resid(f)
 smean <- function(yhat)smearingEst(yhat, exp, res, statistic='mean')
 formals(smean) <- list(yhat=numeric(0), res=r[!is.na(r)])
 #smean$res <- r[!is.na(r)]   # define default res argument to function
-plot(Predict(f, x1=., fun=smean), ylab='Predicted Mean on y-scale')
+plot(Predict(f, x1, fun=smean), ylab='Predicted Mean on y-scale')
 
 # Make an 'interaction plot', forcing the x-axis variable to be
 # plotted at integer values but labeled with category levels
@@ -303,7 +307,7 @@ d <-  datadist(gender, m); options(datadist='d')
 anxiety <- runif(2*n) + .2*(gender=='female') + .4*(gender=='female' & m=='b')
 tapply(anxiety, llist(gender,m), mean)
 f <- ols(anxiety ~ gender*m)
-p <- Predict(f, gender=., m=.)
+p <- Predict(f, gender, m)
 plot(p)     # horizontal dot chart; usually preferred for categorical predictors
 Key(.5, .5)
 plot(p, ~gender, groups='m', nlines=TRUE)
@@ -320,7 +324,7 @@ options(datadist=NULL)
 
 incomes <- seq(22900, 32800, length=4)  
 # equally spaced to outer quintiles
-p <- Predict(f, college=., income=incomes, conf.int=FALSE)
+p <- Predict(f, college, income=incomes, conf.int=FALSE)
 plot(p, xlim=c(0,35), ylim=c(30,55))
 
 # Erase end portions of each curve where there are fewer than 10 counties having

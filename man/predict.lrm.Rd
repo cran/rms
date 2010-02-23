@@ -98,7 +98,7 @@ m(lp)
 # Don't use non.slopes argument to Predict for this
 dd <- datadist(x1,x2); options(datadist='dd')
 m
-plot(Predict(f, x1=., fun=m), ylab='Predicted Mean')
+plot(Predict(f, x1, fun=m), ylab='Predicted Mean')
 options(datadist=NULL)
 }
 \keyword{models}

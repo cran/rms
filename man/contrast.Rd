@@ -249,8 +249,8 @@ d     <- datadist(age, treat, sex); options(datadist='d')
 
 # show separate estimates by treatment and sex
 
-plot(Predict(f, age=., treat=., sex='female'))
-plot(Predict(f, age=., treat=., sex='male'))
+plot(Predict(f, age, treat, sex='female'))
+plot(Predict(f, age, treat, sex='male'))
 ages  <- seq(35,65,by=5); sexes <- c('female','male')
 w     <- contrast(f, list(treat='drug',    age=ages, sex=sexes),
                      list(treat='placebo', age=ages, sex=sexes))

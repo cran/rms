@@ -66,9 +66,7 @@ bj.fit(x, y, control)
     an S statistical model formula. Interactions up to third order are
     supported. The left hand side must be a \code{Surv} object.
   }
-  \item{data}{}
-  \item{subset}{}
-  \item{na.action}{the usual statistical model fitting arguments}
+  \item{data,subset,na.action}{the usual statistical model fitting arguments}
   \item{fit}{
     a fit created by \code{bj}, required for all functions except \code{bj}.
   }
@@ -134,15 +132,7 @@ bj.fit(x, y, control)
     matrix (the names of the original predictors if they entered the model
     linearly) for which to have \code{bjplot} make plots of only the variables listed in \code{which} (names or numbers).
   }
-  \item{B}{}
-  \item{bw}{}
-  \item{rule}{}
-  \item{sls}{}
-  \item{aics}{}
-  \item{pr}{}
-  \item{tol}{}
-  \item{rel.tolerance}{}
-  \item{maxiter}{see \code{\link{predab.resample}}}
+  \item{B,bw,rule,sls,aics,pr,tol,rel.tolerance,maxiter}{see \code{\link{predab.resample}}}
   \item{\dots}{
     ignored for \code{print}; passed through to
     \code{predab.resample} for \code{validate}
@@ -237,7 +227,7 @@ f <- bj(Surv(ftime, stroke) ~ rcs(age,5) + hospital, x=TRUE, y=TRUE)
 anova(f)
 fastbw(f)
 validate(f, B=15)
-plot(Predict(f, age=., hospital=.))
+plot(Predict(f, age, hospital))
 # needs datadist since no explicit age,hosp.
 coef(f)               # look at regression coefficients
 coef(psm(Surv(ftime, stroke) ~ rcs(age,5) + hospital, dist='lognormal'))

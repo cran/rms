@@ -4,7 +4,7 @@ Predict <-
            np=200,
            conf.int=.95, conf.type=c('mean','individual'),
            adj.zero=FALSE, ref.zero=FALSE,
-           non.slopes, time=NULL, loglog=FALSE, digits=4, name)
+           non.slopes, time=NULL, loglog=FALSE, digits=4, name, factors=NULL)
 {
 
   fit       <- x
@@ -14,7 +14,7 @@ Predict <-
   oldopt <- options(digits=digits)
   on.exit(options(oldopt))
 
-  dotlist <- list(...)
+  dotlist <- if(length(factors)) factors else rmsArgs(substitute(list(...)))
   fname   <- if(missing(name)) '' else name
   at      <- fit$Design
   assume  <- at$assume.code

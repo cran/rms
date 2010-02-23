@@ -61,7 +61,7 @@ latexrms <- function(object,
   ##If any interactions to be printed, make sure all main effects are included
 
   ia <- ac[which]==9
-  if(length(which)<p & any(ia))
+  if(length(which) < p & any(ia))
     {
       for(i in which[ia]) which <- c(which,parms[[name[i]]][,1])
       which <- which[which>0]
@@ -78,8 +78,8 @@ latexrms <- function(object,
   if(anytr)
     {
       TLi <- sedit(TLi, from, to)
-      TLi <- sedit(TLi, varnames, vnames)  # was translate  was vnames2 29Apr96
-      TLi <- ifelse(TLi=="","",paste("{\\rm ", TLi, "}", sep=""))
+      TLi <- sedit(TLi, varnames, vnames)
+      TLi <- ifelse(TLi=="", "", paste("{\\rm ", TLi, "}", sep=""))
     }
   
   varnames <- paste("{\\rm ", vnames, "}", sep="")
@@ -108,7 +108,7 @@ latexrms <- function(object,
           nam1 <- nam.coef[[i1]][j1]
           l1 <- lNam[[i1]][j1]
           lN2 <- length(N2)
-          cnam <- if(rev) paste(nam.coef[[i2]],"*",nam1) else
+          cnam <- if(rev) paste(nam.coef[[i2]], "*", nam1) else
           paste(nam1, "*", nam.coef[[i2]])
           mnam <- match(cnam, names(cof), nomatch=0)
           act <- mnam[mnam>0]
@@ -277,7 +277,7 @@ latexrms <- function(object,
   Coef <- f$coef
   if((length(which)==p)&& (nrp==1 | !missing(intercept)))
     {
-      cof <- if(missing(intercept))format(Coef[1]) else format(intercept)
+      cof <- if(missing(intercept)) format(Coef[1]) else format(intercept)
       cur <- cof
       cols <- nchar(cof)
     }
@@ -297,7 +297,7 @@ latexrms <- function(object,
           lprm <- nchar(prm)
           z <- substring(prm,1,1)=="["
           u <- !z & ass==7
-          prm <- sedit(prm, c(' ','&'), c('\\ ','\\&'))
+          prm <- sedit(prm, c(' ','&','%'), c('\\ ','\\&','\\%'))
           prm <- ifelse(z | u, prm, paste("{\\rm ", prm, "}", sep=""))
           prm <- ifelse(z,paste(nam,"\\in ",prm),prm)
           prm <- ifelse(u,paste(nam,"=",prm),prm)

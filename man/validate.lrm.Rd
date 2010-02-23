@@ -33,14 +33,7 @@ takes into account overfitting.
 a fit derived by \code{lrm}. The options \code{x=TRUE} and \code{y=TRUE}
 must have been specified.
 }
-\item{method}{}
-\item{B}{}
-\item{bw}{}
-\item{rule}{}
-\item{type}{}
-\item{sls}{}
-\item{aics}{}
-\item{pr}{see \code{\link{validate}} and \code{\link{predab.resample}}}
+\item{method,B,bw,rule,type,sls,aics,pr}{see \code{\link{validate}} and \code{\link{predab.resample}}}
 \item{kint}{
 In the case of an ordinal model, specify which intercept to validate.
 Default is the middle intercept.

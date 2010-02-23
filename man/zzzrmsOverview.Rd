@@ -133,7 +133,7 @@
       \item if predictor is represented as a function in the model, plots
       should be with respect to the original variable:\cr
       \code{f <- lrm(y ~ log(cholesterol)+age)} \cr
-      \code{plot(Predict(f, cholesterol=.))   # cholesterol on x-axis, default range}
+      \code{plot(Predict(f, cholesterol))   # cholesterol on x-axis, default range}
     }
 
     \item need to store summary of distribution of predictors with the fit
@@ -349,7 +349,7 @@
   \code{cf <- ols(y ~ x1 * x2)}\cr
   \code{anova(f)}\cr
   \code{fastbw(f)}\cr
-  \code{Predict(f, x2=.)}
+  \code{Predict(f, x2)}
   \code{predict(f, newdata)}
 
   In the \bold{Examples} section there are three detailed examples using a
@@ -487,7 +487,7 @@ fpred(age=30, sex=levels(sex))
 
 anova(f)
 
-p <- Predict(f, age=., sex=., conf.int=FALSE)
+p <- Predict(f, age, sex, conf.int=FALSE)
 plot(p, ylim=c(-3,3), data=data.frame(age,sex))
 # Specifying data to plot.Predict results in sex-specific
 # rug plots for age using the Hmisc scat1d function
@@ -497,7 +497,7 @@ title('Spline Fits with True Regression Functions')
 
 f.bp <- lrm(dz.bp ~ rcs(age,5)*sex + rcs(sys.bp,5))
 
-p <- Predict(f.bp, age=., sys.bp=., np=75)
+p <- Predict(f.bp, age, sys.bp, np=75)
 for(method in c('contour','persp','image')) {
   bplot(p, method=method)
   #if(method=='image') iLegend(p, c(34,40),c(115, 120))
@@ -519,7 +519,7 @@ f
 specs(f,long=TRUE)
 edf <- effective.df(f)
 
-p <- Predict(f, age=., sex=., conf.int=FALSE)
+p <- Predict(f, age, sex, conf.int=FALSE)
 plot(p, ylim=c(-3,3), data=llist(age, sex))
 
 plsmo(age, L, group=sex, method='raw', add=TRUE, prefix='True', trim=0)
@@ -634,13 +634,13 @@ contrast(fit, list(treat='b',cholesterol=c(150,200,250)),
 plot(Predict(fit, ref.zero=TRUE), ylim=c(-2,2))
 
 
-plot(Predict(fit, age=seq(20,80,length=100), treat=., conf.int=FALSE))
+plot(Predict(fit, age=seq(20,80,length=100), treat, conf.int=FALSE))
 # Plots relationship between age and log
 # odds, separate curve for each treat, no C.I.
-bplot(Predict(fit, age=., cholesterol=., np=70))
+bplot(Predict(fit, age, cholesterol, np=70))
 # 3-dimensional perspective plot for age, cholesterol, and
 # log odds using default ranges for both variables
-p <- Predict(fit, num.diseases=., fun=function(x) 1/(1+exp(-x)),
+p <- Predict(fit, num.diseases, fun=function(x) 1/(1+exp(-x)),
              conf.int=.9)  #or fun=plogis
 plot(p, ylab="Prob", conf.int=.9, nlevels=5)
 # Treat as categorical variable even though numeric
@@ -740,12 +740,12 @@ xYplot(pred ~ age, groups=interaction(cholesterol,weight),
 # plot may be busy:
 
 ch <- c(170, 200, 230)
-p <- Predict(fit, age=., cholesterol=ch, weight=150,
+p <- Predict(fit, age, cholesterol=ch, weight=150,
      conf.int=FALSE)
 plot(p, ~age | cholesterol)
 
 #Here we use plot.Predict to make 9 separate plots, with CLs
-p <- Predict(fit, age=., cholesterol=c(170,200,230), weight=c(150,200,250))
+p <- Predict(fit, age, cholesterol=c(170,200,230), weight=c(150,200,250))
 plot(p, ~age | cholesterol*weight)
 
 options(datadist=NULL)
@@ -781,15 +781,15 @@ f <- cph(Srv ~ strat(age.dec)+strat(sex), surv=TRUE)
 
 # Plot log(-log 3-year survival probability) vs. mean age
 # within age deciles and vs. sex
-p <- Predict(f, age.dec=., sex=., time=3, loglog=TRUE)
+p <- Predict(f, age.dec, sex, time=3, loglog=TRUE)
 plot(p, ~ as.numeric(as.character(age.dec))|sex, ylim=c(-5,-1))
 
 
 # Fit a model assuming proportional hazards for age and
 # absence of age x sex interaction
 f <- cph(Srv ~ rcs(age,4)+strat(sex), surv=TRUE)
-survplot(f, sex=., n.risk=TRUE)
-# Add ,age=60 after sex=. to tell survplot use age=60
+survplot(f, sex, n.risk=TRUE)
+# Add ,age=60 after sex to tell survplot use age=60
 # Validate measures of model performance using the bootstrap
 # First must add data (design matrix and Srv) to fit object
 f <- update(f, x=TRUE, y=TRUE)
@@ -818,7 +818,7 @@ f
 anova(f)
 ages <- seq(20, 80, by=4)   # Evaluate at fewer points. Default is 100
                             # For exact C.L. formula n=100 -> much memory
-plot(Predict(f, age=ages, sex=., time=3, loglog=TRUE), ylim=c(-5,-1))
+plot(Predict(f, age=ages, sex, time=3, loglog=TRUE), ylim=c(-5,-1))
 
 
 # Fit a model assuming proportional hazards for age but
@@ -831,8 +831,8 @@ ages <- seq(20, 80, by=6)
 
 # Plot 3-year survival probability (log-log and untransformed)
 # vs. age and sex, obtaining accurate confidence limits
-plot(Predict(f, age=ages, sex=., time=3, loglog=TRUE), ylim=c(-5,-1))
-plot(Predict(f, age=ages, sex=., time=3))
+plot(Predict(f, age=ages, sex, time=3, loglog=TRUE), ylim=c(-5,-1))
+plot(Predict(f, age=ages, sex, time=3))
 # Having x=TRUE, y=TRUE in fit also allows computation of influence stats
 r <- resid(f, "dfbetas")
 which.influence(f)
@@ -941,7 +941,7 @@ for(w in c('survival','hazard'))
 # S-Plus 2000 using old survival package:
 #  S(t):.925 .684 SE:0.729 0.556 Hazard:0.0734 0.255
 
-plot(Predict(f, x1=., time=5))
+plot(Predict(f, x1, time=5))
 f$var
 set.seed(3)
 # robcov(f)$var when score residuals implemented
@@ -954,7 +954,7 @@ survplot(r)
 
 f <- cph(S ~ rcs(x1,3)+x2+x3, x=TRUE,y=TRUE,surv=TRUE,time.inc=5)
 f
-plot(Predict(f, x1=., time=5))
+plot(Predict(f, x1, time=5))
 robcov(f)$var
 bootcov(f, B=10)
 validate(f, B=10)

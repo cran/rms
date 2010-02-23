@@ -86,14 +86,7 @@ lwd=3, \dots)
     \code{residuals.psm}.
   }
   \item{fit}{a fit created by \code{psm}}
-  \item{data}{}
-  \item{subset}{}
-  \item{weights}{}
-  \item{dist}{}
-  \item{scale}{}
-  \item{init}{}
-  \item{na.action}{}
-  \item{control}{see \code{survreg}.}
+  \item{data,subset,weights,dist,scale,init,na.action,control}{see \code{survreg}.}
   \item{parms}{a list of fixed parameters.  For the \eqn{t}-distribution
     this is the degrees of freedom; most of the distributions have no
     parameters.}
@@ -237,7 +230,7 @@ anova(f)
 fastbw(f)  # if deletes sex while keeping age*sex ignore the result
 f <- update(f, x=TRUE,y=TRUE)       # so can validate, compute certain resids
 validate(f, dxy=TRUE, B=10)      # ordinarily use B=150 or more
-plot(Predict(f, age=., sex=.))   # needs datadist since no explicit age, hosp.
+plot(Predict(f, age, sex))   # needs datadist since no explicit age, hosp.
 survplot(f, age=c(20,60))     # needs datadist since hospital not set here
 # latex(f)
 

@@ -33,14 +33,7 @@ a fit derived by \code{ols}. The options \code{x=TRUE} and \code{y=TRUE}
 must have been specified.  See \code{validate} for a description of
 arguments \code{method} - \code{pr}.
 }
-\item{method}{}
-\item{B}{}
-\item{bw}{}
-\item{rule}{}
-\item{type}{}
-\item{sls}{}
-\item{aics}{}
-\item{pr}{see \code{\link{validate}} and \code{\link{predab.resample}}}
+\item{method,B,bw,rule,type,sls,aics,pr}{see \code{\link{validate}} and \code{\link{predab.resample}}}
 \item{u}{
 If specifed, \code{y} is also dichotomized at the cutoff \code{u} for
 the purpose of getting a bias-corrected estimate of \eqn{D_{xy}}.

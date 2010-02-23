@@ -284,7 +284,7 @@ par(mfrow=c(1,1))
 \dontrun{
 # Get data used in Hosmer et al. paper and reproduce their calculations
 v <- Cs(id, low, age, lwt, race, smoke, ptl, ht, ui, ftv, bwt)
-d <- read.table("http://www-unix.oit.umass.edu/~statdata/data/lowbwt.dat",
+d <- read.table("http://www.umass.edu/statdata/statdata/data/lowbwt.dat",
                 skip=6, col.names=v)
 d <- upData(d, race=factor(race,1:3,c('white','black','other')))
 f <- lrm(low ~ age + lwt + race + smoke, data=d, x=TRUE,y=TRUE)

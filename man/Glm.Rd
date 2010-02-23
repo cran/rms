@@ -17,20 +17,7 @@ contrasts = NULL, \dots)
 \method{print}{Glm}(x, digits=4, \dots)
 }
 \arguments{
-  \item{formula}{}
-  \item{family}{}
-  \item{data}{}
-  \item{weights}{}
-  \item{subset}{}
-  \item{na.action}{}
-  \item{start}{}
-  \item{offset}{}
-  \item{control}{}
-  \item{model}{}
-  \item{method}{}
-  \item{x}{}
-  \item{y}{}
-  \item{contrasts}{see \code{\link{glm}}; for \code{print}, \code{x} is
+  \item{formula,family,data,weights,subset,na.action,start,offset,control,model,method,x,y,contrasts}{see \code{\link{glm}}; for \code{print}, \code{x} is
 	the result of \code{Glm}}
   \item{\dots}{ignored for \code{print}}
   \item{digits}{number of significant digits to print}

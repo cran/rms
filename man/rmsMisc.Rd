@@ -27,6 +27,7 @@
 \alias{Newlevels}
 \alias{Newlabels.rms}
 \alias{Newlevels.rms}
+\alias{rmsArgs}
 \alias{rmsFit}
 \alias{print.rms}
 \alias{residuals.rms}
@@ -96,6 +97,10 @@ that \code{anova.rms} will be called by \code{anova()}, etc.  So that the
 original fit's \code{residuals} and \code{print} methods, if they exist, will be
 called, there are functions \code{print.rms} and \code{residuals.rms} to
 dispatch them.
+
+\code{rmsArgs} handles \dots arguments to functions such as
+\code{Predict}, \code{summary.rms}, \code{nomogram} so that variables to
+vary may be specified without values (after an equals sign).
 }
 \usage{
 \method{vcov}{cph}(object, regcoef.only=TRUE, \dots)

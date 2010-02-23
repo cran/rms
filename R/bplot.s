@@ -1,41 +1,55 @@
 bplot <-
-  function(x, xlab, ylab, zlab,
-           adj.subtitle=TRUE, cex.adj, 
-           perim,  method=c("image","persp","contour"),
-           zlim=range(yhat, na.rm=TRUE), nlevels=10, ...)
+  function(x, formula, lfun=levelplot, xlab, ylab, zlab,
+           adj.subtitle=TRUE, cex.adj=.75, cex.lab=1,
+           perim, showperim=FALSE,
+           zlim=range(yhat, na.rm=TRUE),
+           scales=list(arrows=FALSE), ylabrot, zlabrot=90, ...)
 {
-  method  <- match.arg(method)
-  fit     <- x
+  require(lattice)
+  lfunname <- deparse(substitute(lfun))
+  if(missing(ylabrot))
+    ylabrot <- switch(lfunname, wireframe=-40, contourplot=90, levelplot=90, 0)
   info    <- attr(x, 'info')
   varying <- info$varying
-  if(length(varying) != 2) stop('two variables should be varying')
-  nx      <- varying[1]
-  ny      <- varying[2]
-  
+  if(length(varying) < 2) stop('should vary at least two variables')
+  if(missing(formula))
+    {
+      nx      <- varying[1]
+      ny      <- varying[2]
+      formula <- paste('yhat ~', nx, '*', ny)
+      if(length(varying) > 2)
+        formula <- paste(formula, '|', paste(varying[-(1:2)], collapse='*'))
+      formula <- as.formula(formula)
+    }
+  else
+    {
+      ter <- attributes(terms(formula))
+      vars <- ter$term.labels
+      nx <- vars[1]
+      ny <- vars[2]
+      if(!ter$response)
+        formula <- as.formula(paste('yhat', format(formula)))
+    }
+
+  data    <- x
   yhat    <- x$yhat
   y       <- x[[ny]]
   x       <- x[[nx]]
-  xu      <- sort(unique(x))
-  yu      <- sort(unique(y))
 
   at      <- info$Design
   label   <- at$label
   units   <- at$units
-  npersp  <- method != 'persp'
 
   if(missing(xlab))
-    xlab  <- labelPlotmath(label[nx], units[nx], plotmath=npersp)
+    xlab  <- list(label=labelPlotmath(label[nx], units[nx]), cex=cex.lab)
   if(missing(ylab))
-    ylab  <- labelPlotmath(label[ny], units[ny], plotmath=npersp)
+    ylab  <- list(label=labelPlotmath(label[ny], units[ny]), rot=ylabrot,
+                  cex=cex.lab)
   if(missing(zlab))
-    zlab  <- if(npersp) info$ylabPlotmath else info$ylab
+    zlab  <- list(label=info$ylabPlotmath, rot=zlabrot, cex=cex.lab)
   
   adjust  <- info$adjust
-  if(!adj.subtitle) adjust <- NULL
   
-  cex <- par('cex')
-  if(missing(cex.adj)) cex.adj <- .75*cex
-
   if(!missing(perim))
     {
       Ylo <- approx(perim[,1], perim[,2], x, ties=mean)$y
@@ -44,115 +58,35 @@ bplot <-
       Yhi[is.na(Yhi)] <- -1e30
       yhat[y < Ylo] <- NA
       yhat[y > Yhi] <- NA
+      data$yhat     <- yhat
     }
-      
-  zmat <- matrix(pmin(zlim[2], pmax(zlim[1], yhat)),
-                 nrow=length(xu),
-                 ncol=length(yu), byrow=TRUE)
-
-  switch(method,
-         contour = contour(xu, yu, zmat,
-           xlab=xlab, ylab=ylab, nlevels=nlevels, ...),
-         persp   = persp(xu, yu, zmat, zlim=zlim, xlab=xlab, ylab=ylab,
-           zlab=zlab, box=TRUE, ...),
-         image   = image(xu, yu, zmat, xlab=xlab, ylab=ylab, ...))
-
-  if(length(adjust)) title(sub=paste('Adjusted to:', adjust),
-                           cex.sub=cex.adj, adj=0)
-}
-
-iLegend <- function(object, x, y, size = c(1, 1), 
-                    horizontal = TRUE, nint = 50, fun.=NULL, at=NULL, 
-                    zlab, zlim, par.=NULL, ...)
-{
-  ## Note: fun. is used instead of fun because subplot has arg fun
-  if(missing(x)) 
-    if(missing(size))
-      {
-        cat("Using function \"locator(2)\" to place opposite corners of legend\n")
-        x   <- locator(2)
-        x$x <- sort(x$x)
-        x$y <- sort(x$y)
-      }
-    else
-      {
-        cat("Using function \"locator(1)\" to place upper left corner of legend\n")
-        x <- locator(1)
-      }
-
-  if(missing(zlab)) zlab <- attr(object, 'info')$ylabPlotmath
-    
-  if(!missing(y)) x <- list(x=x,y=y)
-  z <- object$yhat
-
-  if(missing(zlim)) zlim <- range(z, na.rm=TRUE)
+  else if(showperim) stop('cannot request showperim without specifying perim')
   
-  irgz  <- seq(zlim[1], zlim[2], length = nint)
-  lirgz <- length(irgz)
+  sub <- if(adj.subtitle && length(info$adjust))
+    list(label=paste('Adjusted to:', info$adjust), cex=cex.adj) else NULL
 
-  dotlist <- list(...)
-  
-  if(horizontal)
+  pan <- function(...)
     {
-      f <- function()
+      do.call(paste('panel', lfunname, sep='.'), list(...))
+      if(showperim)
         {
-          if(length(par.))
-            {
-              opar <- do.call('par', par.)
-              on.exit(par(opar))
-            }
-          ##axis() does not respect mgp
-
-          image(x=irgz, y=1:lirgz, z=matrix(irgz, lirgz, lirgz),
-                xlab=zlab, ylab='',
-                yaxt="n", xaxt=if(!length(fun.))"s" else "n", ...)
-        
-          if(length(fun.))
-            mgp.axis(1,
-                     if(!length(at)) pretty(irgz)
-                     else at,
-                     labels=format(fun.(if(!length(at)) pretty(irgz)
-                     else at)))
-          
-          title(xlab=zlab)
+          llines(perim[,'x'], perim[,'ymin'], col=gray(.85))
+          llines(perim[,'x'], perim[,'ymax'], col=gray(.85))
         }
-      subplot(x = x$x, y = x$y, size = size, fun = f, hadj=0, vadj=1)
     }
-  else
-    {
-      f <- function()
-        {
-          if(length(par.))
-            {
-              opar <- do.call('par', par.)
-              on.exit(par(opar))
-            }
-          image(x = 1:lirgz, y = irgz,
-                z = matrix(irgz, lirgz, lirgz,byrow=TRUE),
-                xlab='', ylab=zlab,
-                xaxt = "n", yaxt=if(!length(fun.))"s" else "n", ...)
-          
-          if(length(fun.))
-            mgp.axis(2, if(!length(at)) pretty(irgz) else at,
-                     labels=format(fun.(if(!length(at)) pretty(irgz) else at)))
-          
-          title(ylab=zlab)
-        }
-  subplot(x = x$x, y = x$y, size = size, fun = f, hadj=0, vadj=1)
-}
-  
-invisible(x)
+  lfun(formula, panel=pan, scales=scales, ..., data=data,
+       xlab=xlab, ylab=ylab, zlab=zlab, sub=sub)
 }
 
 perimeter <- function(x, y, xinc=diff(range(x))/10, n=10,
                       lowess.=TRUE)
 {
 
-  s <- !is.na(x+y)
+  s <- !is.na(x + y)
   x <- x[s]
   y <- y[s]
   m <- length(x)
-  if(m<n)
+  if(m < n)
     stop("number of non-NA x must be >= n")
 
   i <- order(x)
@@ -193,11 +127,3 @@ perimeter <- function(x, y, xinc=diff(range(x))/10, n=10,
             dimnames=list(NULL,
               c("x","ymin","ymax")), class='perimeter')
 }
-
-lines.perimeter <- function(x, ...)
-{
-  lines(x[,'x'], x[,'ymin'],...)
-  lines(x[,'x'], x[,'ymax'],...)
-  invisible()
-}
-

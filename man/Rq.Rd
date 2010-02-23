@@ -33,15 +33,8 @@ RqFit(fit, wallow=TRUE, passdots=FALSE)
 	the single quantile to estimate.  Unlike \code{rq} you cannot estimate
 	more than one quantile at one model fitting.
   }
-  \item{data}{}
-  \item{subset}{}
-  \item{weights}{}
-  \item{na.action}{}
-  \item{method}{}
-  \item{model}{}
-  \item{contrasts}{}
-  \item{se}{}
-  \item{hs}{see \code{\link[quantreg]{rq}}}
+  \item{data,subset,weights,na.action,method,model,contrasts,se,hs}{see
+	\code{\link[quantreg]{rq}}}
   \item{x}{set to \code{TRUE} to store the design matrix with the fit.
 	For \code{print} is an \code{Rq} object.}
   \item{y}{set to \code{TRUE} to store the response vector with the fit}
@@ -55,13 +48,8 @@ RqFit(fit, wallow=TRUE, passdots=FALSE)
 	\code{print.Rq}.
   }
   \item{object}{an object created by \code{Rq}}
-  \item{file}{}
-  \item{append}{}
-  \item{which}{}
-  \item{varnames}{}
-  \item{columns}{}
-  \item{inline}{}
-  \item{caption}{see \code{\link{latexrms}}}
+  \item{file,append,which,varnames,columns,inline,caption}{see
+	\code{\link{latexrms}}}
   \item{fit}{an object created by \code{Rq}}
   \item{wallow}{
 	set to \code{TRUE} if \code{weights} are allowed in the
@@ -96,8 +84,8 @@ fq2 <- Rq(y ~ pol(x1,2))
 anova(fq2)
 fq3 <- Rq(y ~ pol(x1,2), tau=.75)
 anova(fq3)
-pq2 <- Predict(fq2, x1=.)
-pq3 <- Predict(fq3, x1=.)
+pq2 <- Predict(fq2, x1)
+pq3 <- Predict(fq3, x1)
 p <- rbind(Median=pq2, Q3=pq3)
 plot(p, ~ x1 | .set.)
 # For superpositioning, with true curves superimposed

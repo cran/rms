@@ -3,7 +3,7 @@ calibrate.default <- function(fit, predy,
 			      B=40, bw=FALSE, rule=c("aic","p"),
 			      type=c("residual","individual"),
 			      sls=.05, pr=FALSE, kint,
-			      smoother="lowess", ...)
+			      smoother="lowess", digits=NULL, ...)
 {
   call   <- match.call()
   method <- match.arg(method)
@@ -44,14 +44,17 @@ calibrate.default <- function(fit, predy,
 
   penalty.matrix <- fit$penalty.matrix
 
-  cal.error <- function(x, y, iter, smoother, predy, kint, model, ...)
+  cal.error <- function(x, y, iter, smoother, predy, kint, model,
+                        digits=NULL, ...)
     {
       if(model=="lr")
         {
-          x <- 1/(1+exp(-x))
+          x <- plogis(x)
           y <- y >= kint
         }
-      smo <- if(is.function(smoother)) smoother(x,y) else lowess(x,y,iter=0)
+      if(length(digits)) x <- round(x, digits)
+      smo <- if(is.function(smoother)) smoother(x, y) else
+       lowess(x, y, iter=0)
       cal <- approx(smo, xout=predy, ties=function(x)x[1])$y
       if(iter==0) storeTemp(cal,".orig.cal")
       cal-predy

@@ -325,8 +325,8 @@ Srv <- Surv(dt,e)
 f <- cph(Srv ~ rcs(age,4) + sex, x=TRUE, y=TRUE)
 cox.zph(f, "rank")             # tests of PH
 anova(f)
-plot(Predict(f, age=., sex=.)) # plot age effect, 2 curves for 2 sexes
-survplot(f, sex=.)             # time on x-axis, curves for x2
+plot(Predict(f, age, sex)) # plot age effect, 2 curves for 2 sexes
+survplot(f, sex)             # time on x-axis, curves for x2
 res <- resid(f, "scaledsch")
 time <- as.numeric(dimnames(res)[[1]])
 z <- loess(res[,4] ~ time, span=0.50)   # residuals for sex
@@ -340,7 +340,7 @@ f <- cph(Srv ~ age + strat(sex), surv=TRUE)
 g <- Survival(f)   # g is a function
 g(seq(.1,1,by=.1), stratum="sex=Male", type="poly") #could use stratum=2
 med <- Quantile(f)
-plot(Predict(f, age=., fun=function(x) med(lp=x)))  #plot median survival
+plot(Predict(f, age, fun=function(x) med(lp=x)))  #plot median survival
 
 # Fit a model that is quadratic in age, interacting with sex as strata
 # Compare standard errors of linear predictor values with those from

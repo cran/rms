@@ -35,7 +35,8 @@ survplot(fit, \dots)
          conf.type=c("log","log-log","plain","none"),
          conf.int=FALSE, conf=c("bands","bars"),
          add=FALSE, label.curves=TRUE,
-         abbrev.label=FALSE, lty, lwd=par("lwd"),
+         abbrev.label=FALSE, levels.only=FALSE,
+         lty, lwd=par("lwd"),
          col=1, col.fill=gray(seq(.95, .75, length=5)),
          adj.subtitle=TRUE, loglog=FALSE, fun,
          n.risk=FALSE, logt=FALSE, dots=FALSE, dotsize=.003,
@@ -45,7 +46,7 @@ survplot(fit, \dots)
          ylim, xlab, ylab, time.inc,
          conf=c("bands","bars","none"), add=FALSE, 
          label.curves=TRUE, abbrev.label=FALSE,
-         lty,lwd=par('lwd'),
+         levels.only=FALSE, lty,lwd=par('lwd'),
          col=1, col.fill=gray(seq(.95, .75, length=5)),
          loglog=FALSE,fun,n.risk=FALSE,logt=FALSE,
          dots=FALSE,dotsize=.003,
@@ -68,26 +69,26 @@ result of fit (\code{cph}, \code{psm}, \code{survfit},
 result of \code{survfit}.
 }
 \item{\dots}{
-list of factors with names used in model. For fits from \code{survfit}, these
-arguments do not appear - all strata are plotted. Otherwise the first factor 
-listed is
-the factor used to determine different survival curves.  Any other factors
-are used to specify single constants to be adjusted to, when defaults given
-to fitting routine (through \code{limits}) are not used.  
-The value given to factors is the original
+list of factors with names used in model. For fits from \code{survfit},
+these arguments do not appear - all strata are plotted. Otherwise the
+first factor listed is the factor used to determine different survival
+curves.  Any other factors are used to specify single constants to be
+adjusted to, when defaults given to fitting routine (through
+\code{limits}) are not used.  The value given to factors is the original
 coding of data given to fit, except that for categorical or strata
-factors the text string levels may be specified.  The form
-of values given to the first factor are \code{.} or \code{NA} (use default range or list of
-all values if variable is discrete), \code{"text"} if factor is categorical,
-\code{c(value1, value2, \dots)}, or a function which returns a vector, such as 
-\code{seq(low,high,by=increment)}.  \code{.} may be specified only for the first factor.
-In this case the \code{Low effect}, \code{Adjust to}, and \code{High effect} values will
-be used from \code{datadist} if the variable is continuous.
-For variables not defined to \code{datadist}, you must specify non-missing
-constant settings (or a vector of settings for the one displayed variable).
-Note that since \code{survfit} objects do not use the variable list in \code{\dots},
-you can specify any extra arguments to \code{labcurve} by adding them at the
-end of the list of arguments.
+factors the text string levels may be specified.  The form of values
+given to the first factor none (omit the equal sign to use default range
+or list of all values if variable is discrete), \code{"text"} if factor
+is categorical, \code{c(value1, value2, \dots)}, or a function which
+returns a vector, such as \code{seq(low,high,by=increment)}.  Only the
+first factor may have the values omitted.  In this case the \code{Low
+effect}, \code{Adjust to}, and \code{High effect} values will be used
+from \code{datadist} if the variable is continuous.  For variables not
+defined to \code{datadist}, you must specify non-missing constant
+settings (or a vector of settings for the one displayed variable).  Note
+that since \code{survfit} objects do not use the variable list in
+\code{\dots}, you can specify any extra arguments to \code{labcurve} by
+adding them at the end of the list of arguments.
 }
 \item{xlim}{
 a vector of two numbers specifiying the x-axis range for follow-up time.
@@ -175,6 +176,9 @@ either on the curves or in the legend.
 \item{abbrev.label}{
 set to \code{TRUE} to \code{abbreviate()} curve labels that are plotted
 }
+\item{levels.only}{
+  set to \code{TRUE} to remove \code{variablename=} from the start of
+  curve labels.}
 \item{lty}{
 vector of line types to use for different factor levels.  Default is
 \code{c(1,3,4,5,6,7,\dots)}.
@@ -328,17 +332,17 @@ survplot(g, age=75, conf.int=.95, add=TRUE, col='red', conf='bars')
 
 f <- cph(S ~ pol(age,2)*strat(sex), x=TRUE, y=TRUE)
 #or f <- psm(S ~ pol(age,2)*sex)
-Predict(f, sex=., age=c(30,50,70))
-survplot(f, sex=., n.risk=TRUE)           #Adjust age to median
-survplot(f, sex=., logt=TRUE, loglog=TRUE)   #Check for Weibull-ness (linearity)
+Predict(f, sex, age=c(30,50,70))
+survplot(f, sex, n.risk=TRUE, levels.only=TRUE)   #Adjust age to median
+survplot(f, sex, logt=TRUE, loglog=TRUE)   #Check for Weibull-ness (linearity)
 survplot(f, sex=c("male","female"), age=50)
                                         #Would have worked without datadist
                                         #or with an incomplete datadist
-survplot(f, sex=., label.curves=list(keys=c(2,0), point.inc=2))
+survplot(f, sex, label.curves=list(keys=c(2,0), point.inc=2))
                                         #Identify curves with symbols
 
 
-survplot(f, sex=., label.curves=list(keys=c('m','f')))
+survplot(f, sex, label.curves=list(keys=c('m','f')))
                                         #Identify curves with single letters
 
 

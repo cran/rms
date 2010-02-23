@@ -9,7 +9,8 @@ survplot.rms <-
            type=c("tsiatis","kaplan-meier"),
            conf.type=c("log","log-log","plain","none"),
            conf.int=FALSE, conf=c("bands","bars"),
-           add=FALSE, label.curves=TRUE, abbrev.label=FALSE,
+           add=FALSE, label.curves=TRUE,
+           abbrev.label=FALSE, levels.only=FALSE,
            lty, lwd=par('lwd'),
            col=1, col.fill=gray(seq(.95, .75, length=5)),
            adj.subtitle=TRUE, loglog=FALSE, fun, n.risk=FALSE, logt=FALSE,
@@ -19,30 +20,8 @@ survplot.rms <-
 {
 
   what <- match.arg(what)
-
   polyg <- ordGridFun(grid=FALSE)$polygon
-  ## Overide problematic version in Hmisc until 3.8 comes out
-  makeSteps <- function(x, y)
-    {
-      if (is.na(x[1] + y[1]))
-        {
-          x <- x[-1]
-          y <- y[-1]
-        }
-      n <- length(x)
-      if (n > 2)
-        {
-          xrep <- rep(x, c(1, rep(2, n - 1)))
-          yrep <- rep(y, c(rep(2, n - 1), 1))
-          list(x = xrep, y = yrep)
-        }
-      else if (n == 1)
-        list(x = x, y = y)
-      else list(x = x[c(1, 2, 2)], y = y[c(1, 1, 2)])
-    }
-
   ylim <- ylim  ## before R changes missing(fun)
-  
   type <- match.arg(type)
   conf.type <- match.arg(conf.type)
   conf <- match.arg(conf)
@@ -135,7 +114,8 @@ survplot.rms <-
     }
   zcrit <- qnorm((1+conf.int)/2)
 
-  xadj <- Predict(fit, ..., type='model.frame', np=5)
+  xadj <- Predict(fit, type='model.frame', np=5,
+                  factors=rmsArgs(substitute(list(...))))
   info <- attr(xadj, 'info')
   varying <- info$varying
   if(length(varying) > 1)
@@ -150,7 +130,11 @@ survplot.rms <-
   if(n.risk & !add)
     {
       mar <- par()$mar
-      if(mar[4] < 4){mar[4] <- mar[4]+2; par(mar=mar)}
+      if(mar[4] < 4)
+        {
+          mar[4] <- mar[4] + 2
+          par(mar=mar)
+        }
     }
 
   ## One curve for each value of y, excl style used for C.L.
@@ -161,6 +145,7 @@ survplot.rms <-
   lwd <- rep(lwd, length=nc)
   
   i <- 0
+  if(levels.only) y <- gsub('.*=', '', y)
   abbrevy <- if(abbrev.label) abbreviate(y) else y
   abbrevy <- if(is.factor(abbrevy)) as.character(abbrevy) else format(abbrevy)
   
@@ -183,8 +168,8 @@ survplot.rms <-
       if(!is.na(stratum))
         {
           ##can be NA if illegal strata combinations requested
-          if(is.factor(ay)) cl <- as.character(ay)
-          else cl <- format(ay)
+          cl <- if(is.factor(ay)) as.character(ay)
+          else format(ay)
           curve.labels <- c(curve.labels, abbrevy[i])
           if(i==1 & !add)
             {				
@@ -264,8 +249,6 @@ survplot.rms <-
                   polyg(x = c(tim,    rev(tim)),
                         y = c(blower, rev(bupper)),
                         col =  col.fill[i], type=ltype)
-                  ## lines(tim, blower, type=ltype, lty=2, col=col[i], lwd=1)
-                  ## lines(tim, bupper, type=ltype, lty=2, col=col[i], lwd=1)
                 }
               else
                 {
@@ -320,14 +303,16 @@ survplot.rms <-
                     stop("you must use surv=T or y=T in fit to use n.risk=T")
                   tt <- as.numeric(dimnames(surv.sum)[[1]])
                   l <- (tt >= xlim[1]) & (tt <= xlim[2])
-                  tt <- tt[l]; nrisk <- surv.sum[l,stratum,2]
+                  tt <- tt[l]
+                  nrisk <- surv.sum[l,stratum,2]
                 }
               tt[1] <- xlim[1]  #was xd*.015, .030, .035
               yd <- ylim[2] - ylim[1]
               if(missing(y.n.risk)) y.n.risk <- ylim[1]
               yy <- y.n.risk + yd*(nc-i)*sep.n.risk #was .029, .038, .049
 
-              nri <- nrisk; nri[tt > xlim[2]] <- NA
+              nri <- nrisk
+              nri[tt > xlim[2]] <- NA
               text(tt[1], yy, nri[1], cex=cex.n.risk,
                    adj=adj.n.risk, srt=srt.n.risk)
               text(tt[-1], yy, nri[-1], cex=cex.n.risk, adj=1)

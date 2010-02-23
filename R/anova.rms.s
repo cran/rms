@@ -465,7 +465,7 @@ latex.anova.rms <-
                                  1,5),sep=""), 
            psmall=TRUE,
            dec.chisq=2, dec.F=2, dec.ss=NA,
-           dec.ms=NA, dec.P=4, ...)
+           dec.ms=NA, dec.P=4, table.env=TRUE, ...)
 {
   rowl <- latexTranslate(dimnames(object)[[1]])
 
@@ -507,8 +507,9 @@ latex.anova.rms <-
   head <- paste(if(any(sn=='F'))"Analysis of Variance"
   else "Wald Statistics", "for {\\tt", resp, "}")
 
-  latex(dstats, cdec=dig, title=title, caption=head, rowlabel="",
-        col.just=rep('r',length(sn)), ...)
+  latex(dstats, cdec=dig, title=title,
+        caption = if(table.env) head else NULL,
+        rowlabel="", col.just=rep('r',length(sn)), table.env=table.env, ...)
 }
 
 plot.anova.rms <-
