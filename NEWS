@@ -11,3 +11,18 @@ Changes in version 2.1-0 (2009-09-30)
    * Fixed calibrate confidence limits from groupkm
    * Added smooth calibration curve using hare (polspline package) for calibrate.cph and calibrate.psm
    * Added display of predicted risks for cph and psm models even for the stratified KM method (old default)
+
+Changes in version 2.2-0 (2010-02-23)
+   * Added levels.only option to survplot.* to remove variablename= from curve labels
+   * Added digits argument to calibrate.default
+   * Added new ref in val.prob help page
+   * Corrected location of dataset in residuals.lrm help page (thanks frederic.holzwarth@bgc-jena.mpg.de)
+   * Fixed latex.rms to latex-escape percent signs inside value labels
+   * Added scat1d.opts to plot.Predict
+   * Changed method of specifying variables to vary by not requiring an equals sign and a dot after the variable name, for Predict, summary, nomogram, gendata, survplot.rms
+   * Added factors argument to Predict to handle the above for survplot
+   * Made gendata a non-generic function, changed the order of its arguments, removed editor options, relying on R de function always
+   * Thanks to Kevin Thorpe <kevin.thorpe@utoronto.ca> to make latex.summary.rms and latex.anova.rms respect the table.env argument
+   * Fixed bug in calibrate.default related to digits argument
+   * Re-wrote bplot to use lattice graphics (e.g., levelplot contourplot wireframe), allowing for multiple panels for 3-d plots
+   * Changed all Rd files to use {arg1,arg2,...} instead of having empty {}

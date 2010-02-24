@@ -3,11 +3,19 @@ plot.Predict <-
            xlim, ylim, xlab, ylab,
            data=NULL, col.fill=gray(seq(.95, .75, length=5)),
            adj.subtitle, cex.adj, perim=NULL,
-           digits=4, nlevels=3, nlines=FALSE, addpanel, ...)
+           digits=4, nlevels=3, nlines=FALSE, addpanel,
+           scat1d.opts=list(frac=0.025, lwd=0.3), ...)
 {
   require(lattice)
   predpres <- length(x$.predictor.)
   if(missing(addpanel)) addpanel <- function(...) {}
+
+  doscat1d <- function(x, y, col)
+    {
+      so <- scat1d.opts
+      if(!length(so$col)) so$col <- col
+      do.call('scat1d', c(list(x=x, y=y), so, grid=TRUE))
+    }
 
   info   <- attr(x, 'info')
   at     <- info$Design
@@ -100,8 +108,8 @@ plot.Predict <-
               if(length(data) && length(xd <- data[[names(levs)[pn]]]))
                 {
                   xd <- xd[!is.na(xd)]
-                  scat1d(xd, y=approx(x, y, xout=xd, rule=2, ties=mean)$y,
-                         col=col[1], frac=0.025, lwd=.3, grid=TRUE)
+                  doscat1d(xd, approx(x, y, xout=xd, rule=2, ties=mean)$y,
+                         col=col[1])
                 }
             }
           else
@@ -250,15 +258,15 @@ plot.Predict <-
                   yg <- y[z]
                   x1 <- xd[gd==w]
                   x1 <- x1[!is.na(x1)]
-                  scat1d(x1, y=approx(xg, yg, xout=x1, rule=2, ties=mean)$y,
-                         col=col[j], frac=.025, lwd=.3, grid=TRUE)
+                  doscat1d(x1, approx(xg, yg, xout=x1, rule=2, ties=mean)$y,
+                           col=col[j])
                 }
             }
           else if(length(xd <- data[[xvar]]))
             {
               xd <- xd[!is.na(xd)]
-              scat1d(xd, y=approx(x, y, xout=xd, rule=2, ties=mean)$y,
-                     col=col[1], frac=.025, lwd=.3, grid=TRUE)
+              doscat1d(xd, approx(x, y, xout=xd, rule=2, ties=mean)$y,
+                       col=col[1])
             }
           addpanel(x, y, groups=NULL, subscripts=subscripts, ...)
         }

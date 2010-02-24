@@ -128,7 +128,7 @@ f$var      # bootstrap variances
 f$varBeta  # original variances
 summary(f)
 anova(f)
-plot(Predict(f, tim=., trt=.))
+plot(Predict(f, tim, trt))
 # v <- Variogram(f, form=~tim|id, data=d)
 options(datadist=NULL)
 }

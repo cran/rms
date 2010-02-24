@@ -44,7 +44,7 @@ calibrate(fit, \dots)
   method=c("boot","crossvalidation",".632","randomization"),
   B=40, bw=FALSE, rule=c("aic","p"),
   type=c("residual","individual"),
-  sls=.05, pr=FALSE, kint, smoother="lowess", \dots)
+  sls=.05, pr=FALSE, kint, smoother="lowess", digits=NULL, \dots)
 \method{calibrate}{cph}(fit, cmethod=c('hare', 'KM'),
   method="boot", u, m=150, pred, cuts, B=40, 
   bw=FALSE, rule="aic", type="residual", sls=0.05, aics=0, 
@@ -71,13 +71,7 @@ calibrate(fit, \dots)
 a fit from \code{ols}, \code{lrm}, \code{cph} or \code{psm}
 }
 \item{x}{an object created by \code{calibrate}}
-\item{method}{}
-\item{B}{}
-\item{bw}{}
-\item{rule}{}
-\item{type}{}
-\item{sls}{}
-\item{aics}{see \code{\link{validate}}}
+\item{method,B,bw,rule,type,sls,aics}{see \code{\link{validate}}}
 \item{cmethod}{method for validating survival predictions using
   right-censored data.  The default is \code{cmethod='hare'} to use the
   \code{hare} function in the \code{polspline} package.  Specify
@@ -138,6 +132,11 @@ a function in two variables which produces \eqn{x}- and
 \eqn{y}-coordinates by smoothing the input \code{y}.  The default is to
 use \code{lowess(x, y, iter=0)}. 
 }
+\item{digits}{If specified, predicted values are rounded to
+  \code{digits} digits before passing to the smoother.  Occasionally,
+  large predicted values on the logit scale will lead to predicted
+  probabilities very near 1 that should be treated as 1, and the
+  \code{round} function will fix that.  Applies to \code{calibrate.default}.}
 \item{\dots}{
 other arguments to pass to \code{predab.resample}, such as \code{group},
 \code{cluster}, and \code{subset}.
@@ -151,8 +150,8 @@ other models
 defaults to "Fraction Surviving x-units" or to a suitable label for
 other models
 }
-\item{xlim}{}
-\item{ylim}{2-vectors specifying x- and y-axis limits, if not using defaults}
+\item{xlim,ylim}{2-vectors specifying x- and y-axis limits, if not using
+  defaults} 
 \item{subtitles}{
 set to \code{FALSE} to suppress subtitles in plot describing method and for \code{lrm}
 and \code{ols} the mean absolute error and original sample size

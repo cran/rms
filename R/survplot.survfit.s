@@ -2,7 +2,8 @@ survplot.survfit <-
   function(fit, xlim, 
            ylim, xlab, ylab, time.inc,
            conf=c("bands","bars","none"), add=FALSE, 
-           label.curves=TRUE, abbrev.label=FALSE,
+           label.curves=TRUE,
+           abbrev.label=FALSE, levels.only=FALSE,
            lty,lwd=par('lwd'),
            col=1, col.fill=gray(seq(.95, .75, length=5)),
            loglog=FALSE,fun,n.risk=FALSE,logt=FALSE,
@@ -70,13 +71,18 @@ survplot.survfit <-
     }
   else if(missing(ylim)) ylim <- c(0,1)
 
-  if(grid) {dots <- FALSE; if(is.logical(grid)) grid <- .05}
+  if(grid)
+    {
+      dots <- FALSE
+      if(is.logical(grid)) grid <- .05
+    }
   if(logt|trans) { dots <- FALSE; grid <- FALSE }
 
   slev <- names(fit$strata)
+  if(levels.only) slev <- gsub('.*=', '', slev)
   sleva <- if(abbrev.label) abbreviate(slev) else slev
   ns <- length(slev)
-  slevp <- ns>0
+  slevp <- ns > 0
 
   labelc <- is.list(label.curves) || label.curves
   if(!slevp) labelc <- FALSE
@@ -84,8 +90,8 @@ survplot.survfit <-
   ns <- max(ns,1)
 
   y <- 1:ns
-  if(ns==1) stemp <- rep(1, length(fit$time))
-  else stemp <- rep(1:ns, fit$strata)
+  stemp <- if(ns==1) rep(1, length(fit$time))
+  else rep(1:ns, fit$strata)
 
   if(n.risk | (conf.int>0 & conf=="bars"))
     {
@@ -157,72 +163,66 @@ survplot.survfit <-
         }
       ##don't let step function go beyond x-axis -
       ##this cuts it off but allows step to proceed axis end
-      if(max(tim)>xlim[2])
+      if(max(tim) > xlim[2])
         {
-          srvl <- srv[tim<=xlim[2]+1e-6]
+          srvl <- srv[tim <= xlim[2] + 1e-6]
           ## s.last <- min(srv[tim<=xlim[2]+1e-6]) #not work w/fun
           s.last <- srvl[length(srvl)]
-          k <- tim<xlim[2]
-          tim <- c(tim[k], xlim[2]); srv <- c(srv[k], s.last)
+          k <- tim < xlim[2]
+          tim <- c(tim[k], xlim[2])
+          srv <- c(srv[k], s.last)
           if(conf.int > 0 && conf=="bands")
             {
               low.last <- blower[time <= xlim[2] + 1e-6]
               low.last <- low.last[length(low.last)]
               up.last  <- bupper[time <= xlim[2] + 1e-6]
               up.last  <- up.last[length(up.last)]
-              blower <- c(blower[k],low.last)
-              bupper <- c(bupper[k],up.last)
+              blower   <- c(blower[k],low.last)
+              bupper   <- c(bupper[k],up.last)
             }
         }
       if(logt)
         {
           if(conf != 'bands')
-            lines(tim,srv,type="s",lty=lty[i],col=col[i],lwd=lwd[i])
+            lines(tim, srv, type="s", lty=lty[i], col=col[i], lwd=lwd[i])
           if(labelc || conf=='bands') curves[[i]] <- list(tim,srv)
         }
 	  else
         {
-          xxx <- c(mintime,tim);  yyy <- c(fun(1),srv)
+          xxx <- c(mintime,tim)
+          yyy <- c(fun(1),srv)
           if(conf != 'bands')
-            lines(xxx,yyy,type="s",lty=lty[i],col=col[i],lwd=lwd[i])
-          if(labelc || conf=='bands') curves[[i]] <- list(xxx,yyy)
+            lines(xxx, yyy, type="s", lty=lty[i], col=col[i], lwd=lwd[i])
+          if(labelc || conf=='bands') curves[[i]] <- list(xxx, yyy)
         }
-      if(pr){zest <- rbind(time[s],surv[s])
-             dimnames(zest) <- list(c("Time","Survival"),
-                                    rep("",sum(s)))
-             if(slevp)cat("\nEstimates for ", slev[i],"\n\n")
-             print(zest, digits=3)
-           }
+      if(pr){
+        zest <- rbind(time[s],surv[s])
+        dimnames(zest) <- list(c("Time","Survival"),
+                               rep("",sum(s)))
+        if(slevp)cat("\nEstimates for ", slev[i],"\n\n")
+        print(zest, digits=3)
+      }
       if(conf.int>0)
         {
           if(conf=="bands")
             {
               if(logt)
-                {
-                  polyg(x = c(tim,    rev(tim)),
-                        y = c(blower, rev(bupper)),
-                        col =  col.fill[i], type='s')
-                  ## lines(tim,blower,type="s",lty=2,col=col[i],lwd=1)
-                  ## lines(tim,bupper,type="s",lty=2,col=col[i],lwd=1)
-                }
+                polyg(x = c(tim,    rev(tim)),
+                      y = c(blower, rev(bupper)),
+                      col =  col.fill[i], type='s')
               else
-                {
-                  polyg(x = c(mintime, tim,   rev(c(mintime,tim))),
-                        y = c(fun(1), blower, rev(c(fun(1), bupper))),
-                        col =  col.fill[i], type='s')
-                  ## lines(c(mintime,tim),c(fun(1),blower),
-                  ##       type="s",lty=2,col=col[i],lwd=1)
-                  ## lines(c(0,tim),c(fun(1),bupper),
-                  ##       type="s",lty=2,col=col[i],lwd=1)
-                }
+                polyg(x = c(mintime, tim,   rev(c(mintime,tim))),
+                      y = c(fun(1), blower, rev(c(fun(1), bupper))),
+                      col =  col.fill[i], type='s')
             }
           else
             {
               j <- vs==i
               tt <- v$time[j]  #may not get predictions at all t
-              ss <- v$surv[j]; lower <- v$lower[j]; 
+              ss <- v$surv[j]
+              lower <- v$lower[j]
               upper <- v$upper[j]
-              if(logt) tt <- logb(ifelse(tt==0,NA,tt))
+              if(logt) tt <- logb(ifelse(tt==0, NA, tt))
               tt <- tt + xd*(i-1)*.01
               errbar(tt, ss, upper, lower, add=TRUE, lty=lty[i],
                      col=col[i])
@@ -231,27 +231,30 @@ survplot.survfit <-
       
           if(n.risk)
             {
-              j <- vs==i; tt <- v$time[j]; nrisk <- v$n.risk[j]
+              j <- vs==i
+              tt <- v$time[j]
+              nrisk <- v$n.risk[j]
               tt[1] <- xlim[1]  #was xd*.015, .030, .035
               if(missing(y.n.risk)) y.n.risk <- ylim[1]
-              yy <- y.n.risk+yd*(ns-i)*sep.n.risk
-              nri <- nrisk; nri[tt>xlim[2]] <- NA
-              text(tt[1],yy,nri[1],cex=cex.n.risk,
-                   adj=adj.n.risk,srt=srt.n.risk)
-              text(tt[-1],yy,nri[-1],cex=cex.n.risk,adj=1)
+              yy <- y.n.risk + yd*(ns-i)*sep.n.risk
+              nri <- nrisk
+              nri[tt>xlim[2]] <- NA
+              text(tt[1], yy, nri[1], cex=cex.n.risk,
+                   adj=adj.n.risk, srt=srt.n.risk)
+              text(tt[-1], yy, nri[-1], cex=cex.n.risk, adj=1)
               if(slevp)text(xlim[2]+xd*.025,
-                            yy,adj=0,sleva[i],cex=cex.n.risk)
+                            yy, adj=0, sleva[i], cex=cex.n.risk)
             }
-        }
-
-      if(conf=='bands') for(i in 1:ns)
-        lines(curves[[i]][[1]], curves[[i]][[2]],
-              lty=lty[i], lwd=lwd[i], col=col[i], type='s')
-      if(labelc) labcurve(curves, sleva, type='s', lty=lty, lwd=lwd,
-                          opts=label.curves, col=col)
-      
-      invisible(slev)
     }
+  
+  if(conf=='bands') for(i in 1:ns)
+    lines(curves[[i]][[1]], curves[[i]][[2]],
+          lty=lty[i], lwd=lwd[i], col=col[i], type='s')
+  if(labelc) labcurve(curves, sleva, type='s', lty=lty, lwd=lwd,
+                      opts=label.curves, col=col)
+  
+  invisible(slev)
+}
 
 
 survdiffplot <-
@@ -287,7 +290,7 @@ survdiffplot <-
     }
 
   if(missing(xlab)) xlab <- if(units==' ') 'Time' else paste(units,"s",sep="")
-
+  
   if(missing(xlim)) xlim <- c(mintime,maxtime)
   
   if(grid) {dots <- FALSE; if(is.logical(grid)) grid <- .05}
@@ -297,7 +300,7 @@ survdiffplot <-
 
   
   f <- summary(fit, times=times)
-
+  
   slev <- levels(f$strata)
   ns <- length(slev)
   if(ns !=2 ) stop('must have exactly two strata')

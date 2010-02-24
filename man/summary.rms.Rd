@@ -20,8 +20,8 @@ comparisons with the reference level are made for categorical factors.
 the results, and \code{plot.summary.rms}
 plots shaded confidence bars to display the results graphically.
 The longest confidence bar on each page is labeled with confidence levels
-(unless this bar has been ignored due to \code{clip}).  By default, the following
-confidence levels are all shown: .7, .8, .9, .95, and .99, using 
+(unless this bar has been ignored due to \code{clip}).  By default, the
+following confidence levels are all shown: .7, .8, .9, .95, and .99, using 
 levels of gray scale (colors for Windows).
 }
 \usage{
@@ -30,7 +30,7 @@ conf.int=.95, abbrev=FALSE, vnames=c("names","labels"))
 
 \method{print}{summary.rms}(x, \dots)
 
-\method{latex}{summary.rms}(object, title, \dots)
+\method{latex}{summary.rms}(object, title, table.env=TRUE, \dots)
 
 \method{plot}{summary.rms}(x, at, log=FALSE,
     q=c(0.7, 0.8, 0.9, 0.95, 0.99), xlim, nbar, cex=1, nint=10,
@@ -46,7 +46,7 @@ the result of \code{summary}.
 \item{\dots}{
 For \code{summary}, omit list of variables to estimate effects for all
 predictors. Use a list 
-of variables of the form \code{age=., sex=.} to estimate using default
+of variables of the form \code{age, sex} to estimate using default
 ranges. Specify \code{age=50} for example to adjust age to 50 when testing
 other factors (this will only matter for factors that interact with age).
 Specify e.g. \code{age=c(40,60)} to estimate the effect of increasing age from
@@ -97,9 +97,8 @@ factor levels for categorical variables in the model.
 \item{x}{result of \code{summary}}
 \item{title}{
 \code{title} to pass to \code{latex}.  Default is name of fit object passed to
-\code{summary} prefixed with \code{"summary"}.
-}
-
+\code{summary} prefixed with \code{"summary"}.}
+\item{table.env}{see \code{\link[Hmisc]{latex}}}
 \item{at}{
 vector of coordinates at which to put tick mark labels on the main axis.  If
 \code{log=TRUE}, \code{at} should be in anti-log units.

@@ -154,7 +154,7 @@ plot(Predict(f, x1=200:800, x2=3))
 d$limits$age[2] <- 30    # make 30 the reference value for age
 # Could also do: d$limits["Adjust to","age"] <- 30
 fit <- update(fit)   # make new reference value take effect
-plot(Predict(fit, age=NA, ref.zero=TRUE, fun=exp),
+plot(Predict(fit, age, ref.zero=TRUE, fun=exp),
      ylab='Age=x:Age=30 Odds Ratio')
 }
 }

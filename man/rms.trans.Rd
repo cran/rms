@@ -110,8 +110,7 @@ name)
 Name to use for predictor in model. Default is name of argument to
 function
 }
-\item{x1}{}
-\item{x2}{two continuous variables for which to form a
+\item{x1,x2}{two continuous variables for which to form a
   non-doubly-nonlinear interaction}
 \item{\dots}{a variety of things}
 }

@@ -34,8 +34,7 @@ columns, inline, before, pretrans, caption, \dots) # psm fit
 a fit object created by a \code{rms} fitting function.
 }
 \item{title}{ignored}
-\item{file}{}
-\item{append}{see \code{\link[Hmisc]{latex.default}}}
+\item{file,append}{see \code{\link[Hmisc]{latex.default}}}
 \item{surv}{
 if \code{surv=TRUE} was specified to \code{cph}, the underlying survival
 probabilities from \code{object$surv.summary} will be placed in a table
@@ -46,13 +45,7 @@ if the maximum follow-up time in the data (\code{object$maxtime}) exceeds the
 last entry in \code{object$surv.summary}, underlying survival estimates at
 \code{object$maxtime} will be added to the table if \code{maxt=TRUE}.
 }
-\item{which}{}
-\item{varnames}{}
-\item{columns}{}
-\item{inline}{}
-\item{before}{}
-\item{dec}{}
-\item{pretrans}{see \code{\link[Hmisc]{latex.default}}}
+\item{which,varnames,columns,inline,before,dec,pretrans}{see \code{\link[Hmisc]{latex.default}}}
 \item{caption}{a character string specifying a title for the equation to
   be centered and typeset in bold face.   Default is no title.
   }

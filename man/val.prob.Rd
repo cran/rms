@@ -279,6 +279,11 @@ London: Methuen.
 
 Spiegelhalter DJ (1986):Probabilistic prediction in patient management.
 Stat in Med 5:421--433.
+
+
+Tjur T (2009):Coefficients of determination in logistic regression
+models-A new proposal:The coefficient of discrimination.  Am Statist
+63:366--372.
 }
 \seealso{
 \code{\link{validate.lrm}}, \code{\link{lrm.fit}}, \code{\link{lrm}},

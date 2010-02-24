@@ -36,7 +36,7 @@ summary.rms <- function(object, ..., est.all=TRUE, antilog, conf.int=.95,
   if(missing(antilog)) antilog <- length(scale)==2
   if(antilog & length(scale) < 2) scale <- c("","Antilog")
 
-  factors <- list(...)
+  factors <- rmsArgs(substitute(list(...)))
   nf <- length(factors)
 
   if(est.all) which <- (1:length(assume))[assume!=9]
@@ -244,7 +244,7 @@ latex.summary.rms <-
            paste('summary',attr(object,'obj.name'),sep='.') else
            paste("sum",substring(first.word(attr(object,"obj.name")),
                                  1,5),sep=""),
-           ...)
+           table.env=TRUE, ...)
 { 
 
   title <- title   # because of lazy evaluation
@@ -266,8 +266,9 @@ latex.summary.rms <-
   cstats <- as.data.frame(cstats)
   attr(cstats,"row.names") <- rowl
   names(cstats)[3] <- "$\\Delta$"
-  latex(cstats, caption=caption, title=title, rowlabel="",
-        col.just=rep("r",7), ...)
+  latex(cstats, caption=if(table.env) caption else NULL,
+        title=title, rowlabel="",
+        col.just=rep("r",7), table.env=table.env, ...)
 }
 
 

@@ -57,7 +57,7 @@ nomogram <-
 
   ia    <- at$interactions
   
-  factors <- list(...)
+  factors <- rmsArgs(substitute(list(...)))
   nf <- length(factors)
 
   which <- if(est.all) (1:length(assume))[assume!=8] else 

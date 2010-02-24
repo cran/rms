@@ -20,13 +20,7 @@ estimation for spline functions) is the same one used for basing predictions.
 a fit object from \code{cph} or \code{coxph}
 see \code{\link[survival]{survfit.coxph}}
 }
-\item{newdata}{}
-\item{se.fit}{}
-\item{conf.int}{}
-\item{individual}{}
-\item{type}{}
-\item{vartype}{}
-\item{conf.type}{see \code{\link[survival]{survfit}}}
+\item{newdata,se.fit,conf.int,individual,type,vartype,conf.type}{see \code{\link[survival]{survfit}}}
 \item{\dots}{Not used}
 }
 \value{see \code{survfit.coxph}}

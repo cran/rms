@@ -25,13 +25,7 @@ objects created by \code{validate.rpart}.
   an object created by \code{rpart}.  You must have specified the
   \code{model=TRUE} argument to \code{rpart}. 
 }
-\item{method}{}
-\item{B}{}
-\item{bw}{}
-\item{rule}{}
-\item{type}{}
-\item{sls}{}
-\item{aics}{
+\item{method,B,bw,rule,type,sls,aics}{
   are there only for consistency with the generic \code{validate}
   function; these are ignored
 } 

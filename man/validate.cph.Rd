@@ -29,9 +29,7 @@
     number of repetitions.  For \code{method="crossvalidation"}, is the
     number of groups of omitted observations.
   }
-  \item{rel.tolerance}{}
-  \item{maxiter}{}
-  \item{bw}{
+  \item{rel.tolerance,maxiter,bw}{
     \code{TRUE} to do fast step-down using the \code{fastbw} function,
     for both the overall model and for each repetition. \code{fastbw}
     keeps parameters together that represent the same factor.
@@ -55,8 +53,7 @@
   \item{pr}{
     \code{TRUE} to print results of each repetition
   }
-  \item{tol}{}
-  \item{...}{see \code{\link{validate}} or \code{\link{predab.resample}}}
+  \item{tol,\dots}{see \code{\link{validate}} or \code{\link{predab.resample}}}
   \item{dxy}{
     set to \code{TRUE} to validate Somers' \eqn{D_{xy}}{Dxy}  using
     \code{rcorr.cens}, which takes longer.

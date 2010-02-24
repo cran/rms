@@ -44,8 +44,8 @@ to \code{latex.default} for conversion to LaTeX.
      rm.totals=TRUE, rm.ia=FALSE, rm.other=NULL, newnames,
      sort=c("descending","ascending","none"), pl=TRUE, \dots)
 
-\method{latex}{anova.rms}(object, title, psmall=TRUE, 
-      dec.chisq=2, dec.F=2, dec.ss=NA, dec.ms=NA, dec.P=4, \dots)
+\method{latex}{anova.rms}(object, title, psmall=TRUE, dec.chisq=2,
+      dec.F=2, dec.ss=NA, dec.ms=NA, dec.P=4, table.env=TRUE, \dots)
 }
 \arguments{
 \item{object}{
@@ -153,6 +153,7 @@ floating point)
 digits to the right for mean squares (default is \code{NA})
 }
 \item{dec.P}{digits to the right for \eqn{P}-values}
+\item{table.env}{see \code{\link[Hmisc]{latex}}}
 }
 \value{
 \code{anova.rms} returns a matrix of class \code{anova.rms} containing factors 
@@ -217,7 +218,7 @@ anova(fit, treat, cholesterol)   # Test these 2 by themselves
 g <- lrm(y ~ treat*rcs(age))
 dd <- datadist(treat, num.diseases, age, cholesterol)
 options(datadist='dd')
-p <- Predict(g, age=., treat="b")
+p <- Predict(g, age, treat="b")
 s <- anova(g)
 # Usually omit fontfamily to default to 'Courier'
 # It's specified here to make R pass its package-building checks

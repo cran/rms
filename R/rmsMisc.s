@@ -655,24 +655,29 @@ vif <- function(fit)
   v
 }
 
-## Correction until fixed in Hmisc beyond 3.7
-makeSteps <- function(x, y)
+## Returns a list such that variables with no = after them get the value NA
+## For handling ... arguments to Predict, summary, nomogram, gendata,
+## survplot.rms, ...
+rmsArgs <- function(.object, envir=parent.frame(2))
   {
-    if (is.na(x[1] + y[1]))
+    if(length(.object) < 2) return(NULL)
+    .names <- names(.object)[-1]
+    ## See if no variables given with = after their names
+    if(!length(.names)) .names <- rep('', length(.object)-1)
+    .n <- length(.names)
+    .vars  <- sapply(.object, as.character)[-1]
+    .res <- vector('list', .n)
+    for(.i in 1:.n)
       {
-        x <- x[-1]
-        y <- y[-1]
+        if(.names[.i] == '')
+          {
+            .names[.i] <- .vars[.i]
+            .res[[.i]] <- NA
+          }
+        else .res[[.i]] <- eval(.object[[.i+1]], envir=envir)
       }
-    n <- length(x)
-    if (n > 2)
-      {
-        xrep <- rep(x, c(1, rep(2, n - 1)))
-        yrep <- rep(y, c(rep(2, n - 1), 1))
-        list(x = xrep, y = yrep)
-      }
-    else if (n == 1)
-      list(x = x, y = y)
-    else list(x = x[c(1, 2, 2)], y = y[c(1, 1, 2)])
+    names(.res) <- .names
+    .res
   }
 
 

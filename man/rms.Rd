@@ -60,7 +60,7 @@ Design(mf, allow.offset=TRUE, intercept=1)
 # This leaves unspecified variables set to reference values from datadist
 # pred.combos <- gendata(f, nobs=10)   # Use X-windows to edit predictor settings
 # predict(f, newdata=pred.combos)
-# plot(Predict(f, x1=.))
+# plot(Predict(f, x1))
 # latex(f)
 # nomogram(f)
 }
@@ -103,7 +103,7 @@ anova(f,age,height)          # Joint test of 2 vars
 fastbw(f)
 summary(f, sex="female")     # Adjust sex to "female" when testing
                              # interacting factor bp
-bplot(Predict(f, age=., height=.))   # 3-D plot
+bplot(Predict(f, age, height))   # 3-D plot
 plot(Predict(f, age=10:70, height=60))
 latex(f)                     # LaTeX representation of fit
 
@@ -121,7 +121,7 @@ plot(f, x1=seq(100,300,by=.5), x2=.5)
                              # all values defined - don't need datadist
 dist <- datadist(x1,x2)      # Equivalent to datadist(f)
 options(datadist="dist")
-plot(f, x1=., x2=.5)        # Now you can do plot, summary
+plot(f, x1, x2=.5)        # Now you can do plot, summary
 plot(nomogram(f, interact=list(x2=c(.2,.7))))
 }
 }

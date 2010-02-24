@@ -1,10 +1,6 @@
 \name{gendata}
 \alias{gendata}
-\alias{gendata.rms}
-\alias{gendata.default}
-\title{
-Generate Data Frame with Predictor Combinations
-}
+\title{Generate Data Frame with Predictor Combinations}
 \description{
 If \code{nobs} is not specified, allows user to specify predictor settings
 by e.g. \code{age=50, sex="male"}, and any omitted predictors are set to
@@ -25,38 +21,32 @@ displayed with \code{data.ed}, and a final full data frame is returned.
 to \code{predict}.
 }
 \usage{
-gendata(fit, \dots)
-\method{gendata}{rms}(fit, nobs, viewvals=FALSE,
-  editor=.Options$editor, \dots, factors)
-\method{gendata}{default}(fit, \dots)
+gendata(fit, \dots, nobs, viewvals=FALSE, factors)
 }
 \arguments{
 \item{fit}{
 a fit object created with \code{rms} in effect
 }
+\item{...}{
+predictor settings, if \code{nobs} is not given. 
+}
 \item{nobs}{
 number of observations to create if doing it interactively using X-windows
 }
 \item{viewvals}{
-if \code{nobs} is given, set \code{viewvals=TRUE} to open a window displaying the
-possible value of categorical predictors
-}
-\item{editor}{
-editor to use to edit the list of variable names to consider.
-Default is \code{options(editor=)} value (\code{"xedit"} is this is not specified
-by \code{using.X()==TRUE}.
-}
-\item{...}{
-predictor settings, if \code{nobs} is not given. 
+if \code{nobs} is given, set \code{viewvals=TRUE} to open a window
+displaying the possible value of categorical predictors
 }
 \item{factors}{
 a list containing predictor settings with their names.  This is an
-alternative to specifying the variables separatey in \dots .
+alternative to specifying the variables separately in \dots.  Unlike the
+usage of \dots, variables getting default ranges in \code{factors}
+should have \code{NA} as their value. 
 }}
 \value{
 a data frame with all predictors, and an attribute \code{names.subset} if
 \code{nobs} is specified.  This attribute contains the vector of variable
-names for predictors which were passed to \code{data.ed} and hence were
+names for predictors which were passed to \code{de} and hence were
 allowed to vary.  If neither \code{nobs} nor any predictor settings were
 given, returns a data frame with adjust-to values.
 }
@@ -65,9 +55,9 @@ optionally writes to the terminal, opens X-windows, and generates a
 temporary file using \code{sink}.
 }
 \details{
-if you have a variable in \code{\dots} that is named \code{n, no, nob, nob}, add
-\code{nobs=FALSE} to the invocation to prevent that variable from being misrecognized
-as \code{nobs}
+if you have a variable in \code{\dots} that is named \code{n, no, nob,
+  nob}, add \code{nobs=FALSE} to the invocation to prevent that variable
+from being misrecognized as \code{nobs}
 }
 \author{
 Frank Harrell\cr
@@ -78,9 +68,8 @@ f.harrell@vanderbilt.edu
 \seealso{
 \code{\link{predict.rms}}, \code{\link{survest.cph}},
 \code{\link{survest.psm}}, \code{\link{rmsMisc}},
-\code{\link{expand.grid}}, \code{\link{data.entry}}, \code{\link{page}}, 
-\code{\link{print.datadist}}, \code{\link{edit.data.frame}},
-\code{\link{Predict}}
+\code{\link{expand.grid}}, \code{\link{de}}, \code{\link{page}}, 
+\code{\link{print.datadist}}, \code{\link{Predict}}
 }
 \examples{
 set.seed(1)
