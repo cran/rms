@@ -31,6 +31,7 @@
 #    5-06-96 :return information matrix
 #    6-06-02 :added back weights, normwt like SAS PROC LOGIST
 #    1-17-03 :made all versions use weights, double precision for x,y
+#    5-13-10 :change B to use middle intercept; added g-index
 
 lrm.fit <- function(x,y,offset,initial,est,
                     maxit=12,eps=.025,tol=1E-7,trace=FALSE,
@@ -161,7 +162,7 @@ lrm.fit <- function(x,y,offset,initial,est,
                  penmat, weights, PACKAGE="rms")
       
       loglik <- c(loglik,z$loglik)
-      if(z$opts[6] | z$opts[7]<kint)
+      if(z$opts[6] | z$opts[7] < kint)
         return(structure(list(fail=TRUE),class="lrm"))
       initial <- z$coef
     }
@@ -247,30 +248,32 @@ lrm.fit <- function(x,y,offset,initial,est,
   if(length(v)) dimnames(v) <- list(name,name)
   
   llnull <- loglik[length(loglik)-1]
-  model.lr <- llnull-loglik[length(loglik)]
-  model.df <- irank-kint
-  if(initial.there) model.p <- NA else
-  {
-    if(model.df>0) model.p <- 1-pchisq(model.lr,model.df)
-    else
-      model.p <- 1
-  }
-  r2 <- 1 - exp(-model.lr/sumwt)
+  model.lr <- llnull - loglik[length(loglik)]
+  model.df <- irank - kint
+  model.p <- if(initial.there) NA else
+    if(model.df > 0) 1 - pchisq(model.lr,model.df) else 1
+
+  r2     <- 1 - exp(-model.lr/sumwt)
   r2.max <- 1 - exp(-llnull/sumwt)
-  r2 <- r2/r2.max
-  lp <- matxv(x, z$coef)
-  B <- mean((1/(1+exp(-lp)) - (y>0))^2)
-  B <- sum(weights*(plogis(lp) - (y>0))^2)/sum(weights)
+  r2     <- r2 / r2.max
+  kmid <- floor((kint + 1) / 2)
+  lp <- matxv(x, z$coef, kint=kmid)
+  prob <- plogis(lp)
+  event <- y > (kmid - 1)
+##  B <- mean((prob - event)^2)
+  B <- sum(weights*(prob - event)^2)/sum(weights)
+  g  <- GiniMd(lp)
+  gp <- GiniMd(prob)
   
   stats <- c(n,max(abs(z$u[elements])),model.lr,model.df,
              model.p,z$opts[8],z$opts[9],
-             z$opts[10], z$opts[11], r2, B)
+             z$opts[10], z$opts[11], r2, B, g, exp(g), gp)
   ## was stats <- c(n,max(abs(z$u[elements])),model.lr,model.df,  21Aug97
   ##	model.p,round(z$opts[8],3),round(z$opts[9],3),
   ##	round(z$opts[10],3), round(z$opts[11],3), r2, B)
   nam <- c("Obs","Max Deriv",
            "Model L.R.","d.f.","P","C","Dxy",
-           "Gamma","Tau-a","R2","Brier")
+           "Gamma","Tau-a","R2","Brier","g","gr","gp")
   
   if(nxin!=nx)
     {

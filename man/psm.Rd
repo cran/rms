@@ -204,7 +204,7 @@ lwd=3, \dots)
   \code{\link[survival]{Surv}}, 
   \code{\link[Hmisc]{na.delete}},
   \code{\link[Hmisc]{na.detail.response}}, \code{\link{datadist}},
-  \code{\link{latex.psm}} 
+  \code{\link{latex.psm}}, \code{\link{GiniMd}} 
 }
 \examples{
 n <- 400
@@ -256,12 +256,12 @@ med(c(.25,.5), f$linear.predictors)
 
 
 # fit a model with no predictors
-f <- psm(Surv(d.time,death) ~ 1, dist=if(.R.)"weibull" else "extreme")
+f <- psm(Surv(d.time,death) ~ 1, dist="weibull")
 f
 pphsm(f)          # print proportional hazards form
 g <- survest(f)
 plot(g$time, g$surv, xlab='Time', type='l',
-     ylab=if(.R.)expression(S(t)) else 'S(t)')
+     ylab=expression(S(t)))
 
 
 f <- psm(Surv(d.time,death) ~ age, 

@@ -119,11 +119,13 @@ added for the
 intercept.  When \code{var.penalty="simple"} (the default), \code{var} is
 \eqn{\sigma^{2} (X'X + P)^{-1}}.
 The returned list has a vector \code{stats} with named elements
-\code{n, Model L.R., d.f., R2, Sigma}.  \code{Model L.R.} is the model
+\code{n, Model L.R., d.f., R2, g, Sigma}.  \code{Model L.R.} is the model
 likelihood ratio \eqn{\chi^2}{chi-square} statistic, and \code{R2} is
 \eqn{R^2}.  For penalized estimation, \code{d.f.} is the 
 effective degrees of freedom, which is the sum of the elements of another
-vector returned, \code{effective.df.diagonal}, minus one for the intercept.
+vector returned, \code{effective.df.diagonal}, minus one for the
+intercept.
+\code{g} is the \eqn{g}-index.
 \code{Sigma} is the penalized maximum likelihood estimate (see below).
 }
 \details{

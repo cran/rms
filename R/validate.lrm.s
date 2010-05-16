@@ -29,16 +29,17 @@ validate.lrm <- function(fit,method="boot",
         {	#Fit was for bootstrap sample
           stats <- fit$stats
           lr <- stats["Model L.R."]
-          if(Dxy.method=="lrm") Dxy <- stats["Dxy"]
-          else
-            Dxy <- somers2(x,y)["Dxy"]
+          Dxy <- if(Dxy.method=="lrm") stats["Dxy"] else
+            somers2(x,y)["Dxy"]
           intercept <- 0
           shrink <- 1
-          n <- stats["Obs"]
-          D <- (lr-1)/n
-          U <- -2/n
-          Q <- D - U
+          n  <- stats["Obs"]
+          D  <- (lr - 1)/n
+          U  <- -2/n
+          Q  <- D - U
           R2 <- stats["R2"]
+          g  <- stats['g']
+          gp <- stats['gp']
         }
       else
         {	
@@ -49,37 +50,37 @@ validate.lrm <- function(fit,method="boot",
           ##Model with no variables = null model
           stats <- refit$stats
           lr <- stats["Model L.R."]
-          if(Dxy.method=="lrm")Dxy <- stats["Dxy"]
-          else
-            Dxy <- somers2(x,y)["Dxy"]
+          Dxy <- if(Dxy.method=="lrm") stats["Dxy"] else
+            somers2(x,y)["Dxy"]
           intercept <- refit$coefficients[kint]
-          if(null.model) shrink <- 1
-          else
-            shrink <- refit$coefficients[kr+1]
+          shrink <- if(null.model) 1 else refit$coefficients[kr + 1]
           n <- stats["Obs"]
           D <- (lr-1)/n
-          L01 <- -2 * sum( (y>=kint)*x - logb(1 + exp(x)), na.rm=TRUE)
-          U <- (L01 - refit$deviance[2] -2)/n
+          L01 <- -2 * sum( (y >= kint)*x - logb(1 + exp(x)), na.rm=TRUE)
+          U <- (L01 - refit$deviance[2] - 2)/n
           Q <- D - U
           R2 <- stats["R2"]
+          g  <- GiniMd(shrink*x)
+          gp <- GiniMd(plogis(intercept + shrink*x))
         }
       P <- plogis(x)  # 1/(1+exp(-x))
-      B <- sum(((y>=kint)-P)^2)/n
-      z <- c(Dxy, R2, intercept, shrink, D, U, Q, B)
-      names(z) <- c("Dxy", "R2", "Intercept", "Slope", "D", "U", "Q", "B")
+      B <- sum(((y >= kint) - P)^2)/n
+      z <- c(Dxy, R2, intercept, shrink, D, U, Q, B, g, gp)
+      names(z) <- c("Dxy", "R2", "Intercept", "Slope", "D", "U", "Q", "B",
+                    "g",   "gp")
       z
     }
   
   lrmfit <- function(x, y, maxit=12, tol=1e-7, penalty.matrix=NULL, 
                      xcol=NULL, ...)
     {
-      if(length(xcol) && length(penalty.matrix)>0)
-        penalty.matrix <- penalty.matrix[xcol,xcol,drop=FALSE]
+      if(length(xcol) && length(penalty.matrix) > 0)
+        penalty.matrix <- penalty.matrix[xcol, xcol, drop=FALSE]
       lrm.fit(x, y, maxit=maxit, penalty.matrix=penalty.matrix, tol=tol)
     }
 
-  z <- predab.resample(fit,method=method,fit=lrmfit,measure=discrim,pr=pr,
-                       B=B,bw=bw,rule=rule,type=type,sls=sls,aics=aics,
+  z <- predab.resample(fit, method=method, fit=lrmfit, measure=discrim, pr=pr,
+                       B=B, bw=bw, rule=rule, type=type, sls=sls, aics=aics,
                        Dxy.method=Dxy.method,
                        non.slopes.in.x=FALSE,
                        penalty.matrix=penalty.matrix, kint=kint, ...)
@@ -89,11 +90,11 @@ validate.lrm <- function(fit,method="boot",
   L <- logb(p/(1-p))
   P <- plogis(calib[1]+calib[2]*L)  # 1/(1+exp(-calib[1]-calib[2]*L))
   emax <- max(abs(p-P), na.rm=TRUE)
-  z <- rbind(z[1:4,],c(0,0,emax,emax,emax,z[1,6]),z[5:8,])
+  z <- rbind(z[1:4,],c(0,0,emax,emax,emax,z[1,6]),z[5:nrow(z),])
   dimnames(z) <- list(c("Dxy", "R2","Intercept", "Slope", "Emax", "D", "U", "Q",
-                        "B"),
+                        "B", "g", "gp"),
                       c("index.orig","training","test","optimism",
                         "index.corrected","n"))
-  if(k>1) z <- z[-(7:9),,drop=FALSE]
-  z
+  ## if(k > 1) z <- z[-(7:9),,drop=FALSE]
+  structure(z, class='validate')
 }

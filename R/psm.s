@@ -266,10 +266,11 @@ psm <- function(formula=formula(data),
     R2.max <- 1 - exp(2*fit$loglik[1]/Nn)
     R2 <- (1 - exp(-logtest/Nn))/R2.max
     df <- length(fit$coef)-1
-    P <- if(df==0) NA else 1-pchisq(logtest,df)
-    stats <- c(nnn, logtest, df, P, R2)
+    P  <- if(df==0) NA else 1-pchisq(logtest,df)
+    gindex <- GiniMd(fit$linear.predictors)
+    stats <- c(nnn, logtest, df, P, R2, gindex, exp(gindex))
     names(stats) <- c("Obs", "Events", "Model L.R.", "d.f.", "P",
-                      "R2")
+                      "R2","g","gr")
     if(length(weights)) stats <- c(stats, 'Sum of Weights'=sum(weights))
     fit <- c(fit, list(stats=stats, maxtime=maxtime, units=time.units,
                        time.inc=time.inc, scale.pred=scale.pred,
@@ -323,14 +324,17 @@ Mean.psm <- function(object, ...)
 
 predict.psm <- 
   function(object, newdata,
-           type=c("lp","x","data.frame","terms","adjto","adjto.data.frame",
-             "model.frame"),
+           type=c("lp","x","data.frame","terms","cterms", "adjto",
+             "adjto.data.frame",  "model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes, non.slopes, kint=1,
-           na.action=na.keep, expand.na=TRUE, center.terms=TRUE, ...)
-  predictrms(object, newdata, type, se.fit, conf.int, conf.type,
-             incl.non.slopes, non.slopes, kint,
-             na.action, expand.na, center.terms, ...)
+           na.action=na.keep, expand.na=TRUE, center.terms=type=="terms", ...)
+  {
+    type <- match.arg(type)
+    predictrms(object, newdata, type, se.fit, conf.int, conf.type,
+               incl.non.slopes, non.slopes, kint,
+               na.action, expand.na, center.terms, ...)
+  }
 
 
 residuals.psm <- function(object, type = "censored.normalized", ...)

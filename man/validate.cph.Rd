@@ -73,7 +73,8 @@
   \eqn{U} = (difference in -2 log likelihood between uncalibrated
   \eqn{X\beta}{X beta} and  
   \eqn{X\beta}{X beta} with overall slope calibrated to test sample) / L,
-  and the overall quality index \eqn{Q = D - U}. 
+  and the overall quality index \eqn{Q = D - U}.  \eqn{g} is the
+        \eqn{g}-index on the log relative hazard (linear predictor) scale.
   L is -2 log likelihood with beta=0.  The "corrected" slope
   can be thought of as shrinkage factor that takes into account overfitting.
   See \code{predab.resample} for the list of resampling methods.
@@ -105,7 +106,8 @@
   \code{\link{validate}}, \code{\link{predab.resample}},
   \code{\link{fastbw}}, \code{\link{rms}}, \code{\link{rms.trans}},
   \code{\link{calibrate}}, \code{\link[Hmisc]{rcorr.cens}},
-  \code{\link{cph}}, \code{\link[survival]{survival-internal}} 
+  \code{\link{cph}}, \code{\link[survival]{survival-internal}},
+  \code{\link{gIndex}}
 }
 \examples{
 n <- 1000

@@ -3,13 +3,13 @@
 \title{Validation of an Ordinary Linear Model}
 
 \description{
- 
 The \code{validate} function when used on an object created by
 \code{ols} does resampling validation of a multiple linear regression
 model, with or without backward step-down variable deletion.  Uses
 resampling to estimate the optimism in various measures of predictive
-accuracy which include \eqn{R^2}, \eqn{MSE} (mean squared error with a
-denominator of \eqn{n}), and the intercept and slope of an overall
+accuracy which include \eqn{R^2}, \eqn{MSE} (mean squared error with a 
+denominator of \eqn{n}), the \eqn{g}-index, and the intercept and slope
+of an overall 
 calibration \eqn{a + b\hat{y}}{a + b * (predicted y)}.  The "corrected"
 slope can be thought of as shrinkage factor that takes into account
 overfitting.  \code{validate.ols} can also be used when a model for a
@@ -50,11 +50,11 @@ tolerance for singularity; passed to \code{lm.fit.qr}.
 other arguments to pass to \code{predab.resample}, such as \code{group}, \code{cluster}, and \code{subset}
 }}
 \value{
-matrix with rows corresponding to R-square, MSE, intercept, slope, and 
+matrix with rows corresponding to R-square, MSE, g, intercept, slope, and 
 optionally \eqn{D_{xy}} and \eqn{R^2}, and
 columns for the original index, resample estimates, 
-indexes applied to whole or omitted sample using model derived from resample, average optimism, corrected index, and number
-of successful resamples.
+indexes applied to whole or omitted sample using model derived from
+resample, average optimism, corrected index, and number of successful resamples.
 }
 \section{Side Effects}{
 prints a summary, and optionally statistics for each re-fit
@@ -65,7 +65,9 @@ Department of Biostatistics, Vanderbilt University\cr
 f.harrell@vanderbilt.edu
 }
 \seealso{
-\code{\link{ols}}, \code{\link{predab.resample}}, \code{\link{fastbw}}, \code{\link{rms}}, \code{\link{rms.trans}}, \code{\link{calibrate}}
+\code{\link{ols}}, \code{\link{predab.resample}}, \code{\link{fastbw}},
+\code{\link{rms}}, \code{\link{rms.trans}}, \code{\link{calibrate}},
+\code{\link{gIndex}}
 }
 \examples{
 set.seed(1)

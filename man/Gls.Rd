@@ -85,7 +85,9 @@ Gls(model, data, correlation, weights, subset, method, na.action,
   coefficients), \code{boot.Corr} (vector of bootstrapped correlation
   parameters), \code{Nboot} (vector of total sample size used in each
   bootstrap (may vary if have unbalanced clusters), and \code{var}
-  (sample variance-covariance matrix of bootstrapped coefficients).
+  (sample variance-covariance matrix of bootstrapped coefficients).  The
+  \eqn{g}-index is also stored in the returned object under the name
+  \code{"g"}.
 }
 \references{
   Pinheiro J, Bates D (2000): Mixed effects models in S and S-Plus.  New
@@ -99,7 +101,8 @@ Gls(model, data, correlation, weights, subset, method, na.action,
 \seealso{
   \code{\link{gls}}
   \code{\link{glsControl}}, \code{\link{glsObject}},
-  \code{\link{varFunc}}, \code{\link{corClasses}}, \code{\link{varClasses}}
+  \code{\link{varFunc}}, \code{\link{corClasses}},
+  \code{\link{varClasses}}, \code{\link{GiniMd}}
 }
 \examples{
 \dontrun{

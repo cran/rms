@@ -266,11 +266,12 @@ cph <- function(formula=formula(data),
       logtest <- -2 * (f$loglik[1] - f$loglik[2])
       R2.max <- 1 - exp(2*f$loglik[1]/nnn)
       R2 <- (1 - exp(-logtest/nnn))/R2.max
-      P <- 1-pchisq(logtest,nvar)
+      P  <- 1 - pchisq(logtest,nvar)
+      gindex <- GiniMd(f$linear.predictors)
       stats <- c(nnn, nevent, logtest, nvar, P, f$score, 
-                 1-pchisq(f$score,nvar), R2)
+                 1-pchisq(f$score,nvar), R2, gindex, exp(gindex))
       names(stats) <- c("Obs", "Events", "Model L.R.", "d.f.", "P", 
-                        "Score", "Score P","R2")
+                        "Score", "Score P", "R2", "g", "gr")
     }
   else
     {
@@ -627,16 +628,19 @@ Mean.cph <- function(object, method=c("exact","approximate"),
 }
 
 predict.cph <- function(object, newdata=NULL,
-                        type=c("lp", "x", "data.frame", "terms", "adjto",
-                          "adjto.data.frame", "model.frame"),
+                        type=c("lp", "x", "data.frame", "terms", "cterms",
+                          "adjto",  "adjto.data.frame", "model.frame"),
                         se.fit=FALSE, conf.int=FALSE,
                         conf.type=c('mean','individual'),
                         incl.non.slopes=NULL, non.slopes=NULL, kint=1,
                         na.action=na.keep, expand.na=TRUE,
-                        center.terms=TRUE, ...)
-  predictrms(object, newdata, type, se.fit, conf.int, conf.type,
-             incl.non.slopes, non.slopes, kint,
-             na.action, expand.na, center.terms, ...)
+                        center.terms=type=="terms", ...)
+  {
+    type <- match.arg(type)
+    predictrms(object, newdata, type, se.fit, conf.int, conf.type,
+               incl.non.slopes, non.slopes, kint,
+               na.action, expand.na, center.terms, ...)
+  }
 
 #This is Terry Therneau's old print.coxreg with conf.int default to F
 #Add Nagelkerke R2 9Jun92
@@ -701,6 +705,8 @@ print.cph <- function(x, long=FALSE, digits=3, conf.int=FALSE,
       stats[6] <- round(stats[6],2)
       stats[7] <- round(stats[7],4)
       stats[8] <- round(stats[8],3)
+      stats[9] <- round(stats[9],3)
+      stats[10] <- round(stats[10],3)
       print(format.sep(stats), quote=FALSE)
       cat("\n")
       print.cph.fit(x, digits=digits, conf.int=conf.int, table=table, ...)

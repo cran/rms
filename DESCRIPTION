@@ -1,6 +1,6 @@
 Package: rms
-Version: 2.2-0
-Date: 2010-02-23
+Version: 3.0-0
+Date: 2010-05-16
 Title: Regression Modeling Strategies
 Author: Frank E Harrell Jr <f.harrell@vanderbilt.edu>
 Maintainer: Frank E Harrell Jr <f.harrell@vanderbilt.edu>
@@ -25,6 +25,6 @@ Description: Regression modeling, testing, estimation, validation,
 License: GPL (>= 2)
 URL: http://biostat.mc.vanderbilt.edu/rms
 LazyLoad: yes
-Packaged: 2010-02-23 21:28:01 UTC; harrelfe
+Packaged: 2010-05-16 11:55:39 UTC; harrelfe
 Repository: CRAN
-Date/Publication: 2010-02-24 08:17:21
+Date/Publication: 2010-05-16 16:21:05

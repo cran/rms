@@ -1,7 +1,7 @@
-validate.cph <- function(fit,method="boot",
-                         B=40,bw=FALSE,rule="aic",type="residual",
-                         sls=.05,aics=0,pr=FALSE,
-                         dxy=FALSE,u,tol=1e-9, ...)
+validate.cph <- function(fit, method="boot",
+                         B=40, bw=FALSE, rule="aic", type="residual",
+                         sls=.05, aics=0, pr=FALSE,
+                         dxy=FALSE, u, tol=1e-9, ...)
 {
   atr <- fit$Design
 
@@ -30,19 +30,20 @@ validate.cph <- function(fit,method="boot",
           dimnames(x) <- list(as.character(1:nrow(x)),as.character(1:ncol(x)))
           if(evalfit)
             {	#Fit was for training sample
-              lr <- -2 * (fit$loglik[1]-fit$loglik[2])
+              lr  <- -2 * (fit$loglik[1] - fit$loglik[2])
               ll0 <- -2 * fit$loglik[1]
               slope <- 1
               D <- (lr - 1)/ll0
               U <- -2/ll0
               R2.max <- 1 - exp(-ll0/n)
               R2 <- (1 - exp(-lr/n))/R2.max
+              g  <- GiniMd(x)
             }
           else
             {
               type <- attr(y, "type")
               storage.mode(x) <- "double"
-              f <- coxphFit(x=x,y=y,strata=stra,iter.max=10,eps=.0001,
+              f <- coxphFit(x=x, y=y, strata=stra, iter.max=10, eps=.0001,
                             method=modtype, type=type)
               if(f$fail)
                 stop('fit failure in discrim,coxphFit')
@@ -58,12 +59,13 @@ validate.cph <- function(fit,method="boot",
                                    method=modtype, init=1, type=type)
               if(f.frozen$fail) stop('fit failure in discrim for f.frozen')
               U <- -2 * (f.frozen$loglik[2] - f$loglik[2]) / ll0
+              g <- GiniMd(slope*x)
             }
         }
       
       Q <- D - U
-      z <- c(R2, slope, D, U, Q)
-      nam <- c("R2","Slope", "D", "U", "Q")
+      z   <- c(R2,  slope,    D,  U,   Q,   g)
+      nam <- c("R2","Slope", "D", "U", "Q", "g")
       if(dxy)
         {
           if(need.surv)
@@ -96,11 +98,10 @@ validate.cph <- function(fit,method="boot",
           x <- as.matrix(x)
           dimnames(x) <- list(as.character(1:nrow(x)),as.character(1:ncol(x)))
           
-          f <- coxphFit(x=x,y=y,strata=stra,iter.max=10,eps=.0001,
+          f <- coxphFit(x=x, y=y, strata=stra, iter.max=10, eps=.0001,
                         method=modtype, toler.chol=tol, type=type)
           
-          if(f$fail)
-            return(f)
+          if(f$fail) return(f)
           
           if(any(is.na(f$coef)))
             {
@@ -117,8 +118,8 @@ validate.cph <- function(fit,method="boot",
       f
     }
   
-  predab.resample(fit,method=method,fit=cox.fit,measure=discrim,pr=pr,
-                  B=B,bw=bw,rule=rule,type=type,sls=sls,aics=aics,dxy=dxy,
-                  u=u,need.surv=need.surv,strata=TRUE,modtype=modtype,tol=tol,
-                  ...)
+  predab.resample(fit, method=method, fit=cox.fit, measure=discrim,
+                  pr=pr, B=B, bw=bw, rule=rule, type=type, sls=sls,
+                  aics=aics, dxy=dxy, u=u, need.surv=need.surv,
+                  strata=TRUE, modtype=modtype,tol=tol, ...)
 }

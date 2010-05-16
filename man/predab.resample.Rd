@@ -144,7 +144,7 @@ The user may add other arguments here that are passed to \code{fit} and
 \code{measure}.
 }}
 \value{
-a matrix with rows corresponding
+a matrix of class \code{"validate"} with rows corresponding
 to indexes computed by \code{measure}, and the following columns:
 
 \item{index.orig}{
@@ -166,9 +166,6 @@ average \code{training-test} except for \code{method=".632"} - is .632 times
 \item{n}{
 number of successful repetitions with the given index non-missing
 }}
-\section{Side Effects}{
-prints a summary of the results
-}
 \details{
 For \code{method=".632"}, the program stops with an error if every observation
 is not omitted at least once from a bootstrap sample.  Efron's ".632" method

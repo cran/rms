@@ -5,12 +5,12 @@
 
 predictrms <-
   function(fit, newdata=NULL,
-           type=c("lp","x","data.frame","terms","adjto","adjto.data.frame",
-             "model.frame"),
+           type=c("lp","x","data.frame","terms","cterms","adjto",
+             "adjto.data.frame","model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes=NULL, non.slopes=NULL, kint=1,
            na.action=na.keep, expand.na=TRUE,
-           center.terms=TRUE, ref.zero=FALSE, ...)
+           center.terms=type=="terms", ref.zero=FALSE, ...)
 {
 
   type <- match.arg(type)
@@ -22,8 +22,8 @@ predictrms <-
   assume    <- at$assume.code
   Limval    <- Getlim(at, allow.null=TRUE, need.all=FALSE)
   Values    <- Limval$values
-  non.ia    <- assume!=9
-  non.strat <- assume!=8
+  non.ia    <- assume != 9
+  non.strat <- assume != 8
   f <- sum(non.ia)
   nstrata   <- sum(assume==8)
   somex     <- any(non.strat)
@@ -230,7 +230,7 @@ predictrms <-
           strata <- list()
           nst <- 0
           ii <- 0
-          for(i in setdiff(1:ncol(X),offs))
+          for(i in setdiff(1:ncol(X), offs))
             {
               ii <- ii + 1
               xi <- X[[i]]
@@ -284,7 +284,7 @@ predictrms <-
     }
   
   if(type=="adjto" | type=="adjto.data.frame" | ref.zero |
-     (center.terms && type=="terms")| 
+     (center.terms && type %in% c("terms","cterms")) | 
      (cox & (se.fit | conf.int)))
     {
       ## Form design matrix for adjust-to values
@@ -322,20 +322,19 @@ predictrms <-
         }
     }
   
-  if(length(xx) & type!="terms" & incl.non.slopes)
+  if(length(xx) && type!="terms" && type!="cterms" && incl.non.slopes)
     {
       X <- cbind(xx, X)
       dimnames(X) <- list(rnam, names(coeff))
-      if((center.terms && type=='terms') | (cox & (se.fit | conf.int))) 
-        adjto <- c(xx[1,], adjto)
+      if(cox & (se.fit | conf.int)) adjto <- c(xx[1,], adjto)
     }
   
   else if(somex) dimnames(X) <- 
-    list(rnam,names(coeff)[(1+length(coeff)-ncol(X)):length(coeff)]) #22Jun95
+    list(rnam,names(coeff)[(1 + length(coeff) - ncol(X)):length(coeff)])
 
   if(type=="x") return(
        structure(naresid(naa,X),
-                 strata=if(nstrata > 0) naresid(naa,strata)  else NULL,
+                 strata=if(nstrata > 0)  naresid(naa,strata) else NULL,
                  offset=if(length(offs)) naresid(naa,offset) else NULL,
                  na.action=if(expand.na)NULL else naa)
        )
@@ -384,13 +383,15 @@ predictrms <-
       else return(structure(xb - ycenter, na.action=if(expand.na)NULL else naa))
     }
 
-  if(type=="terms")
+  if(type=="terms" || type=="cterms")
     {
-      if(!somex) stop('type="terms" may not be given unless covariables present')
-      fitted <- array(0,c(nrow(X),sum(non.strat)),
-                      list(rnam,name[non.strat]))
+      if(!somex)
+        stop('type="terms" may not be given unless covariables present')
+
+      usevar <- if(type=="terms") non.strat else rep(TRUE, length(assume))
+      fitted <- array(0, c(nrow(X), sum(usevar)),
+                      list(rnam, name[usevar]))
       if(se.fit) se <- fitted
-      j <- 0
       if(center.terms)
         {
           if(ncol(adjto) != ncol(X))
@@ -403,19 +404,34 @@ predictrms <-
           X <- sweep(X, 2, adjto) # center columns
         }
       num.intercepts.not.in.X <- length(coeff) - ncol(X)
-      for(i in (1:length(assume))[non.strat])
+      j <- 0
+      for(i in (1:length(assume))[usevar])
         {
           j <- j+1
-          k <- assign[[j+asso]]
-          ko <- k - num.intercepts.not.in.X
-          fitted[,j] <- matxv(X[,ko,drop=FALSE], coeff[k])
-          if(se.fit) se[,j] <-
-            (((X[,ko,drop=FALSE] %*% cov[ko,ko,drop=FALSE]) * 
-              X[,ko,drop=FALSE]) %*% rep(1,length(ko)))^.5
+          if(assume[i]!=8) # non-strat factor; otherwise leave fitted=0
+            {
+              k <- assign[[j+asso]]
+              ko <- k - num.intercepts.not.in.X
+              fitted[,j] <- matxv(X[,ko,drop=FALSE], coeff[k])
+              if(se.fit) se[,j] <-
+                (((X[, ko, drop=FALSE]  %*% cov[ko, ko, drop=FALSE]) * 
+                   X[, ko, drop=FALSE]) %*% rep(1, length(ko)))^.5
+            }
         }
-      fitted <- structure(naresid(naa,fitted),
-                          strata=if(nstrata==0) NULL else
-                          naresid(naa, strata))
+      if(type=="cterms")
+        {
+          ## Combine all related interation terms with main effect terms
+          w <- fitted[, non.ia, drop=FALSE]  # non-interaction terms
+          for(i in 1:f)
+            {
+              ia <- interactions.containing(at, i) # subscripts of interaction terms related to predictor i
+              if(length(ia)) w[, i] <- rowSums(fitted[, c(i,ia), drop=FALSE])
+            }
+          fitted <- w
+        }
+      fitted <- structure(naresid(naa, fitted),
+                          strata=if(nstrata==0) NULL else naresid(naa, strata))
+      
   if(se.fit)
     {
       return(structure(list(fitted=fitted, se.fit=naresid(naa,se)),

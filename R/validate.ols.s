@@ -20,12 +20,13 @@ validate.ols <- function(fit, method="boot",
   
   penalty.matrix <- fit.orig$penalty.matrix
   
-  discrim <- function(x,y,fit,iter,evalfit=FALSE,u=NULL,rel=NULL,pr=FALSE,...)
+  discrim <- function(x, y, fit, iter, evalfit=FALSE, u=NULL, rel=NULL,
+                      pr=FALSE, ...)
 	{
       resid <- if(evalfit) fit$residuals else y - x
 
       n <- length(resid)
-      sst <- sum(y^2) - (sum(y)^2)/n
+      sst <- (n-1)*var(y)   # sum(y^2) - (sum(y)^2)/n
       mse <- sum(resid^2)
       rsquare <- 1 - mse/sst
       mse <- mse/n
@@ -33,7 +34,7 @@ validate.ols <- function(fit, method="boot",
       if(evalfit)
         {	#Fit being examined on sample used to fit
           intercept <- 0
-          slope <- 1
+          slope     <- 1
         }
       else
         {
@@ -42,18 +43,18 @@ validate.ols <- function(fit, method="boot",
             {
               coef <- lsfit(x, y)$coef   #Note x is really x*beta from other fit
               intercept <- coef[1]
-              slope <- coef[2]
+              slope     <- coef[2]
             }
         }
 
-      z <- c(rsquare, mse, intercept, slope)
-      nam <- c("R-square", "MSE", "Intercept", "Slope")
+      z <- c(rsquare, mse, GiniMd(slope*x), intercept, slope)
+      nam <- c("R-square", "MSE", "g", "Intercept", "Slope")
       if(length(u))
         {
-          if(rel==">") yy <- ifelse(y>u,1,0)
-          else if(rel==">=") yy <- ifelse(y>=u,1,0)
-          else if(rel=="<") yy <- ifelse(y<u,1,0)
-          else yy <- ifelse(y<=u,1,0)
+          yy <- if(rel==">") ifelse(y>u,  1, 0)
+          else if(rel==">=") ifelse(y>=u, 1, 0)
+          else if(rel=="<")  ifelse(y<u,  1, 0)
+          else ifelse(y <= u, 1, 0)
           z <- c(z, somers2(x,yy)["Dxy"])
           nam <- c(nam, paste("Dxy Y",rel,format(u),sep=""))
           if(rel==">"|rel==">=") P <- 1-pnorm((u-x)/sqrt(mse))
@@ -76,11 +77,11 @@ validate.ols <- function(fit, method="boot",
         {
           ybar <- mean(y)
           n <- length(y)
-          residuals <- y-ybar
+          residuals <- y - ybar
           v <- sum(residuals^2)/(n-1)
-          return(list(coef=ybar,var=v/n,residuals=residuals,fail=FALSE))
+          return(list(coef=ybar, var=v/n, residuals=residuals, fail=FALSE))
         }
-      if(length(penalty.matrix)>0)
+      if(length(penalty.matrix) > 0)
         {
           if(length(xcol))
             {
@@ -107,3 +108,6 @@ validate.ols <- function(fit, method="boot",
                   backward=bw,u=u, penalty.matrix=penalty.matrix,
                   rel=rel, ...)
 }
+
+print.validate <- function(x, digits=4, ...)
+  print(round(unclass(x), digits), ...)
