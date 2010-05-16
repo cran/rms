@@ -177,7 +177,7 @@ lrm <- function(formula,data,subset,na.action=na.delete,
       if(se.fit)
         {
           if(nstrata > 1) stop('se.fit=T not implemented for strat')
-          xint <- matrix(0,nrow=length(Y),ncol=f$non.slopes)
+          xint <- matrix(0, nrow=length(Y), ncol=f$non.slopes)
           xint[,1] <- 1
           X <- cbind(xint, X)
           se <- drop((((X %*% f$var) * X) %*% rep(1, ncol(X)))^.5)
@@ -269,17 +269,15 @@ print.lrm <- function(x, digits=4, strata.coefs=FALSE, ...)
   stats[7] <- round(stats[7],3)
   if(nstrata==1)
     {
-      stats[8] <- round(stats[8],3)
-      stats[9] <- round(stats[9],3)
-      stats[10] <- round(stats[10],3)
-      if(length(stats)>10)
+      for(j in 8:13) stats[j] <- round(stats[j], 3)
+      if(length(stats) > 13)
         {
-          stats[11] <- round(stats[11],3)
-          if(length(x$weights)) stats[12] <- round(stats[12],3)
+          stats[14] <- round(stats[14], 3)
+          if(length(x$weights)) stats[15] <- round(stats[15], 3)
         }
     }
   else
-    stats <- c(stats,Strata=x$nstrat)
+    stats <- c(stats, Strata=x$nstrat)
 
   nst <- length(stats)
   cstats <- character(nst)
@@ -297,7 +295,7 @@ print.lrm <- function(x, digits=4, strata.coefs=FALSE, ...)
                           c("Coef","S.E.","Wald Z","P"))
   if(length(pm))
     stats <- cbind(stats, "Penalty Scale"=sg(penalty.scale,digits))
-  print(stats,quote=FALSE)
+  print(stats, quote=FALSE)
   cat("\n")
 
 

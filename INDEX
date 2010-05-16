@@ -13,6 +13,8 @@ fastbw                  Fast Backward Variable Selection
 Function.rms            Compose an S Function to Compute X beta from a
                         Fit
 gendata                 Generate Data Frame with Predictor Combinations
+gIndex                  Calculate Total and Partial g-indexes for an
+                        rms Fit
 Glm                     rms Version of glm
 Gls                     Fit Linear Model Using Generalized Least
                         Squares

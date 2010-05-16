@@ -99,10 +99,10 @@ ols <- function(formula, data, weights, subset, na.action=na.delete,
         lm.fit(X, Y, method=method, ...)
       cov.unscaled <- chol2inv(fit$qr$qr)
       r <- fit$residuals
+      yhat <- Y - r
       if(length(weights))
         { ## see summary.lm
           sse <- sum(weights * r^2)
-          yhat <- Y - r
           m <- sum(weights * yhat / sum(weights))
           ssr <- sum(weights * (yhat - m)^2)
           r2 <- ssr / (ssr + sse)
@@ -118,7 +118,8 @@ ols <- function(formula, data, weights, subset, na.action=na.delete,
       cnam <- dimnames(X)[[2]]
       dimnames(fit$var) <- list(cnam, cnam)
       fit$stats <- c(n=n,'Model L.R.'=-n*logb(1-r2),
-                     'd.f.'=length(fit$coef)-1,R2=r2,Sigma=sigma)
+                     'd.f.'=length(fit$coef)-1, R2=r2, g=GiniMd(yhat),
+                     Sigma=sigma)
     }
   else
     {
@@ -173,22 +174,24 @@ lm.pfit <- function(X, Y, penalty.matrix, tol=1e-7, regcoef.only=FALSE,
   pm <- rbind(matrix(0, ncol=p+1, nrow=1),
               cbind(matrix(0, ncol=1, nrow=p), penalty.matrix))
   xpx <- t(X) %*% X
-  Z <- solvet(xpx+pm, tol=tol)
+  Z <- solvet(xpx + pm, tol=tol)
   coef <- Z %*% t(X) %*% Y
   if(regcoef.only) return(list(coefficients=coef))
-  res  <- drop(Y - X %*% coef)
+  yhat <- drop(X %*% coef)
+  res  <- Y - yhat
   n <- length(Y)
   sse <- sum(res^2)
   s2 <- drop( (sse + t(coef) %*% pm %*% coef) / n )
   var <- if(var.penalty=='simple') s2 * Z else s2 * Z %*% xpx %*% Z
   cnam <- dimnames(X)[[2]]
   dimnames(var) <- list(cnam, cnam)
-  sst <- sum((Y-mean(Y))^2)
+  sst <- (n-1)*var(Y)
   lr <- n*(1+logb(sst/n))-n*logb(s2)-sse/s2
   s2.unpen <- sse/n
   dag <- diag((xpx / s2.unpen) %*% (s2 * Z))
   df <- sum(dag) - 1
-  stats <- c(n=n, 'Model L.R.'=lr, 'd.f.'=df, R2=1-sse/sst, Sigma=sqrt(s2))
+  stats <- c(n=n, 'Model L.R.'=lr, 'd.f.'=df, R2=1-sse/sst,
+             g=GiniMd(yhat), Sigma=sqrt(s2))
   
   list(coefficients=drop(coef), var=var, residuals=res, df.residual=n-1,
        penalty.matrix=penalty.matrix, 
@@ -198,14 +201,17 @@ lm.pfit <- function(X, Y, penalty.matrix, tol=1e-7, regcoef.only=FALSE,
 
 predict.ols <- 
   function(object, newdata,
-           type=c("lp","x","data.frame","terms","adjto","adjto.data.frame",
-             "model.frame"),
+           type=c("lp","x","data.frame","terms","cterms", "adjto",
+             "adjto.data.frame", "model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes, non.slopes, kint=1,
-           na.action=na.keep, expand.na=TRUE, center.terms=TRUE, ...)
-  predictrms(object, newdata, type, se.fit, conf.int, conf.type,
-                incl.non.slopes, non.slopes, kint,
-                na.action, expand.na, center.terms, ...)
+           na.action=na.keep, expand.na=TRUE, center.terms=type=="terms", ...)
+  {
+    type <- match.arg(type)
+    predictrms(object, newdata, type, se.fit, conf.int, conf.type,
+               incl.non.slopes, non.slopes, kint,
+               na.action, expand.na, center.terms, ...)
+  }
 
 print.ols <- function(x, digits=4, long=FALSE, ...)
 {
@@ -270,7 +276,7 @@ print.ols <- function(x, digits=4, long=FALSE, ...)
       cat("\nCoefficients:\n")
   se <- sqrt(diag(x$var))
   z <- x$coefficients/se
-  P <- 2*(1-pt(abs(z),rdf)) ## was pnorm 8feb03
+  P <- 2*(1-pt(abs(z),rdf))
   co <- cbind(x$coefficients,se,z,P)
   dimnames(co) <- list(names(x$coefficients),
                        c("Value","Std. Error","t","Pr(>|t|)"))

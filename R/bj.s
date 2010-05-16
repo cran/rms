@@ -1,98 +1,100 @@
 bj <- function(formula=formula(data), data,
                subset, na.action=na.delete, 
                link="log",	control=NULL,
-               method='fit', x=FALSE, y=FALSE, time.inc) {
-
-    call <- match.call()
-    m <- match.call(expand=FALSE)
-    require(survival) || stop('survival package not available')
-    mc <- match(c("formula", "data", "subset", "weights", "na.action"), 
+               method='fit', x=FALSE, y=FALSE, time.inc)
+{
+  call <- match.call()
+  m <- match.call(expand=FALSE)
+  require(survival) || stop('survival package not available')
+  mc <- match(c("formula", "data", "subset", "weights", "na.action"), 
               names(m), 0)
-    m <- m[c(1, mc)]
-    m$na.action <- na.action
-    m$drop.unused.levels <- TRUE
-    m[[1]] <- as.name("model.frame")
-    dul <- .Options$drop.unused.levels
-    if(!length(dul) || dul)
-      {
-        on.exit(options(drop.unused.levels=dul))
-        options(drop.unused.levels=FALSE)
-      }
+  m <- m[c(1, mc)]
+  m$na.action <- na.action
+  m$drop.unused.levels <- TRUE
+  m[[1]] <- as.name("model.frame")
+  dul <- .Options$drop.unused.levels
+  if(!length(dul) || dul)
+    {
+      on.exit(options(drop.unused.levels=dul))
+      options(drop.unused.levels=FALSE)
+    }
+  
+  X <- Design(eval.parent(m))
+  if(method=='model.frame') return(X)
+  atrx  <- attributes(X)
+  nact  <- atrx$na.action
+  Terms <- atrx$terms
+  atr   <- atrx$Design
+  
+  lnames <- c("logit","probit","cloglog","identity","log","sqrt",
+              "1/mu^2","inverse")
 
-    X <- Design(eval.parent(m))
-	if(method=='model.frame') return(X)
-    atrx <- attributes(X)
-    nact <- atrx$na.action
-    Terms <- atrx$terms
-    atr <- atrx$Design
-
-    lnames <- c("logit","probit","cloglog","identity","log","sqrt",
-      "1/mu^2","inverse")
-
-    link <- pmatch(link, lnames, 0)
-    if(link==0) stop("invalid link function")
-    link <- lnames[link]
-    Y <- model.extract(X, "response")
-    atY <- attributes(Y)
-    ncy <- ncol(Y)
-    maxtime <- max(Y[,-ncy])
-    nnn <- c(nrow(Y),sum(Y[,ncy]))
-    if (!inherits(Y, "Surv")) stop("Response must be a survival object")
-
-    type <- attr(Y, "type")
-
-    linkfun <- make.link(link)$linkfun 
-
-    if (type != 'right') stop ("Surv type must by 'right' censored")
-    Y <- cbind(linkfun(Y[,1]), Y[,2])
-
-    X <- model.matrix(Terms, X)
-    assgn <- DesignAssign(atr, 1, Terms)
-
-	if(method=='model.matrix') return(X)
-
-    time.units <- attr(Y, "units")
-    if(is.null(time.units)) time.units <- "Day"
-    if(missing(time.inc))	{
+  link <- pmatch(link, lnames, 0)
+  if(link==0) stop("invalid link function")
+  link <- lnames[link]
+  Y <- model.extract(X, "response")
+  atY <- attributes(Y)
+  ncy <- ncol(Y)
+  maxtime <- max(Y[,-ncy])
+  nnn <- c(nrow(Y),sum(Y[,ncy]))
+  if (!inherits(Y, "Surv")) stop("Response must be a survival object")
+  
+  type <- attr(Y, "type")
+  
+  linkfun <- make.link(link)$linkfun 
+  
+  if (type != 'right') stop ("Surv type must by 'right' censored")
+  Y <- cbind(linkfun(Y[,1]), Y[,2])
+  
+  X <- model.matrix(Terms, X)
+  assgn <- DesignAssign(atr, 1, Terms)
+  
+  if(method=='model.matrix') return(X)
+  
+  time.units <- attr(Y, "units")
+  if(is.null(time.units)) time.units <- "Day"
+  if(missing(time.inc))
+    {
       time.inc <- switch(time.units,Day=30,Month=1,Year=1,maxtime/10)
-      if(time.inc>=maxtime | maxtime/time.inc>25) 
-		time.inc <- max(pretty(c(0,maxtime)))/10
-	}
-    rnam <- dimnames(Y)[[1]]
-    dimnames(X) <- list(rnam, c("(Intercept)",atr$colnames))
-
-    n <- nrow(X)
-    nvar <- ncol(X)
-
-    fit <- bj.fit(X, Y, control=control)
-
-	if(fit$fail) {
-	  cat("Failure in bj.fit\n")
-	  return(fit)
-	}
-
-    fit$linear.predictors <- matxv(X, fit$coefficients)
-
-    if (length(nact)) fit$na.action <- nact
-
-    fit <- c(fit, list(maxtime=maxtime, units=time.units,
-	time.inc=time.inc,non.slopes=1,assign=assgn,fitFunction='bj'))
-    oldClass(fit) <-  c("bj", "rms")
-    fit$terms   <- Terms
-    fit$formula <- as.vector(attr(Terms, "formula"))
-    fit$call    <- call
-    fit$Design  <- atr
-    if (x) fit$x <- X
-    if (y) {
+      if(time.inc >= maxtime | maxtime/time.inc > 25) 
+         time.inc <- max(pretty(c(0, maxtime)))/10
+    }
+  rnam <- dimnames(Y)[[1]]
+  dimnames(X) <- list(rnam, c("(Intercept)",atr$colnames))
+  
+  n <- nrow(X)
+  nvar <- ncol(X)
+  
+  fit <- bj.fit(X, Y, control=control)
+  if(link == 'log') fit$stats <- c(fit$stats, gr=unname(exp(fit$stats['g'])))
+  
+  if(fit$fail) {
+    cat("Failure in bj.fit\n")
+    return(fit)
+  }
+  
+  if (length(nact)) fit$na.action <- nact
+  
+  fit <- c(fit, list(maxtime=maxtime, units=time.units,
+                     time.inc=time.inc, non.slopes=1, assign=assgn,
+                     fitFunction='bj'))
+  oldClass(fit) <-  c("bj", "rms")
+  fit$terms   <- Terms
+  fit$formula <- as.vector(attr(Terms, "formula"))
+  fit$call    <- call
+  fit$Design  <- atr
+  if (x) fit$x <- X
+  if (y)
+    {
       oldClass(Y) <- 'Surv'
       attr(Y,'type') <- atY$type
       fit$y <- Y
     }
-	scale.pred <- if(link=="log") c("log(T)","Survival Time Ratio") else "T"
-	fit$scale.pred <- scale.pred
-	fit$link       <- link
-    fit
-    }
+  scale.pred <- if(link=="log") c("log(T)","Survival Time Ratio") else "T"
+  fit$scale.pred <- scale.pred
+  fit$link       <- link
+  fit
+}
 
 bj.fit <- function(x, y, control = NULL) {
   
@@ -105,23 +107,16 @@ bj.fit <- function(x, y, control = NULL) {
   trace <- control$trace
   tol <- control$tol
   max.cycle <- control$max.cycle
-  if(length(iter.max) == 0)
-	iter.max <- 20
-  if(length(eps) == 0)
-	eps <- 0.001
-  if(length(trace) == 0)
-	trace <- FALSE
-  if(length(tol) == 0)
-	tol <- 1e-007
-  if(length(max.cycle) == 0)
-	max.cycle <- 30
+  if(length(iter.max) == 0) iter.max <- 20
+  if(length(eps) == 0)   eps <- 0.001
+  if(length(trace) == 0) trace <- FALSE
+  if(length(tol) == 0)   tol <- 1e-007
+  if(length(max.cycle) == 0) max.cycle <- 30
   x <- as.matrix(x)
-  if(all(x[, 1] == 1))
-	x <- x[, -1, drop = FALSE]
+  if(all(x[, 1] == 1)) x <- x[, -1, drop = FALSE]
   d <- dim(x)
   nvar <- d[2]
-  if(length(nvar) == 0)
-	nvar <- 0
+  if(length(nvar) == 0)	nvar <- 0
   N <- length(yy)
   if(nvar > 0)
     {
@@ -142,8 +137,7 @@ bj.fit <- function(x, y, control = NULL) {
     {
       oldbeta <- betahat
       oldsse <- sse
-      if(nvar == 0)
-        ypred <- 0
+      if(nvar == 0) ypred <- 0
 	  else
         {
           betahat <- solvet(t(xm) %*% xm, t(xm) %*% yy, tol = tol)
@@ -156,7 +150,8 @@ bj.fit <- function(x, y, control = NULL) {
         cat("iteration = ", n, "   sse ratio = ", format(razlika), "\n")
       n <- n + 1
       if(trace)
-        cat("  alpha = ", format(alphahat), "   beta = ", format(betahat), "\n\n")	##
+        cat("  alpha = ", format(alphahat),
+            "   beta = ", format(betahat), "\n\n")
       ehat <- timeorig - ypred
       if(!nonconv)
         {
@@ -200,7 +195,8 @@ bj.fit <- function(x, y, control = NULL) {
       w <-  - diff(c(1, surv))
       m <- order(ehat,  - status)
       bla <- cumsum((w * ehat[m]))
-      bla <- (bla[length(bla)] - bla)/(surv + state[m])	## Put bla back into original order
+      bla <- (bla[length(bla)] - bla)/(surv + state[m])
+      ## Put bla back into original order
       bl <- bla
       bl[(1:N)[m]] <- bla
       yhat <- if(nvar == 0) bl else x %*% betahat + bl
@@ -220,8 +216,7 @@ bj.fit <- function(x, y, control = NULL) {
   f <- list(fail = FALSE, iter = n)
   cof <- if(nvar == 0) alphahat else c(alphahat, betahat)
   dx <- dimnames(x)[[2]]
-  if(length(dx) == 0 && nvar > 0)
-	dx <- paste("x", 1:nvar, sep = "")
+  if(length(dx) == 0 && nvar > 0) dx <- paste("x", 1:nvar, sep = "")
   names(cof) <- c("Intercept", dx)
   f$coefficients <- cof
   ehat.u <- ehat[status == 1]
@@ -233,8 +228,10 @@ bj.fit <- function(x, y, control = NULL) {
       f$var <- solvet(t(x) %*% x, tol = tol) * sigma * sigma
     }
   else f$var <- (sigma * sigma)/N
-  stats <- c(N, sum(status), nvar, edf, sigma)
-  names(stats) <- c("Obs", "Events", "d.f.", "error d.f.", "sigma")
+  f$linear.predictors <- alphahat + as.vector(ypred)
+  g <- GiniMd(f$linear.predictors)
+  stats <- c(N, sum(status), nvar, edf, sigma, g)
+  names(stats) <- c("Obs", "Events", "d.f.", "error d.f.", "sigma", "g")
   f$stats <- stats
   if(any(status == 0))
 	yy <- structure(yy, class = "impute", imputed = (1:N)[status == 0])
@@ -334,7 +331,7 @@ print.bj <- function(x, digits=4, long=FALSE, ...)
 
   if(length(z <- x$na.action)) naprint(z)
   stats <- x$stats
-  print(format.sep(stats),quote=FALSE); cat("\n")
+  print(format.sep(stats), quote=FALSE); cat("\n")
 
   cof <- x$coefficients
   cnames <- names(cof)
@@ -364,15 +361,17 @@ print.bj <- function(x, digits=4, long=FALSE, ...)
 
 predict.bj <- 
   function(object, newdata,
-           type=c("lp","x","data.frame","terms","adjto","adjto.data.frame",
-             "model.frame"),
+           type=c("lp","x","data.frame","terms","cterms","adjto",
+             "adjto.data.frame", "model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes, non.slopes, kint=1,
-           na.action=na.keep, expand.na=TRUE, center.terms=TRUE, ...)
-  predictrms(object, newdata, type, se.fit, conf.int, conf.type,
-             incl.non.slopes, non.slopes, kint,
-             na.action, expand.na, center.terms, ...)
-
+           na.action=na.keep, expand.na=TRUE, center.terms=type=="terms", ...)
+  {
+    type <- match.arg(type)
+    predictrms(object, newdata, type, se.fit, conf.int, conf.type,
+               incl.non.slopes, non.slopes, kint,
+               na.action, expand.na, center.terms, ...)
+  }
 
 residuals.bj <- function(object, 
 						 type = c("censored","censored.normalized"), ...)
@@ -415,10 +414,7 @@ validate.bj <-
                        maxiter=15, tol=1e-7, rel.tolerance=1e-3, ...)
     {
       ##Assumes y is matrix with 1st col=time, 2nd=event indicator
-
-      Dxy <- rcorr.cens(x,y)["Dxy"]; z <- Dxy; nam <- "Dxy"
-      names(z) <- nam
-      z
+      rcorr.cens(x,y)["Dxy"]
     }
 
   predab.resample(fit, method=method,

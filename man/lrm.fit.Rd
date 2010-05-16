@@ -74,8 +74,11 @@ P-value,
 Goodman-Kruskal \eqn{\gamma}{gamma}, and Kendall's \eqn{\tau_a}{tau-a}
 rank correlations 
 between predicted probabilities and observed response, the
-Nagelkerke \eqn{R^2} index, and the Brier probability score with
-respect to computing the probability that \eqn{y >} lowest level. 
+Nagelkerke \eqn{R^2} index, the Brier probability score with
+respect to computing the probability that \eqn{y >} the mid level less
+one, the \eqn{g}-index, \eqn{gr} (the \eqn{g}-index on the odds ratio
+scale), and \eqn{gp} (the \eqn{g}-index on the probability scale using
+the same cutoff used for the Brier score).
 Probabilities are rounded to the nearest 0.002
 in the computations or rank correlation indexes.
 When \code{penalty.matrix} is present, the \eqn{\chi^2}{chi-square},
@@ -118,7 +121,8 @@ Department of Biostatistics, Vanderbilt University\cr
 f.harrell@vanderbilt.edu
 }
 \seealso{
-\code{\link{lrm}}, \code{\link{glm}}, \code{\link{matinv}}, \code{\link[Hmisc]{solvet}}, \code{\link{cr.setup}}
+\code{\link{lrm}}, \code{\link{glm}}, \code{\link{matinv}},
+\code{\link[Hmisc]{solvet}}, \code{\link{cr.setup}}, \code{\link{gIndex}}
 }
 \examples{
 #Fit an additive logistic model containing numeric predictors age, 

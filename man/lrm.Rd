@@ -68,8 +68,8 @@ the name \code{se.fit}.
 \item{penalty}{
 The penalty factor subtracted from the log likelihood is
 \eqn{0.5 \beta' P \beta}, where \eqn{\beta} is the vector of regression
-coefficients other than intercept(s), and \eqn{P} is \code{penalty
-  factors * penalty.matrix} and \code{penalty.matrix} is
+coefficients other than intercept(s), and \eqn{P} is
+\code{penalty factors * penalty.matrix} and \code{penalty.matrix} is
 defined below.  The default is \code{penalty=0} implying that ordinary 
 unpenalized maximum likelihood estimation is used.
 If \code{penalty} is a scalar, it is assumed to be a penalty factor that
@@ -153,8 +153,11 @@ derivative of log likelihood, model likelihood ratio
 Goodman-Kruskal \eqn{\gamma}{gamma}, Kendall's \eqn{\tau_a}{tau-a} rank
 correlations 
 between predicted probabilities and observed response, the
-Nagelkerke \eqn{R^2} index, and the Brier score computed with respect to
-\eqn{Y >} its lowest level. Probabilities are rounded to the nearest 0.002 
+Nagelkerke \eqn{R^2} index, the Brier score computed with respect to
+\eqn{Y >} its lowest level, the \eqn{g}-index, \eqn{gr} (the
+\eqn{g}-index on the odds ratio scale), and \eqn{gp} (the \eqn{g}-index
+on the probability scale using the same cutoff used for the Brier
+score).  Probabilities are rounded to the nearest 0.002 
 in the computations or rank correlation indexes.
 In the case of penalized estimation, the \code{"Model L.R."} is computed
 without the penalty factor, and \code{"d.f."} is the effective d.f. from
@@ -234,12 +237,15 @@ Harrell FE: Model uncertainty, penalization, and parsimony.  ISCB
 Presentation on UVa Web page, 1998.
 }
 \seealso{
-\code{\link{lrm.fit}}, \code{\link{predict.lrm}}, \code{\link{rms.trans}}, \code{\link{rms}}, \code{\link{glm}}, \code{\link{latex.lrm}},
+\code{\link{lrm.fit}}, \code{\link{predict.lrm}},
+\code{\link{rms.trans}}, \code{\link{rms}}, \code{\link{glm}},
+\code{\link{latex.lrm}}, 
 \code{\link{residuals.lrm}}, \code{\link[Hmisc]{na.delete}},
 \code{\link[Hmisc]{na.detail.response}},
 \code{\link{pentrace}}, \code{\link{rmsMisc}}, \code{\link{vif}},
 \code{\link{cr.setup}}, \code{\link{predab.resample}},
-\code{\link{validate.lrm}}, \code{\link{calibrate}}, \code{\link{Mean.lrm}}}
+\code{\link{validate.lrm}}, \code{\link{calibrate}},
+\code{\link{Mean.lrm}}, \code{\link{gIndex}}}
 \examples{
 #Fit a logistic model containing predictors age, blood.pressure, sex
 #and cholesterol, with age fitted with a smooth 5-knot restricted cubic 
@@ -356,9 +362,9 @@ for(penlty in seq(0,.15,by=.005)) {
 #problem is addressed in the last example.
 #
 penalties <- seq(0,.7,by=.1)   # really use by=.02
-index <- matrix(NA, nrow=length(penalties), ncol=9,
+index <- matrix(NA, nrow=length(penalties), ncol=11,
 	        dimnames=list(format(penalties),
-          c("Dxy","R2","Intercept","Slope","Emax","D","U","Q","B")))
+          c("Dxy","R2","Intercept","Slope","Emax","D","U","Q","B","g","gp")))
 i <- 0
 for(penlty in penalties)
 {

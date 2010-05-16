@@ -445,6 +445,6 @@ predab.resample <-
       print(tvarin)
     }
   
-  res
+  structure(res, class='validate')
 }
   

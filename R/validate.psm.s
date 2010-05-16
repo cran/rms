@@ -16,8 +16,8 @@ validate.psm <-
   ## inverse <- survreg.distributions[[dist]]$itrans
 
   
-  distance <- function(x,y,fit,iter,evalfit=FALSE,
-                       fit.orig,dxy=FALSE,dist,parms,
+  distance <- function(x, y, fit, iter, evalfit=FALSE,
+                       fit.orig, dxy=FALSE, dist,parms,
                        tol=1e-12, maxiter=15, rel.tolerance=1e-5, ...)
     {
       ##Assumes y is matrix with 1st col=time, 2nd=event indicator
@@ -31,6 +31,7 @@ validate.psm <-
           slope <- 1
           D <- (lr-1)/ll0
           U <- -2/ll0
+          gindex <- GiniMd(x)
         }
       else
         {
@@ -53,11 +54,12 @@ validate.psm <-
           ll0 <- -2*f.frozen$loglik[1]
           frozen.lr <- 2*diff(f.frozen$loglik)
           U <- (frozen.lr - lr)/ll0
+          gindex <- GiniMd(slope*x)
         }
 
       Q <- D - U
-      z <- c(R2, intercept, slope, D, U, Q)
-      nam <- c("R2", "Intercept", "Slope", "D", "U", "Q")
+      z <- c(R2, intercept, slope, D, U, Q, gindex)
+      nam <- c("R2", "Intercept", "Slope", "D", "U", "Q", "g")
       if(dxy)
         {
           Dxy <- rcorr.cens(x,y)["Dxy"]
@@ -124,4 +126,3 @@ survreg.fit2 <- function(x,y,iter=0,dist,parms=NULL,tol,maxiter=15,
 #	f$loglik <- c(f$ndev[2], f$loglik[2])
   f
 }
-

@@ -132,7 +132,8 @@ bj.fit(x, y, control)
     matrix (the names of the original predictors if they entered the model
     linearly) for which to have \code{bjplot} make plots of only the variables listed in \code{which} (names or numbers).
   }
-  \item{B,bw,rule,sls,aics,pr,tol,rel.tolerance,maxiter}{see \code{\link{predab.resample}}}
+  \item{B,bw,rule,sls,aics,pr,tol,rel.tolerance,maxiter}{see
+	\code{\link{predab.resample}}} 
   \item{\dots}{
     ignored for \code{print}; passed through to
     \code{predab.resample} for \code{validate}
@@ -145,8 +146,10 @@ bj.fit(x, y, control)
   \code{residuals.bj} returns a \code{Surv} object.  One of the components of the
   \code{fit} object produced by \code{bj} (and \code{bj.fit}) is a vector called
   \code{stats} which contains the following names elements: 
-  \code{"Obs", "Events", "d.f.","error d.f.","sigma"}.  Here \code{sigma} is the
-  estimate of the residual standard deviation.
+  \code{"Obs", "Events", "d.f.","error d.f.","sigma","g"}.  Here
+  \code{sigma} is the estimate of the residual standard deviation.
+  \code{g} is the \eqn{g}-index.  If the link function is \code{"log"},
+  the \eqn{g}-index on the anti-log scale is also returned as \code{gr}.
 }
 \details{
   The program implements the algorithm as described in the original
@@ -157,8 +160,9 @@ bj.fit(x, y, control)
   behave well. Our experience confirms this view.  Convergence is rather
   slow with this method, so you may want to increase the number of
   iterations.  Our experience shows that often, in particular with high
-  censoring, 100 iterations is not too many. Sometimes the method will not converge,
-  but will instead enter a loop of repeating values (this is due to the discrete nature 
+  censoring, 100 iterations is not too many. Sometimes the method will
+  not converge, but will instead enter a loop of repeating values (this
+  is due to the discrete nature  
   of Kaplan and Meier estimator and usually happens with small sample sizes).
   The program will look for such a loop and return the average betas. It will also 
   issue a warning message and give the size of the cycle (usually less than 6).
@@ -208,7 +212,9 @@ bj.fit(x, y, control)
 }
 \seealso{
   \code{\link{rms}}, \code{\link{psm}}, \code{\link{survreg}}, \code{\link{cph}}, \code{\link[survival]{Surv}},
-  \code{\link[Hmisc]{na.delete}}, \code{\link[Hmisc]{na.detail.response}}, \code{\link{datadist}}, \code{\link[Hmisc]{rcorr.cens}}.
+  \code{\link[Hmisc]{na.delete}},
+  \code{\link[Hmisc]{na.detail.response}}, \code{\link{datadist}},
+  \code{\link[Hmisc]{rcorr.cens}}, \code{\link{GiniMd}}
 }
 \examples{
 set.seed(1)

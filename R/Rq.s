@@ -33,6 +33,10 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
   rownames(fit$residuals) <- rownames(dimnames(X)[[1]])
   rho <- sum(Rho(fit$residuals, tau))
   
+  stats <- c(n=length(fit$residuals),
+             p=length(fit$coefficients),
+             g=GiniMd(fit$fitted.values))
+  
   fit <- c(fit,
            list(
                 na.action = at$na.action,
@@ -50,8 +54,7 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
                 Design    = desatr,
                 assign    = DesignAssign(desatr, 1, mt),
                 fitFunction=c("Rq", "rq"),
-                stats     = c(n=length(fit$residuals),
-                  p=length(fit$coefficients))))
+                stats     = stats))
   attr(fit, "na.message") <- attr(m, "na.message")
   
   s <- summary.rq(fit, cov=TRUE, se=se, hs=hs)
@@ -109,8 +112,9 @@ print.Rq <- function(x, digits=4, ...)
     dput(x$call); cat('\n')
     if(length(z <- x$na.action)) naprint(z)
     s <- x$stats
-    n <- s['n']; p <- s['p']
-    cat('n=', n, '  p=', p, '  residual d.f.=', n-p, '\n\n')
+    n <- s['n']; p <- s['p']; g <- s['g']
+    cat('n=', n, '  p=', p, '  residual d.f.=', n-p,
+        '  g=', round(g,3), '\n\n')
     print(x$summary)
     if (length(attr(x, "na.message"))) cat(attr(x, "na.message"), "\n")
   }

@@ -1,10 +1,10 @@
 predict.lrm <- function(object, ..., 
 		type=c("lp","fitted","fitted.ind","mean","x","data.frame",
-		"terms", "adjto", "adjto.data.frame", "model.frame"),
+		"terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
 		se.fit=FALSE, codes=FALSE) {
 
 type <- match.arg(type)
-if(!(type=="fitted"|type=="fitted.ind"|type=="mean"))
+if(type %nin% c("fitted","fitted.ind","mean"))
   return(predictrms(object,...,type=type, se.fit=se.fit))
 
 xb <- predictrms(object, ..., type="lp", se.fit=FALSE)

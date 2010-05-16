@@ -232,7 +232,8 @@ cph(formula = formula(data), data=parent.frame(),
   }
   \item{stats}{
     vector containing the named elements \code{Obs}, \code{Events}, \code{Model L.R.}, \code{d.f.},
-    \code{P}, \code{Score}, \code{Score P}, and \code{R2}.
+    \code{P}, \code{Score}, \code{Score P}, \code{R2}, \code{g}-index,
+    and \code{gr}, the \code{g}-index on the hazard ratio scale
   }
   \item{var}{
     variance/covariance matrix of coefficients
@@ -299,7 +300,8 @@ cph(formula = formula(data), data=parent.frame(),
   \code{\link{lrm}}, \code{\link{which.influence}},
   \code{\link[Hmisc]{na.delete}},
   \code{\link[Hmisc]{na.detail.response}},  \code{\link{print.cph}},
-  \code{\link{latex.cph}}, \code{\link{vif}}, \code{\link{ie.setup}}
+  \code{\link{latex.cph}}, \code{\link{vif}}, \code{\link{ie.setup}},
+  \code{\link{GiniMd}}
 }
 \examples{
 # Simulate data from a population model in which the log hazard

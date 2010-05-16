@@ -10,7 +10,7 @@ methods exist for \code{Glm} though.
 }
 \usage{
 Glm(formula, family = gaussian, data = list(), weights = NULL, subset =
-NULL, na.action = na.fail, start = NULL, offset = NULL, control =
+NULL, na.action = na.delete, start = NULL, offset = NULL, control =
 glm.control(...), model = TRUE, method = "glm.fit", x = FALSE, y = TRUE,
 contrasts = NULL, \dots)
 
@@ -24,9 +24,10 @@ contrasts = NULL, \dots)
 }
 \value{a fit object like that produced by \code{\link{glm}} but with
   \code{rms} attributes and a \code{class} of \code{"rms"},
-  \code{"Glm"}, and \code{"glm"} or \code{"glm.null"}.
+  \code{"Glm"}, and \code{"glm"} or \code{"glm.null"}.  The \code{g}
+  element of the fit object is the \eqn{g}-index.
 }
-\seealso{\code{\link{glm}},\code{\link{rms}}}
+\seealso{\code{\link{glm}},\code{\link{rms}},\code{\link{GiniMd}}}
 \examples{
 ## Dobson (1990) Page 93: Randomized Controlled Trial :
 counts <- c(18,17,15,20,10,20,25,13,12)

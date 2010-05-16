@@ -23,52 +23,52 @@ linear predictors.
 \usage{
 \method{predict}{bj}(object, newdata,
         type=c("lp", "x", "data.frame",
-                 "terms", "adjto", "adjto.data.frame", "model.frame"),
+                 "terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes, non.slopes, kint=1,
         na.action=na.keep, expand.na=TRUE,
-        center.terms=TRUE, \dots) # for bj
+        center.terms=type=="terms", \dots) # for bj
 
 \method{predict}{cph}(object, newdata,
         type=c("lp", "x",
-                 "data.frame", "terms", "adjto", "adjto.data.frame",
+                 "data.frame", "terms", "cterms", "adjto", "adjto.data.frame",
                  "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes=NULL,
         non.slopes=NULL, kint=1, na.action=na.keep, expand.na=TRUE,
-        center.terms=TRUE, \dots) # cph
+        center.terms=type=="terms", \dots) # cph
 
 \method{predict}{Glm}(object, newdata,
         type= c("lp", "x", "data.frame",
-                 "terms", "adjto", "adjto.data.frame", "model.frame"),
+                 "terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes,
         non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
-        center.terms=TRUE, \dots) # Glm
+        center.terms=type=="terms", \dots) # Glm
 
 \method{predict}{Gls}(object, newdata,
         type=c("lp", "x", "data.frame",
-                 "terms", "adjto", "adjto.data.frame", "model.frame"),
+                 "terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes,
         non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
-        center.terms=TRUE, \dots) # Gls
+        center.terms=type=="terms", \dots) # Gls
 
 \method{predict}{ols}(object, newdata,
         type=c("lp", "x", "data.frame",
-                 "terms", "adjto", "adjto.data.frame", "model.frame"),
+                 "terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes,
         non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
-        center.terms=TRUE, \dots) # ols
+        center.terms=type=="terms", \dots) # ols
 
 \method{predict}{psm}(object, newdata,
         type=c("lp", "x", "data.frame",
-                 "terms", "adjto", "adjto.data.frame", "model.frame"),
+                 "terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes,
         non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
-        center.terms=TRUE, \dots) # psm
+        center.terms=type=="terms", \dots) # psm
 }
 \arguments{
 \item{object}{a fit object with an \code{rms} fitting function}
@@ -104,9 +104,15 @@ at the desired combinations of values, \code{"data.frame"} to get an
 S data frame of the combinations, \code{"model.frame"} to get a data frame
 of the transformed predictors, \code{"terms"} to get a matrix with
 each column being the linear combination of variables making up
-a factor, \code{"adjto"} to return a vector of \code{limits[2]} (see \code{datadist}) in coded
+a factor, \code{"cterms"} ("combined terms") to not create separate
+terms for interactions 
+but to add all interaction terms involving each predictor to the
+main terms for each predictor, \code{"adjto"} to return a vector of
+\code{limits[2]} (see \code{datadist}) in coded 
 form, and \code{"adjto.data.frame"} to return a data frame version of these
-central adjustment values.  If \code{newdata} is not given, \code{predict}
+central adjustment values.  Use of \code{type="cterms"} does not make
+ sense for a \code{strat} variable that does not interact with
+another variable.  If \code{newdata} is not given, \code{predict}
 will attempt to return information stored with the fit object if the
 appropriate options were used with the modeling function (e.g., \code{x, y, linear.predictors, se.fit}).
 }
@@ -182,7 +188,7 @@ f.harrell@vanderbilt.edu
 \code{\link{plot.Predict}}, \code{\link{summary.rms}},
 \code{\link{rms}}, \code{\link{rms.trans}}, \code{\link{predict.lrm}},
 \code{\link{residuals.cph}}, \code{\link{datadist}},
-\code{\link{gendata}}, 
+\code{\link{gendata}}, \code{\link{gIndex}},
 \code{\link{Function.rms}}, \code{\link[Hmisc]{reShape}}, 
 \code{\link[Hmisc]{xYplot}}, \code{\link{contrast.rms}}
 }
@@ -321,9 +327,41 @@ doit(xb - xa, "b:a")
 doit(xc - xa, "c:a")
 doit(xb - xa, "c:b")
 
-
 # NOTE: This is much easier to do using contrast.rms
 
+# Demonstrate type="terms" and type="cterms"
+set.seed(1)
+n <- 100
+x <- 1:n
+w <- factor(sample(c('a', 'b'), n, TRUE))
+u <- factor(sample(c('A', 'B'), n, TRUE))
+y <- .01*x + .2*(w=='b') + .3*(u=='B') + .2*(w=='b' & u=='B') + rnorm(n)/5
+ddist <- datadist(x, w, u)
+f <- ols(y ~ x*w*u, x=TRUE, y=TRUE)
+f
+anova(f)
+z <- predict(f, type='terms', center.terms=FALSE)
+z[1:5,]
+k <- coef(f)
+## Manually compute combined terms
+wb <- w=='b'
+uB <- u=='B'
+h  <- k['x * w=b * u=B']*x*wb*uB
+tx <- k['x']  *x  + k['x * w=b']*x*wb + k['x * u=B']  *x*uB  + h
+tw <- k['w=b']*wb + k['x * w=b']*x*wb + k['w=b * u=B']*wb*uB + h
+tu <- k['u=B']*uB + k['x * u=B']*x*uB + k['w=b * u=B']*wb*uB + h
+h   <- z[,'x * w * u'] # highest order term is present in all cterms
+tx2 <- z[,'x']+z[,'x * w']+z[,'x * u']+h
+tw2 <- z[,'w']+z[,'x * w']+z[,'w * u']+h
+tu2 <- z[,'u']+z[,'x * u']+z[,'w * u']+h
+summary(tx-tx2)
+summary(tw-tw2)
+summary(tu-tu2)
+zc <- predict(f, type='cterms')
+zc[1:5,]
+summary(tx-zc[,'x'])
+summary(tw-zc[,'w'])
+summary(tu-zc[,'u'])
 
 \dontrun{
 #A variable state.code has levels "1", "5","13"

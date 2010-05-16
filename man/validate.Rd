@@ -1,5 +1,6 @@
 \name{validate}
 \alias{validate}
+\alias{print.validate}
 \title{
   Resampling Validation of a Fitted Model's Indexes of Fit
 }
@@ -13,6 +14,7 @@
 validate(fit, method="boot", B=40,
          bw=FALSE, rule="aic", type="residual", sls=0.05, aics=0, 
          pr=FALSE, \dots)
+\method{print}{validate}(x, digits=4, ...)
 }
 \arguments{
   \item{fit}{
@@ -63,7 +65,11 @@ validate(fit, method="boot", B=40,
     for judging matrix singularity in \code{solvet} (default is 1e-12)
     and a \code{rel.tolerance} parameter that is passed to
     \code{survreg.control} (default is 1e-5).
+
+	For \code{print.validate} \ldots is ignored.
   }
+  \item{x}{an object produced by one of the \code{validate} functions}
+  \item{digits}{number of decimal places to print}
 }
 \details{
   It provides bias-corrected indexes that are specific to each type

@@ -17,8 +17,9 @@ beta} and \eqn{X\beta}{X beta} with overall intercept and slope
 calibrated to test sample / n, the overall quality index (logarithmic
 probability score) \eqn{Q = D - U}, and the Brier or quadratic
 probability score, \eqn{B} (the last 3 are not computed for ordinal
-models).  The corrected slope can be thought of as shrinkage factor that
-takes into account overfitting.
+models), the \eqn{g}-index, and \code{gp}, the \eqn{g}-index on the
+probability scale.  The corrected slope can be thought of as shrinkage
+factor that takes into account overfitting.
 }
 
 \usage{
@@ -58,11 +59,10 @@ allowed) and to \code{predab.resample} (note especially the \code{group},
 \value{
 a matrix with rows corresponding to \eqn{D_{xy}},
 \eqn{R^2}, \code{Intercept}, \code{Slope}, \eqn{E_{max}}, \eqn{D},
-\eqn{U}, \eqn{Q}, amd \eqn{B}, and
+\eqn{U}, \eqn{Q}, \eqn{B}, \eqn{g}, \eqn{gp}, and
 columns for the original index, resample estimates, indexes applied to
 the whole or omitted sample using the model derived from the resample,
 average optimism, corrected index, and number of successful re-samples.
-For ordinal models, \eqn{U, Q, B} to not appear.
 }
 \section{Side Effects}{
 prints a summary, and optionally statistics for each re-fit
@@ -90,8 +90,9 @@ and Environmental Sciences.  The Bernard G. Greenberg Volume, ed. PK
 Sen. New York: North-Holland, p. 333--343.
 }
 \seealso{
-\code{\link{predab.resample}}, \code{\link{fastbw}}, \code{\link{lrm}}, \code{\link{rms}}, \code{\link{rms.trans}}, \code{\link{calibrate}},
-\code{\link[Hmisc]{somers2}}, \code{\link{cr.setup}}
+\code{\link{predab.resample}}, \code{\link{fastbw}}, \code{\link{lrm}},
+\code{\link{rms}}, \code{\link{rms.trans}}, \code{\link{calibrate}}, 
+\code{\link[Hmisc]{somers2}}, \code{\link{cr.setup}}, \code{\link{gIndex}}
 }
 \examples{
 n <- 1000    # define sample size

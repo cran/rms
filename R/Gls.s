@@ -217,12 +217,20 @@ Gls <-
         Resid <- y - Fitted
         attr(Resid, "std") <- glsFit$sigma/(varWeights(glsSt))
       }
-    if (controlvals$apVar && FALSE) ## FEH 3apr03
+    attr(Resid, 'label') <- 'Residuals'
+    cr <- class(Resid)
+    if(length(cr) && any(cr == 'labelled'))
+      {
+        if(length(cr) == 1) Resid <- unclass(Resid) else
+        class(Resid) <- setdiff(cr, 'labelled')
+      }
+    
+    if (controlvals$apVar && FALSE)
       apVar <-
         nlme:::glsApVar(glsSt, glsFit$sigma,
-                        .relStep = controlvals[[".relStep"]],  
+                        .relStep  = controlvals[[".relStep"]],  
                         minAbsPar = controlvals[["minAbsParApVar"]],
-                        natural = controlvals[["natural"]])
+                        natural   = controlvals[["natural"]])
     else
       apVar <- "Approximate variance-covariance matrix not available"
     dims <- attr(glsSt, "conLin")[["dims"]]
@@ -231,7 +239,7 @@ Gls <-
     attr(glsSt, "glsFit") <- NULL
     estOut <- list(modelStruct = glsSt, dims = dims, contrasts = contr, 
                    coefficients = glsFit[["beta"]], varBeta = varBeta,
-                   sigma = glsFit$sigma, 
+                   sigma = glsFit$sigma, g=GiniMd(Fitted), 
                    apVar = apVar, logLik = glsFit$logLik,
                    numIter = if(needUpdate(glsSt)) numIter else numIter0,  
                    groups = grps, call = Call, method = method,
@@ -279,6 +287,7 @@ print.Gls <- function(x, digits=4, ...)
       cat("  Subset:", deparse(asOneSidedFormula(mCall$subset)[[2]]), 
           "\n")
     }
+  cat(  '  g-index: ', round(x$g,3), '\n')
   if (inherits(x, "gnls"))
     cat("  Log-likelihood: ", format(x$logLik), "\n", sep = "")
   else
@@ -339,14 +348,17 @@ vcov.Gls <- function(object, ...)
 
 predict.Gls <- 
   function(object, newdata,
-           type=c("lp","x","data.frame","terms","adjto","adjto.data.frame",
-             "model.frame"),
+           type=c("lp","x","data.frame","terms","cterms", "adjto",
+             "adjto.data.frame", "model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes, non.slopes, kint=1,
-           na.action=na.keep, expand.na=TRUE, center.terms=TRUE, ...)
-  predictrms(object, newdata, type, se.fit, conf.int, conf.type,
-             incl.non.slopes, non.slopes, kint,
-             na.action, expand.na, center.terms, ...)
-
+           na.action=na.keep, expand.na=TRUE, center.terms=type=="terms", ...)
+  {
+    type <- match.arg(type)
+    predictrms(object, newdata, type, se.fit, conf.int, conf.type,
+               incl.non.slopes, non.slopes, kint,
+               na.action, expand.na, center.terms, ...)
+  }
+    
 
 latex.Gls <- function(...) latexrms(...)

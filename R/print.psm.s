@@ -22,6 +22,8 @@ print.psm <- function(x, correlation = FALSE, ...)
   stats[3] <- round(stats[3],2)
   stats[5] <- round(stats[5],4)
   stats[6] <- round(stats[6],2)
+  stats[7] <- round(stats[7],3)
+  stats[8] <- round(stats[8],3)
   print(stats)
   cat("\n")
 
