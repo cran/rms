@@ -6,7 +6,6 @@ psm <- function(formula=formula(data),
                 parms=NULL, model=FALSE, x=FALSE, y=TRUE, time.inc, ...)
   {
     require(survival)
-    survreg.fit <- survival:::survreg.fit
     
     call <- match.call()
     m <- match.call(expand=FALSE)
@@ -200,10 +199,10 @@ psm <- function(formula=formula(data),
         pcols<-assign[-1][pterms]
         
         fit <- survival:::survpenal.fit(X, Y, weights, offset, init=init,
-                                        controlvals = control,
-                                        dist= dlist, scale=scale,
-                                        strata=strata, nstrat=nstrata,
-                                        pcols, pattr,assign, parms=parms)
+                             controlvals = control,
+                             dist= dlist, scale=scale,
+                             strata=strata, nstrat=nstrata,
+                             pcols, pattr,assign, parms=parms)
       }
     else fit <-
       survreg.fit(X, Y, weights, offset, 
@@ -324,7 +323,7 @@ Mean.psm <- function(object, ...)
 
 predict.psm <- 
   function(object, newdata,
-           type=c("lp","x","data.frame","terms","cterms", "adjto",
+           type=c("lp","x","data.frame","terms","cterms","ccterms","adjto",
              "adjto.data.frame",  "model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes, non.slopes, kint=1,

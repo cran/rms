@@ -63,7 +63,11 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
           g <- list(...)
           if(length(type))    g$type <- type
           if(length(vartype)) g$vartype <- vartype
-          do.call(if(cphnull)'survfit.cph.null' else 'survfit.cph', g)
+          if(packageDescription('survival')$Version >= '2.36-1')
+            g$censor <- FALSE  # don't output censored values
+          do.call(if(cphnull &&
+                     packageDescription('survival')$Version < '2.36-1')
+          'survfit.cph.null' else 'survfit.cph', g)
         }
 
       if(f==0)

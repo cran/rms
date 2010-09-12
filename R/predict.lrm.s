@@ -1,6 +1,7 @@
 predict.lrm <- function(object, ..., 
 		type=c("lp","fitted","fitted.ind","mean","x","data.frame",
-		"terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
+		"terms", "cterms", "ccterms", "adjto", "adjto.data.frame",
+          "model.frame"),
 		se.fit=FALSE, codes=FALSE) {
 
 type <- match.arg(type)

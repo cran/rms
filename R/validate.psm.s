@@ -100,10 +100,10 @@ survreg.fit2 <- function(x,y,iter=0,dist,parms=NULL,tol,maxiter=15,
   if (length(dlist$dist)) dlist <- survreg.distributions[[dlist$dist]]
   
   f <- 
-    survival:::survreg.fit(as.matrix(x),y,dist=dlist,parms=parms,
-                           controlvals=survreg.control(maxiter=maxiter,
-                             rel.tolerance=rel.tolerance),
-                           offset=rep(0,length(e)),init=init)
+    survreg.fit(as.matrix(x),y,dist=dlist,parms=parms,
+                controlvals=survreg.control(maxiter=maxiter,
+                  rel.tolerance=rel.tolerance),
+                offset=rep(0,length(e)),init=init)
   if(is.character(f)) { warning(f); return(list(fail=TRUE)) }
   f$fail <- FALSE
     

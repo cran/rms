@@ -172,6 +172,11 @@ Frank Harrell\cr
 Department of Biostatistics, Vanderbilt University\cr
 f.harrell@vanderbilt.edu
 }
+\references{
+  Fox J, Hong J (2009): Effect displays in R for multinomial and
+  proportional-odds logit models: Extensions to the effects package.  J
+  Stat Software 32 No. 1.
+  }
 \seealso{
   \code{\link{Predict}}, \code{\link{rbind.Predict}},
   \code{\link{datadist}}, \code{\link{predictrms}}, \code{\link{anova.rms}},

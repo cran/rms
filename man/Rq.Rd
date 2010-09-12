@@ -17,7 +17,7 @@ Rq(formula, tau = 0.5, data, subset, weights, na.action=na.delete,
    method = "br", model = FALSE, contrasts = NULL,
    se = "nid", hs = TRUE, x = FALSE, y = FALSE, ...)
 
-\method{print}{Rq}(x, digits=4, \dots)
+\method{print}{Rq}(x, digits=4, coefs=TRUE, latex=FALSE, \dots)
 
 \method{latex}{Rq}(object,
            file = paste(first.word(deparse(substitute(object))),
@@ -47,6 +47,12 @@ RqFit(fit, wallow=TRUE, passdots=FALSE)
 	number of significant digits used in formatting results in
 	\code{print.Rq}.
   }
+  \item{coefs}{specify \code{coefs=FALSE} to suppress printing the table
+	of model coefficients, standard errors, etc.  Specify \code{coefs=n}
+	to print only the first \code{n} regression coefficients in the
+	model.}
+  \item{latex}{a logical value indicating whether information should be
+	formatted as plain text or as LaTeX markup}
   \item{object}{an object created by \code{Rq}}
   \item{file,append,which,varnames,columns,inline,caption}{see
 	\code{\link{latexrms}}}
@@ -71,7 +77,7 @@ RqFit(fit, wallow=TRUE, passdots=FALSE)
   is Roger Koenker.
 }
 \seealso{
-  \code{\link[quantreg]{rq}}
+  \code{\link[quantreg]{rq}}, \code{\link{prModFit}}
 }
 \examples{
 \dontrun{

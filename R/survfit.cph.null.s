@@ -1,4 +1,5 @@
-survfit.cph.null <-
+if(packageDescription('survival')$Version < '2.36-1')
+  survfit.cph.null <-
   function(formula, newdata, se.fit=TRUE, conf.int=.95, individual=FALSE,
            type, vartype,
            conf.type=c('log', 'log-log', 'plain', 'none'), ...)
@@ -30,7 +31,7 @@ survfit.cph.null <-
   if(!missing(vartype))   g$vartype   <- vartype
   g$conf.type <- conf.type
   
-  survfits <- getFromNamespace('survfit','survival')
+  survfits <- survfit
   g <- do.call('survfits', g)
   g$call <- f$call
   class(g) <- c('survfit.cph.null', class(g))

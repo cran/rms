@@ -1,3 +1,27 @@
+Changes in version 3.1-0 (2010-09-12)
+   * Fixed gIndex to not use scale for labeling unless character
+   * Changed default na.action in Gls to na.omit and added a note in the help file that na.delete does not work with Gls
+   * Added terms component to Gls fit object (latex was not working)
+   * Added examples in robcov help file testing sandwich covariance estimator
+   * Added reference related to the effects package under help file for plot.Predict
+   * Added more examples and simulations to gIndex
+   * Fixed ancient bug in lrm.fit Fortran code to handle case where initial estimates are nearly perfect (was trying to step halve); thanks: Dan Hogan
+   * Changed survdiffplot to use gray(.85) for bands instead of gray(.95)
+   * Fixed formatting problem in print.psm
+   * Added prStats and reVector functions to rmsMisc.s
+   * Changed formatting of all print.* functions for model fits to use new prStats function
+   * Added latex=TRUE option to all model fit print methods; requires LaTeX package needspace
+   * Re-wrote printing routines to make use of more general model
+   * Removed long and scale options from cph printing-related routines
+   * Prepare for version 2.36-1 of survival package by adding censor=FALSE argument to survfit.coxph
+   * Added type="ccterms" to various predict methods
+   * Made type="ccterms" the default for partial g-indexes in gIndex, i.e., combine all indirectly related (through interactions) terms
+   * Added Spiegelhalter calibration test to val.prob
+   * Added a check in cph to trigger an error if strata() is used in formula
+   * Fixed drawing of polygon for shaded confidence bands for survplot.survfit (thanks to Patrick Breheny <patrick.breheny@uky.edu>)
+   * Changed default adjust.subtitle in bplot to depend on ref.zero, thanks to David Winsemius <dwinsemius@comcast.net>
+   * Used a namespace and simplified referenced to a few survival package functions that survival actually exports
+
 Changes in version 3.0-0 (2010-05-16)
    * Made Gls not store data label() in residuals object, instead storing a label of 'Residuals'
    * Fixed handling of na.action and check for presence of offsets in Glm

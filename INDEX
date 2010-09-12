@@ -43,7 +43,6 @@ predict.lrm             Predicted Values for Binary and Ordinal
                         Logistic Models
 predictrms              Predicted Values from Model Fit
 print.cph               Print cph Results
-print.cph.fit           Print cph.fit
 print.ols               Print ols
 psm                     Parametric Survival Model
 residuals.cph           Residuals for a cph Fit

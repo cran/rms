@@ -91,6 +91,27 @@ Adjusted \code{ols} fits do not have the corrected standard errors printed with
 \code{\link{bootcov}}, \code{\link{naresid}}, \code{\link{residuals.cph}}
 }
 \examples{
+# In OLS test against more manual approach
+set.seed(1)
+n <- 15
+x1 <- 1:n
+x2 <- sample(1:n)
+y <- round(x1 + x2 + 8*rnorm(n))
+f <- ols(y ~ x1 + x2, x=TRUE, y=TRUE)
+vcov(f)
+vcov(robcov(f))
+X <- f$x
+G <- diag(resid(f)^2)
+solve(t(X) \%*\% X) \%*\% (t(X) \%*\% G \%*\% X) \%*\% solve(t(X) \%*\% X)
+
+# Duplicate data and adjust for intra-cluster correlation to see that
+# the cluster sandwich estimator completely ignored the duplicates
+x1 <- c(x1,x1)
+x2 <- c(x2,x2)
+y  <- c(y, y)
+g <- ols(y ~ x1 + x2, x=TRUE, y=TRUE)
+vcov(robcov(g, c(1:n, 1:n)))
+
 # A dataset contains a variable number of observations per subject,
 # and all observations are laid out in separate rows. The responses
 # represent whether or not a given segment of the coronary arteries
@@ -100,8 +121,6 @@ Adjusted \code{ols} fits do not have the corrected standard errors printed with
 # independence are reasonably efficient.  The job is then to get
 # unbiased estimates of variances and covariances of these estimates.
 
-
-set.seed(1)
 n.subjects <- 30
 ages <- rnorm(n.subjects, 50, 15)
 sexes  <- factor(sample(c('female','male'), n.subjects, TRUE))

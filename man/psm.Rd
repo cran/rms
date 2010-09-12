@@ -47,7 +47,8 @@ psm(formula=formula(data),
     parms=NULL, 
     model=FALSE, x=FALSE, y=TRUE, time.inc, \dots)
 
-\method{print}{psm}(x, correlation=FALSE, \dots)
+\method{print}{psm}(x, correlation=FALSE, digits=4, coefs=TRUE,
+latex=FALSE, \dots) 
 
 Hazard(object, \dots)
 \method{Hazard}{psm}(object, \dots)   # for psm fit
@@ -113,6 +114,13 @@ lwd=3, \dots)
   }
   \item{correlation}{set to \code{TRUE} to print the correlation matrix
     for parameter estimates}
+  \item{digits}{number of places to print to the right of the decimal point}
+  \item{coefs}{specify \code{coefs=FALSE} to suppress printing the table
+	of model coefficients, standard errors, etc.  Specify \code{coefs=n}
+	to print only the first \code{n} regression coefficients in the
+	model.}
+  \item{latex}{a logical value indicating whether information should be
+	formatted as plain text or as LaTeX markup}
   \item{\dots}{
     other arguments to fitting routines, or to pass to \code{survplot} from
     \cr
@@ -204,7 +212,7 @@ lwd=3, \dots)
   \code{\link[survival]{Surv}}, 
   \code{\link[Hmisc]{na.delete}},
   \code{\link[Hmisc]{na.detail.response}}, \code{\link{datadist}},
-  \code{\link{latex.psm}}, \code{\link{GiniMd}} 
+  \code{\link{latex.psm}}, \code{\link{GiniMd}}, \code{\link{prModFit}}
 }
 \examples{
 n <- 400

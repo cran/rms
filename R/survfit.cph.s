@@ -32,7 +32,10 @@ survfit.cph <- function(formula, newdata, se.fit=TRUE, conf.int=.95,
       rq <- attr(newdata, 'strata')
       g$newdata <- newdata
     }
-  survfits <- survival:::survfit
+  survfits <- survfit
+  if(packageDescription('survival')$Version >= '2.36-1')
+    g$censor <- FALSE  # don't output censored values
+
   g <- do.call('survfits', g)
   g$requested.strata <- rq
   class(g) <- c('survfit.cph', class(g))

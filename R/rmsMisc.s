@@ -218,7 +218,7 @@ related.predictors <- function(at, type=c("all","direct"))
       for(j in 1:ncol(ia))
         {
           w <- ia[,j]
-          if(any(w==i)) r <- c(r,w[w>0 & w!=i])
+          if(any(w==i)) r <- c(r, w[w>0 & w!=i])
         }
       x[[i]] <- r
     }
@@ -241,6 +241,56 @@ related.predictors <- function(at, type=c("all","direct"))
   x
 }
 
+#Function like related.predictors(..., type='all') but with new
+# "super" predictors created by combining all indirected related
+# (through interactions) predictors into a vector of predictor numbers
+# with a new name formed from combining all related original names
+
+combineRelatedPredictors <- function(at)
+  {
+    nam <- at$name
+    r <- related.predictors(at)
+    newnames <- newnamesia <- components <- list()
+    pused <- rep(FALSE, length(nam))
+    k <- 0
+    for(i in (1:length(nam))[at$assume.code != 9])
+      {
+        if(!pused[i])
+          {
+            comp <- i
+            nn   <- nam[i]
+            ri   <- r[[i]]
+            ianames <- character(0)
+            ic <- interactions.containing(at, i)
+            if(length(ic))
+              {
+                comp <- c(comp, ic)
+                ianames <- nam[ic]
+              }
+            if(length(ri))
+              {
+                comp <- c(comp, ri)
+                nn   <- c(nn,   nam[ri])
+                for(j in ri)
+                  {
+                    pused[j] <- TRUE
+                    ic <- interactions.containing(at, j)
+                    if(length(ic))
+                      {
+                        comp <- c(comp, ic)
+                        ianames <- c(ianames, nam[ic])
+                      }
+                  }
+              }
+            k <- k + 1
+            components[[k]] <- unique(comp)
+            newnames[[k]]   <- unique(nn)
+            newnamesia[[k]] <- unique(c(nn, ianames))
+          }
+      }
+    list(names=newnames, namesia=newnamesia, components=components)
+  }
+    
 
 #Function to list all interaction term numbers that include predictor
 #pred as one of the interaction components
@@ -680,5 +730,298 @@ rmsArgs <- function(.object, envir=parent.frame(2))
     .res
   }
 
+## General function to print model fit objects using latex or regular
+## print (the default)
 
+prModFit <- function(x, title, w, digits=4, coefs=TRUE, latex=FALSE, ...)
+  {
+    bverb <- function() if(latex) cat('\\begin{verbatim}\n')
+    everb <- function() if(latex) cat('\\end{verbatim}\n')
+    skipt  <- function(n=1, latex=FALSE)
+      {
+        if(n==0) return()
+        if(latex) paste('\n\\vspace{', n, 'ex}\n\n', sep='')
+        else paste(rep('\n', n), collapse='')
+      }
+    catl  <- function(x, skip=1, bold=FALSE, verb=FALSE, pre=0,
+                      center=TRUE, indent=FALSE)
+      if(latex)
+        {
+          if(verb)
+            cat(paste('\\begin{verbatim}\n', skipt(pre), sep=''),
+                x,
+                skipt(skip),
+                '\\end{verbatim}\n',
+                sep='')
+          else
+            cat(skipt(pre, latex=TRUE),
+                if(center) '\\centerline{'
+                else if(!indent) '\\noindent ',
+                if(bold) '\\textbf{',
+                x,
+                if(bold) '}',
+                if(center) '}',
+                skipt(skip, latex=TRUE),
+                sep='')
+        }
+      else
+        cat(skipt(pre), x, '\n', skipt(skip), sep='')
+    
+    
+    latexVector <- function(x, ...)
+      cat(latexTabular(t(x), helvetica=FALSE, ...),'\n', sep='')
+    
+    if(length(x$fail) && x$fail)
+      {
+        catl('Model Did Not Converge.  No summary provided.', bold=TRUE, pre=1)
+        return()
+      }
 
+    if(latex) cat('\\needspace{13\\baselineskip}\n')
+    catl(title, pre=1, bold=TRUE)
+    
+    bverb()
+    dput(x$call)
+    cat('\n')
+    everb()
+
+    for(z in w)
+      {
+        type <- z$type
+        obj  <- z[[2]]
+        titl <- z$title
+        tex  <- z$tex
+        if(!length(tex)) tex <- FALSE
+
+        preskip <- z$preskip
+        if(!length(preskip)) preskip <- 0
+        if(!tex && length(titl)) catl(titl, pre=preskip, skip=1)
+        if(type == 'stats')
+          {
+            prStats(obj[[1]], obj[[2]], latex=latex)
+            if(!latex) cat('\n')
+          }
+        else if(type == 'coefmatrix')
+          {
+            if(coefs)
+              {
+                errordf <- obj$errordf
+                beta <- obj$coef
+                se   <- obj$se
+                Z    <- beta/se
+                P    <- if(length(errordf)) 2*(1 - pt(abs(Z), errordf)) else
+                        1 - pchisq(Z^2, 1)
+                U    <- cbind('\\textrm{Coef}' =
+                              formatNP(beta, digits, latex=latex),
+                              '\\textrm{S.E.}' =
+                              formatNP(se,   digits, latex=latex),
+                              '\\textrm{Wald~} Z'  =
+                              formatNP(Z,    2, latex=latex),
+                              '\\textrm{Pr}(>|Z|)' =
+                              formatNP(P, 4, latex=latex, pvalue=TRUE))
+                if(!latex)
+                  colnames(U) <- c('Coef', 'S.E.', 'Wald Z', 'Pr(>|Z|)')
+                if(length(errordf))
+                  colnames(U)[3:4] <- if(latex) c('t', '\\textrm{Pr}(>|t|)') else
+                                                c('t',   'Pr(>|t|)')
+                rownames(U) <- names(beta)
+                if(length(obj$aux))
+                  {
+                    U <- cbind(U, formatNP(obj$aux, digits, latex=latex))
+                    colnames(U)[ncol(U)] <- obj$auxname
+                  }
+                if(latex)
+                  {
+                    cat(skipt(1, latex=TRUE))
+                    rownames(U) <- latexTranslate(names(beta))
+                    if(is.numeric(coefs))
+                      {
+                        U <- U[1:coefs,,drop=FALSE]
+                        U <- rbind(U, rep('', ncol(U)))
+                        rownames(U)[nrow(U)] <- '\\dots'
+                      }
+                    latex(U, file='', first.hline.double=FALSE, table=FALSE,
+                          col.just=rep('r',4), rowlabel='',
+                          math.col.names=TRUE)
+                  }
+                else
+                  {
+                    if(is.numeric(coefs))
+                      {
+                        U <- U[1:coefs,,drop=FALSE]
+                        U <- rbind(U, rep('', ncol(U)))
+                        rownames(U)[nrow(U)] <- '. . .'
+                      }
+                    print(U, quote=FALSE)
+                    cat('\n')
+                  }
+              }
+          }
+        else {
+          if(tex)
+            {
+              cat('\\begin{center}\n')
+              if(length(titl)) cat(titl, '\n\n')
+            }
+          else
+            {
+              bverb()
+              cat(skipt(preskip, latex=tex))
+            }
+          do.call(type, obj)
+          ## unlike do.call, eval(call(...)) dispatches on class of ...
+          if(tex) cat('\\end{center}\n')
+          else
+            {
+              cat('\n')
+              everb()
+            }
+        }
+      }
+    cat('\n')
+  }
+    
+## Function to print model fit statistics
+## Example:
+#prStats(list('Observations', c('Log','Likelihood'),
+#            c('Rank','Measures'),
+#            c('Mean |difference|','Measures')),
+#       list(c(N0=52, N1=48), c('max |deriv|'=1e-9,'-2 LL'=1332.23,c(NA,2)),
+#            c(tau=-.75, Dxy=-.64, C=.743, 2),
+#            c(g=1.25, gr=11.3, 2)))
+## Note that when there is an unnamed element of w, it is assumed to be
+## the number of digits to the right of the decimal place (recycling of
+## elements is done if fewer elements are in this vector), causing
+## round(, # digits) and format(..., nsmall=# digits).  Use NA to use
+## format without nsmall and without rounding (useful for integers and for
+## scientific notation)
+
+prStats <- function(labels, w, latex=FALSE)
+  {
+    spaces <- function(n)
+      if(n <= 0.5) '' else
+    substring('                                                         ',
+              1, floor(n))
+    
+    ## Find maximum width used for each column
+    p <- length(labels)
+    width <- numeric(p)
+    for(i in 1:p)
+      {
+        width[i] <- max(nchar(labels[[i]]))
+        u <- w[[i]]
+        dig <- NA
+        if(any(names(u)==''))
+          {
+            dig <- u[names(u)=='']
+            u   <- u[names(u)!='']
+          }
+        lu <- length(u)
+        dig <- rep(dig, length=lu)
+        fu <- character(lu)
+        for(j in 1:length(u))
+          {
+            dg <- dig[j]
+            fu[j] <- if(is.na(dg)) format(u[j]) else
+            if(dg < 0) formatNP(u[j], -dg, pvalue=TRUE, latex=latex) else
+            formatNP(u[j], dg, latex=latex)
+          }
+        names(fu) <- names(u)
+        w[[i]] <- fu
+        for(j in 1:length(u))
+          width[i] <- max(width[i],
+                          1 + nchar(names(u))[j] + nchar(fu[j]))
+      }
+    if(latex)
+      {
+        cat('\\centerline{\\begin{tabular}{|', rep('c|',p), '}\\hline\n',
+            sep='')
+        if(sum(nchar(unlist(labels))) > 0)
+          {
+            maxl <- max(sapply(labels, length))
+            for(i in 1:maxl)
+              {
+                lab <- sapply(labels, function(x) if(length(x) < i)'' else x[i])
+                cat(paste(lab, collapse='&'), '\\\\ \n', sep='')
+              }
+            cat('\\hline\n')
+          }
+        maxl <- max(sapply(w, length))
+        z <- matrix('', nrow=maxl, ncol=p)
+        for(i in 1:p)
+          {
+            k <- latexTranslate(names(w[[i]]), greek=TRUE)
+            k[k=='Dxy']   <- '$D_{xy}$'
+            k[k=='LR chi2']  <- 'LR $\\chi^{2}$'
+            k[k=='Pr($>$ chi2)'] <- 'Pr$(>\\chi^{2})$'
+            k[k=='$\\tau$-a'] <- '$\\tau_{a}$'
+            k[k=='R2']    <- '$R^{2}$'
+            k[k=='R2 adj'] <- '$R^{2}_{\\textrm{adj}}$'
+            k[k=='C']     <- '$C$'
+            k[k=='g']     <- '$g$'
+            k[k=='gp']    <- '$g_{p}$'
+            k[k=='gr']    <- '$g_{r}$'
+            k[k=='max $|$deriv$|$'] <- 'max $|$deriv$|$~'
+            z[1:length(k),i] <- paste(k, '~\\hfill ', w[[i]], sep='')
+          }
+        for(j in 1:maxl) cat(paste(z[j,], collapse='&'), '\\\\ \n', sep='')
+        cat('\\hline\n')
+        cat('\\end{tabular}}\n\n')
+        return()
+      }
+    z <- labs <- character(0)
+    for(i in 1:p)
+      {
+        wid <- width[i]
+        lab <- labels[[i]]
+        for(j in 1:length(lab))
+          lab[j] <- paste(spaces((wid - nchar(lab[j]))/2), lab[j], sep='')
+        labs <- c(labs, paste(lab, collapse='\n'))
+        u   <- w[[i]]
+        a <- ''
+        for(i in 1:length(u))
+          a <- paste(a, names(u)[i],
+                     spaces(wid - nchar(u[i]) - nchar(names(u[i]))),
+                     u[i],
+                     if(i < length(u)) '\n', sep='')
+        z <- c(z, a)
+      }
+    res <- rbind(labs, z)
+    rownames(res) <- NULL
+    print.char.matrix(res, vsep='', hsep='    ', csep='',
+                      top.border=FALSE, left.border=FALSE)
+  }
+
+## reVector is used in conjunction with pstats
+## Example:
+# x <- c(a=1, b=2)
+# c(A=x[1], B=x[2])
+# reVector(A=x[1], B=x[2])
+# reVector(A=x['a'], B=x['b'], C=x['c'])
+reVector <- function(..., na.rm=TRUE)
+  {
+    d <- list(...)
+    d <- d[sapply(d, function(x) !is.null(x))]
+    x <- unlist(d)
+    names(x) <- names(d)
+    if(na.rm) x[!is.na(x)] else x
+  }
+
+formatNP <- function(x, digits=NULL, pvalue=FALSE, latex=FALSE)
+  {
+    f <- if(length(digits))
+      format(round(x, digits), nsmall=digits, scientific=1) else
+      format(x, scientific=1)
+    sci <- grep('e', f)
+    if(latex && length(sci)) f[sci] <- paste('$', latexSN(f[sci]), '$', sep='')
+    if(!pvalue) return(f)
+    if(!length(digits)) stop('must specify digits if pvalue=TRUE')
+    s <- x < 10^(-digits)
+    if(any(s))
+      {
+        w <- paste('0.', paste(rep('0', digits-1), collapse=''), '1', sep='')
+        f[s] <- if(latex) paste('$<', w, '$', sep='') else
+        paste('<', w, sep='')
+      }
+    f
+  }

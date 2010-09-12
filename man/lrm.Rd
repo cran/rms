@@ -16,7 +16,8 @@ lrm(formula, data, subset, na.action=na.delete, method="lrm.fit",
     strata.penalty=0, var.penalty=c('simple','sandwich'),
     weights, normwt, \dots)
 
-\method{print}{lrm}(x, digits=4, strata.coefs=FALSE, \dots)
+\method{print}{lrm}(x, digits=4, strata.coefs=FALSE,
+    coefs=TRUE, latex=FALSE, \dots)
 }
 \arguments{
 \item{formula}{
@@ -133,6 +134,12 @@ variances estimates that are too low.
 \item{digits}{number of significant digits to use}
 \item{strata.coefs}{set to \code{TRUE} to print the (experimental)
   strata coefficients}
+\item{coefs}{specify \code{coefs=FALSE} to suppress printing the table
+  of model coefficients, standard errors, etc.  Specify \code{coefs=n}
+  to print only the first \code{n} regression coefficients in the
+  model.}
+\item{latex}{a logical value indicating whether information should be
+  formatted as plain text or as LaTeX markup}
 }
 \value{
 The returned fit object of \code{lrm} contains the following components
@@ -245,7 +252,8 @@ Presentation on UVa Web page, 1998.
 \code{\link{pentrace}}, \code{\link{rmsMisc}}, \code{\link{vif}},
 \code{\link{cr.setup}}, \code{\link{predab.resample}},
 \code{\link{validate.lrm}}, \code{\link{calibrate}},
-\code{\link{Mean.lrm}}, \code{\link{gIndex}}}
+\code{\link{Mean.lrm}}, \code{\link{gIndex}}, \code{\link{prModFit}}
+}
 \examples{
 #Fit a logistic model containing predictors age, blood.pressure, sex
 #and cholesterol, with age fitted with a smooth 5-knot restricted cubic 
@@ -271,6 +279,7 @@ units(blood.pressure) <- 'mmHg'
 ch <- cut2(cholesterol, g=40, levels.mean=TRUE) # use mean values in intervals
 table(ch)
 f <- lrm(ch ~ age)
+print(f, latex=TRUE, coefs=4)
 m <- Mean(f)    # see help file for Mean.lrm
 d <- data.frame(age=seq(0,90,by=10))
 m(predict(f, d))

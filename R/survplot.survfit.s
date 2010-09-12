@@ -6,11 +6,11 @@ survplot.survfit <-
            abbrev.label=FALSE, levels.only=FALSE,
            lty,lwd=par('lwd'),
            col=1, col.fill=gray(seq(.95, .75, length=5)),
-           loglog=FALSE,fun,n.risk=FALSE,logt=FALSE,
-           dots=FALSE,dotsize=.003,
+           loglog=FALSE, fun, n.risk=FALSE, logt=FALSE,
+           dots=FALSE, dotsize=.003,
            grid=FALSE,
-           srt.n.risk=0,sep.n.risk=.056,adj.n.risk=1,
-           y.n.risk,cex.n.risk=.6, pr=FALSE, ...) {
+           srt.n.risk=0, sep.n.risk=.056, adj.n.risk=1,
+           y.n.risk, cex.n.risk=.6, pr=FALSE, ...) {
 
   conf <- match.arg(conf)
   polyg <- ordGridFun(grid=grid)$polygon
@@ -28,7 +28,7 @@ survplot.survfit <-
   if(missing(time.inc))
     {
       time.inc <- switch(units,Day=30,Month=1,Year=1,(maxtime-mintime)/10)
-      if(time.inc>maxtime) time.inc <- (maxtime-mintime)/10
+      if(time.inc > maxtime) time.inc <- (maxtime-mintime)/10
     }
   if(n.risk && !length(fit$n.risk))
     {
@@ -207,13 +207,16 @@ survplot.survfit <-
           if(conf=="bands")
             {
               if(logt)
-                polyg(x = c(tim,    rev(tim)),
-                      y = c(blower, rev(bupper)),
+                polyg(x = c(tim, max(tim), rev(tim)),
+                      y = c(blower, rev(bupper), max(bupper)),
                       col =  col.fill[i], type='s')
               else
-                polyg(x = c(mintime, tim,   rev(c(mintime,tim))),
-                      y = c(fun(1), blower, rev(c(fun(1), bupper))),
-                      col =  col.fill[i], type='s')
+                polyg(x = c(max(tim), tim, rev(c(tim, max(tim)))),
+                      y = c(fun(1), blower, rev(c(fun(1),bupper))),
+                      col = col.fill[i], type = "s")
+#                polyg(x = c(mintime, tim,   rev(c(mintime,tim))),
+#                      y = c(fun(1), blower, rev(c(fun(1), bupper))),
+#                      col =  col.fill[i], type='s')
             }
           else
             {
@@ -341,7 +344,7 @@ survdiffplot <-
   
   switch(conf,
          shaded=polyg(c(times[k],rev(times[k])), c(lo[k],rev(hi[k])),
-           col=gray(.95), type='s'),
+           col=gray(.85), type='s'),
          bands={
            lines(times, lo, col=gray(.7))
            lines(times, hi, col=gray(.7))

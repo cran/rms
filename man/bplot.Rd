@@ -17,7 +17,7 @@ sufficient data to generate believable interaction fits.
 }
 \usage{
 bplot(x, formula, lfun=levelplot, xlab, ylab, zlab,
-      adj.subtitle=TRUE, cex.adj=.75, cex.lab=1, perim, showperim=FALSE,
+      adj.subtitle=!info$ref.zero, cex.adj=.75, cex.lab=1, perim, showperim=FALSE,
       zlim=range(yhat, na.rm=TRUE), scales=list(arrows=FALSE),
       ylabrot, zlabrot=90, \dots)
 
@@ -59,7 +59,8 @@ perimeter(x, y, xinc=diff(range(x))/10, n=10, lowess.=TRUE)
 \item{adj.subtitle}{
 Set to \code{FALSE} to suppress subtitling the graph with the list of
        settings of non-graphed adjustment values. Default is \code{TRUE}
-       if there are non-plotted adjustment variables.
+       if there are non-plotted adjustment variables and \code{ref.zero}
+	   was not used.
 }
 \item{cex.adj}{
   \code{cex} parameter for size of adjustment settings in subtitles.  Default is

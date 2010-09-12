@@ -23,7 +23,7 @@ linear predictors.
 \usage{
 \method{predict}{bj}(object, newdata,
         type=c("lp", "x", "data.frame",
-                 "terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
+                 "terms", "cterms", "ccterms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes, non.slopes, kint=1,
         na.action=na.keep, expand.na=TRUE,
@@ -31,7 +31,7 @@ linear predictors.
 
 \method{predict}{cph}(object, newdata,
         type=c("lp", "x",
-                 "data.frame", "terms", "cterms", "adjto", "adjto.data.frame",
+                 "data.frame", "terms", "cterms", "ccterms", "adjto", "adjto.data.frame",
                  "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes=NULL,
@@ -40,7 +40,7 @@ linear predictors.
 
 \method{predict}{Glm}(object, newdata,
         type= c("lp", "x", "data.frame",
-                 "terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
+                 "terms", "cterms", "ccterms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes,
         non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
@@ -48,7 +48,7 @@ linear predictors.
 
 \method{predict}{Gls}(object, newdata,
         type=c("lp", "x", "data.frame",
-                 "terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
+                 "terms", "cterms", "ccterms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes,
         non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
@@ -56,7 +56,7 @@ linear predictors.
 
 \method{predict}{ols}(object, newdata,
         type=c("lp", "x", "data.frame",
-                 "terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
+                 "terms", "cterms", "ccterms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes,
         non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
@@ -64,7 +64,7 @@ linear predictors.
 
 \method{predict}{psm}(object, newdata,
         type=c("lp", "x", "data.frame",
-                 "terms", "cterms", "adjto", "adjto.data.frame", "model.frame"),
+                 "terms", "cterms", "ccterms", "adjto", "adjto.data.frame", "model.frame"),
         se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
         incl.non.slopes,
         non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
@@ -104,10 +104,12 @@ at the desired combinations of values, \code{"data.frame"} to get an
 S data frame of the combinations, \code{"model.frame"} to get a data frame
 of the transformed predictors, \code{"terms"} to get a matrix with
 each column being the linear combination of variables making up
-a factor, \code{"cterms"} ("combined terms") to not create separate
-terms for interactions 
+a factor (with separate terms for interactions), \code{"cterms"}
+("combined terms") to not create separate terms for interactions 
 but to add all interaction terms involving each predictor to the
-main terms for each predictor, \code{"adjto"} to return a vector of
+main terms for each predictor, \code{"ccterms"} to combine all related
+terms (related through interactions) and their interactions into a
+single column, \code{"adjto"} to return a vector of 
 \code{limits[2]} (see \code{datadist}) in coded 
 form, and \code{"adjto.data.frame"} to return a data frame version of these
 central adjustment values.  Use of \code{type="cterms"} does not make
@@ -329,9 +331,9 @@ doit(xb - xa, "c:b")
 
 # NOTE: This is much easier to do using contrast.rms
 
-# Demonstrate type="terms" and type="cterms"
+# Demonstrate type="terms", "cterms", "ccterms"
 set.seed(1)
-n <- 100
+n <- 40
 x <- 1:n
 w <- factor(sample(c('a', 'b'), n, TRUE))
 u <- factor(sample(c('A', 'B'), n, TRUE))
@@ -354,14 +356,22 @@ h   <- z[,'x * w * u'] # highest order term is present in all cterms
 tx2 <- z[,'x']+z[,'x * w']+z[,'x * u']+h
 tw2 <- z[,'w']+z[,'x * w']+z[,'w * u']+h
 tu2 <- z[,'u']+z[,'x * u']+z[,'w * u']+h
-summary(tx-tx2)
-summary(tw-tw2)
-summary(tu-tu2)
+ae <- function(a, b) all.equal(a, b, check.attributes=FALSE)
+ae(tx, tx2)
+ae(tw, tw2)
+ae(tu, tu2)
+
 zc <- predict(f, type='cterms')
 zc[1:5,]
-summary(tx-zc[,'x'])
-summary(tw-zc[,'w'])
-summary(tu-zc[,'u'])
+ae(tx, zc[,'x'])
+ae(tw, zc[,'w'])
+ae(tu, zc[,'u'])
+
+zc <- predict(f, type='ccterms')
+# As all factors are indirectly related, ccterms gives overall linear
+# predictor except for the intercept
+zc[1:5,]
+ae(as.vector(zc + coef(f)[1]), f$linear.predictors)
 
 \dontrun{
 #A variable state.code has levels "1", "5","13"
