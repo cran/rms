@@ -201,7 +201,7 @@ lm.pfit <- function(X, Y, penalty.matrix, tol=1e-7, regcoef.only=FALSE,
 
 predict.ols <- 
   function(object, newdata,
-           type=c("lp","x","data.frame","terms","cterms", "adjto",
+           type=c("lp","x","data.frame","terms","cterms","ccterms","adjto",
              "adjto.data.frame", "model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes, non.slopes, kint=1,
@@ -213,27 +213,20 @@ predict.ols <-
                na.action, expand.na, center.terms, ...)
   }
 
-print.ols <- function(x, digits=4, long=FALSE, ...)
+print.ols <- function(x, digits=4, long=FALSE, coefs=TRUE, latex=FALSE, ...)
 {
-  oldopt <- options(digits=digits)
-  on.exit(options(oldopt))
+  k <- 0
+  z <- list()
   
-  cat("\n")
-  
-  cat("Linear Regression Model\n\n")
-  dput(x$call)
-  cat("\n")
-  if(!is.null(z <- x$na.action)) naprint(z)
-  stats <- x$stats
-  if(lst <- length(stats))
+  Title <- "Linear Regression Model"
+
+  if(length(zz <- x$na.action))
     {
-      cstats <- character(lst)
-      names(cstats) <- names(stats)
-      for(i in 1:lst) cstats[i] <- format(stats[i])
-      print(cstats, quote=FALSE)
-      cat('\n')
+      k <- k + 1
+      z[[k]] <- list(type=paste('naprint', class(zz)[1], sep='.'), list(zz))
     }
 
+  stats <- x$stats
 
   pen <- length(x$penalty.matrix) > 0
 
@@ -241,15 +234,32 @@ print.ols <- function(x, digits=4, long=FALSE, ...)
 
   n <- length(resid)
   p <- length(x$coef)-(names(x$coef)[1]=="Intercept")
-  if(length(x$stats)==0) cat("n=", n,"   p=",p,"\n\n",sep="")
-  ndf <- x$stats['d.f.']
+  if(length(stats)==0) cat("n=", n,"   p=",p,"\n\n",sep="")
+  ndf <- stats['d.f.']
   df <- c(ndf, n-ndf-1, ndf)
-  r2 <- x$stats['R2']
-  sigma <- x$stats['Sigma']
+  r2 <- stats['R2']
+  sigma <- stats['Sigma']
   rdf <- df[2]
+  rsqa <- 1 - (1 - r2)*(n-1)/rdf
+  lrchisq <- stats['Model L.R.']
+  if(lst <- length(stats))
+    {
+      misc <- reVector(Obs=stats['n'],
+                       sigma=sigma,
+                       'd.f.'=df[2])
+      lr   <- reVector('LR chi2'     = lrchisq,
+                       'd.f.'        = ndf,
+                       'Pr(> chi2)' = 1 - pchisq(lrchisq, ndf))
+      disc <- reVector(R2=r2, 'R2 adj'=rsqa, g=stats['g'])
+      headings <- list('',
+                       c('Model Likelihood', 'Ratio Test'),
+                       c('Discrimination', 'Indexes'))
+      data <- list(c(misc, c(NA,digits,NA)), c(lr, c(2,NA,4)), c(disc,3))
+      k <- k + 1
+      z[[k]] <- list(type='stats', list(headings=headings, data=data))
+    }
   if(rdf > 5)
     {
-      cat("Residuals:\n")
       if(length(dim(resid)) == 2)
         {
           rq <- apply(t(resid), 1, quantile)
@@ -261,34 +271,34 @@ print.ols <- function(x, digits=4, long=FALSE, ...)
           rq <- quantile(resid)
           names(rq) <- c("Min", "1Q", "Median", "3Q", "Max")
         }
-      print(rq, digits = digits, ...)
+      k <- k + 1
+      z[[k]] <- list(type=if(latex)'latexVector' else 'print',
+                     list(rq, digits=digits),
+                     tex=latex, title='Residuals')
     }
   else
     if(rdf > 0)
       {
-        cat("Residuals:\n")
-        print(resid, digits = digits, ...)
+        k <- k + 1
+        z[[k]] <- list(type=if(latex)'latexVector' else 'print',
+                       list(resid, digits=digits),
+                       tex=latex, title='Residuals')
       }
+  
   if(nsingular <- df[3] - df[1])
-	cat("\nCoefficients: (", nsingular, 
-		" not defined because of singularities)\n", sep = "")
-	else
-      cat("\nCoefficients:\n")
+    {
+      k <- k + 1
+      z[[k]] <- list(type='cat',
+                     paste(nsingular, 'coefficients not defined because of singularities'))
+    }
+      
+  k <- k + 1
   se <- sqrt(diag(x$var))
-  z <- x$coefficients/se
-  P <- 2*(1-pt(abs(z),rdf))
-  co <- cbind(x$coefficients,se,z,P)
-  dimnames(co) <- list(names(x$coefficients),
-                       c("Value","Std. Error","t","Pr(>|t|)"))
-  print(co)
-  if(pen) cat('\n')
-  else
-    cat("\nResidual standard error:", format(signif(sigma, digits)),
-        "on", rdf, "degrees of freedom\n")
-  rsqa <- 1 - (1 - r2)*(n-1)/rdf
-  if(length(x$stats)==0)
-	cat("Multiple R-Squared:", format(signif(r2  , digits))," ")
-  cat("Adjusted R-Squared:", format(signif(rsqa, digits)), "\n")
+  z[[k]] <- list(type='coefmatrix',
+                 list(coef    = x$coefficients,
+                      se      = se,
+                      errordf = rdf))
+  
   if(!pen)
     {
       if(long && p > 0)
@@ -299,11 +309,14 @@ print.ols <- function(x, digits=4, long=FALSE, ...)
           ll <- lower.tri(correl)
           correl[ll] <- format(round(correl[ll], digits), ...)
           correl[!ll] <- ""
-          print(correl[-1,  - (p+1), drop = FALSE], quote = FALSE, digits = digits,
-                ...)
+          k <- k + 1
+          z[[k]] <- list(type='print', 
+                         list(correl[-1,  - (p+1), drop = FALSE],
+                              quote=FALSE, digits = digits))
         }
     }
-  cat("\n")
+  prModFit(x, title=Title, z, digits=digits,
+           coefs=coefs, latex=latex, ...)
   
   invisible()
 }

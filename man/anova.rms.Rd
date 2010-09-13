@@ -275,26 +275,29 @@ mydata$y <- ifelse(runif(200)<=plogis(mydata$x1-.5 + .5*(mydata$x2-.5) +
                    .5*(mydata$sex=='male')),1,0)
 
 
-require(boot)
-b <- boot(mydata, function(data, i, ...) rank(-plot(anova(
+if(require(boot))
+   {
+      b <- boot(mydata, function(data, i, ...) rank(-plot(anova(
                 lrm(y ~ rcs(x1,4)+pol(x2,2)+sex,data,subset=i)), 
                 sort='none', pl=FALSE)),
                 R=25)  # should really do R=500 but will take a while
-Rank <- b$t0
-lim <- t(apply(b$t, 2, quantile, probs=c(.025,.975)))
+      Rank <- b$t0
+      lim <- t(apply(b$t, 2, quantile, probs=c(.025,.975)))
 
 
 # Use the Hmisc Dotplot function to display ranks and their confidence
 # intervals.  Sort the categories by descending adj. chi-square, for ranks
-original.chisq <- plot(anova(lrm(y ~ rcs(x1,4)+pol(x2,2)+sex,data=mydata)),
+      original.chisq <- plot(anova(lrm(y ~ rcs(x1,4)+pol(x2,2)+sex,
+                       data=mydata)),
                        sort='none', pl=FALSE)
-predictor <- as.factor(names(original.chisq))
-predictor <- reorder.factor(predictor, -original.chisq)
+      predictor <- as.factor(names(original.chisq))
+      predictor <- reorder.factor(predictor, -original.chisq)
 
-Dotplot(predictor ~ Cbind(Rank, lim), pch=3, xlab='Rank', 
-		main=if(.R.) expression(paste(
-'Ranks and 0.95 Confidence Limits for ',chi^2,' - d.f.')) else
-'Ranks and 0.95 Confidence Limits for Chi-square - d.f.')
+      Dotplot(predictor ~ Cbind(Rank, lim), pch=3, xlab='Rank', 
+              main=if(.R.) expression(paste(
+      'Ranks and 0.95 Confidence Limits for ',chi^2,' - d.f.')) else
+      'Ranks and 0.95 Confidence Limits for Chi-square - d.f.')
+}
 }
 \keyword{models}
 \keyword{regression}

@@ -1,25 +1,27 @@
 gIndex <-
-  function(object, partials=TRUE,
-           lplabel=if(length(object$scale)) object$scale[1]
-           else 'X*Beta',
+  function(object, partials=TRUE, type=c('ccterms', 'cterms', 'terms'),
+           lplabel=if(length(object$scale) && is.character(object$scale))
+           object$scale[1] else 'X*Beta',
            fun, funlabel=if(missing(fun)) character(0) else
            deparse(substitute(fun)),
            postfun=if(length(object$scale)==2) exp else NULL,
            postlabel=if(length(postfun))
            ifelse(missing(postfun),
-                  if(length(object$scale) > 1) object$scale[2] else
-                  'Anti-log',
-                  deparse(substitute(postfun))) else character(0),
+                  if((length(object$scale) > 1) &&
+                     is.character(object$scale)) object$scale[2] else
+                     'Anti-log',
+                     deparse(substitute(postfun))) else character(0),
            ...)
 {	
   obj.name <- as.character(sys.call())[2]
+  type <- match.arg(type)
   labels <- attr(object, 'Design')$label
 
   lp <- predict(object, ...)
 
   if(partials)
     {
-      terms <- predict(object, type="cterms")
+      terms <- predict(object, type=type)
       if(nrow(terms) != length(lp))
         warning('expected predicted linear predictors and terms to have same no. of rows')
       p <- ncol(terms)
@@ -47,7 +49,7 @@ gIndex <-
   structure(g, gtrans=gtrans, class='gIndex',
             lplabel=lplabel, funlabel=funlabel,
             postlabel=postlabel, partials=partials,
-            labels=c(labels, Total='Total'), formula=formula(object))
+            labels=c(labels, Total='Total'), type=type, formula=formula(object))
 }
 
 print.gIndex <-

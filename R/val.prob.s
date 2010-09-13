@@ -26,7 +26,7 @@ val.prob <- function(p,y,logit,group,weights=rep(1,length(y)),normwt=FALSE,
 					 xlab="Predicted Probability", ylab="Actual Probability",
 					 lim=c(0,1),m,g,cuts,emax.lim=c(0,1),
 					 legendloc=lim[1]+c(.55*diff(lim),.27*diff(lim)),
-					 statloc=c(0,.9),riskdist="calibrated",cex=.75, mkh=.02,
+					 statloc=c(0,.99),riskdist="calibrated",cex=.7, mkh=.02,
 					 connect.group=FALSE, connect.smooth=TRUE, 
 					 g.group=4, evaluate=100, nmin=0)
 {
@@ -34,6 +34,13 @@ val.prob <- function(p,y,logit,group,weights=rep(1,length(y)),normwt=FALSE,
   if(missing(p)) p <- 1/(1+exp(-logit))	else logit <- logb(p/(1-p))
   if(length(p)!=length(y))stop("lengths of p or logit and y do not agree")
   names(p) <- names(y) <- names(logit) <- NULL
+
+  Spi <- function(p, y)
+    {
+      z <- sum((y - p)*(1 - 2*p)) / sqrt(sum((1-2*p)*(1-2*p)*p*(1-p)))
+      P <- 2*(1 - pnorm(abs(z)))
+      c(Z=z, P=P)
+    }
   
   if(!missing(group))
     {
@@ -74,12 +81,14 @@ val.prob <- function(p,y,logit,group,weights=rep(1,length(y)),normwt=FALSE,
       U.p <- 1 - pchisq(U.chisq, 1)
       U <- (U.chisq - 1)/n
       Q <- D - U
+      spi <- unname(Spi(p, y))
       stats <- c(0, .5, 0, D, 0, 1, U, U.chisq, U.p, Q,
                  mean((y-p[1])^2), Intc, 0,
-                 rep(abs(p[1]-P),2)) 
+                 rep(abs(p[1]-P),2), spi)
       names(stats) <- c("Dxy","C (ROC)", 
                         "R2","D","D:Chi-sq","D:p","U","U:Chi-sq","U:p","Q",
-                        "Brier","Intercept","Slope","Emax","Eavg")
+                        "Brier","Intercept","Slope","Emax","Eavg",
+                        "S:z", "S:p")
       return(stats)
     }
   
@@ -152,10 +161,12 @@ val.prob <- function(p,y,logit,group,weights=rep(1,length(y)),normwt=FALSE,
   C <- stats["C"]
   R2 <- stats["R2"]
   B <- sum((p-y)^2)/n
-  stats <- c(Dxy, C, R2, D, lr, p.lr, U, U.chisq, p.U, Q, B, f$coef, emax)
+  spi <- unname(Spi(p, y))
+  stats <- c(Dxy, C, R2, D, lr, p.lr, U, U.chisq, p.U, Q, B, f$coef, emax,
+             spi)
   names(stats) <- c("Dxy","C (ROC)", 
                     "R2","D","D:Chi-sq","D:p","U","U:Chi-sq","U:p","Q",
-                    "Brier","Intercept","Slope","Emax")
+                    "Brier","Intercept","Slope","Emax","S:z","S:p")
   if(smooth) stats <- c(stats, c(Eavg=eavg))
   if(pl)
     {
@@ -174,15 +185,15 @@ val.prob <- function(p,y,logit,group,weights=rep(1,length(y)),normwt=FALSE,
         }
       if(!is.logical(statloc))
         {
-          dostats <- c(1,2,3,4,7,10,11,12,13,14)
+          dostats <- c(1,2,3,4,7,10,11,12,13,14,15,16)
           leg <- format(names(stats)[dostats]) #constant length
           leg <- paste(leg, ":", format(stats[dostats]),sep="")
           if(!is.list(statloc)) statloc <- list(x=statloc[1],y=statloc[2])
           text(statloc,paste(format(names(stats[dostats])),collapse="\n"),
-               adj=0,cex=cex)
+               adj=c(0,1),cex=cex)
           text(statloc$x+.225*diff(lim),statloc$y,
                paste(format(round(stats[dostats],3)),
-                     collapse="\n"),adj=1,cex=cex)
+                     collapse="\n"),adj=c(1,1),cex=cex)
           ##	legend(statloc, leg, lty=rep(0, length(dostats)))
         }
       if(is.character(riskdist))

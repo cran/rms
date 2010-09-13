@@ -1,6 +1,6 @@
 bplot <-
   function(x, formula, lfun=levelplot, xlab, ylab, zlab,
-           adj.subtitle=TRUE, cex.adj=.75, cex.lab=1,
+           adj.subtitle=!info$ref.zero, cex.adj=.75, cex.lab=1,
            perim, showperim=FALSE,
            zlim=range(yhat, na.rm=TRUE),
            scales=list(arrows=FALSE), ylabrot, zlabrot=90, ...)

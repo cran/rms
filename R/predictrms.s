@@ -5,7 +5,7 @@
 
 predictrms <-
   function(fit, newdata=NULL,
-           type=c("lp","x","data.frame","terms","cterms","adjto",
+           type=c("lp","x","data.frame","terms","cterms","ccterms","adjto",
              "adjto.data.frame","model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes=NULL, non.slopes=NULL, kint=1,
@@ -284,7 +284,7 @@ predictrms <-
     }
   
   if(type=="adjto" | type=="adjto.data.frame" | ref.zero |
-     (center.terms && type %in% c("terms","cterms")) | 
+     (center.terms && type %in% c("terms","cterms","ccterms")) | 
      (cox & (se.fit | conf.int)))
     {
       ## Form design matrix for adjust-to values
@@ -322,7 +322,7 @@ predictrms <-
         }
     }
   
-  if(length(xx) && type!="terms" && type!="cterms" && incl.non.slopes)
+  if(length(xx) && type %nin% c("terms","cterms","ccterms") && incl.non.slopes)
     {
       X <- cbind(xx, X)
       dimnames(X) <- list(rnam, names(coeff))
@@ -383,7 +383,7 @@ predictrms <-
       else return(structure(xb - ycenter, na.action=if(expand.na)NULL else naa))
     }
 
-  if(type=="terms" || type=="cterms")
+  if(type %in% c("terms", "cterms", "ccterms"))
     {
       if(!somex)
         stop('type="terms" may not be given unless covariables present')
@@ -429,6 +429,18 @@ predictrms <-
             }
           fitted <- w
         }
+
+      if(type=='ccterms')
+        {
+          z <- combineRelatedPredictors(at)
+          f <- length(z$names)
+          w <- matrix(NA, ncol=f, nrow=nrow(fitted))
+          colnames(w) <- sapply(z$names, paste, collapse=', ')
+          for(i in 1:f)
+            w[,i] <- rowSums(fitted[,z$namesia[[i]], drop=FALSE])
+          fitted <- w
+        }
+      
       fitted <- structure(naresid(naa, fitted),
                           strata=if(nstrata==0) NULL else naresid(naa, strata))
       

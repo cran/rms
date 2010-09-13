@@ -106,17 +106,46 @@ RqFit <- function(fit, wallow=TRUE, passdots=FALSE)
     g
   }
 
-print.Rq <- function(x, digits=4, ...)
+print.Rq <- function(x, digits=4, coefs=TRUE, latex=FALSE, ...)
   {
-    cat('Quantile Regression\t\ttau:', format(x$tau), '\n\n')
-    dput(x$call); cat('\n')
-    if(length(z <- x$na.action)) naprint(z)
+    k <- 0
+    z <- list()
+
+    ftau <- format(round(x$tau, digits))
+    Title <- if(latex)
+      paste('Quantile Regression~~~~$\\tau$', ftau, sep='=') else
+      paste('Quantile Regression\t\ttau:',     ftau)
+
+    if(length(zz <- x$na.action))
+      {
+        k <- k + 1
+        z[[k]] <- list(type=paste('naprint', class(zz)[1], sep='.'), list(zz))
+      }
+    
     s <- x$stats
-    n <- s['n']; p <- s['p']; g <- s['g']
-    cat('n=', n, '  p=', p, '  residual d.f.=', n-p,
-        '  g=', round(g,3), '\n\n')
-    print(x$summary)
-    if (length(attr(x, "na.message"))) cat(attr(x, "na.message"), "\n")
+    n <- s['n']; p <- s['p']; errordf <- n - p; g <- s['g']
+
+    misc <- reVector(Obs=n, p=p, 'Residual d.f.'=errordf)
+    disc <- reVector(g=g)
+    headings <- list('', c('Discrimination', 'Index'))
+    data     <- list(misc, c(disc,3))
+    k <- k + 1
+    z[[k]] <- list(type='stats', list(headings=headings, data=data))
+
+    s <- x$summary
+    k <- k + 1
+    z[[k]] <- list(type='coefmatrix', 
+                   list(coef = s[,'Value'],
+                        se   = s[,'Std. Error'],
+                        errordf = errordf))
+    
+    if (length(mes <- attr(x, "na.message")))
+      {
+        k <- k + 1
+        z[[k]] <- list(type='cat', list(mes, '\n'))
+      }
+
+    prModFit(x, title=Title, z, digits=digits, coefs=coefs, latex=latex, ...)
   }
 
 latex.Rq <-

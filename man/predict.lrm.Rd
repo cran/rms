@@ -14,7 +14,7 @@ predictor, which is assumed to use the first intercept in its computation.
 \usage{
 \method{predict}{lrm}(object, \dots, type=c("lp", "fitted",
             "fitted.ind", "mean", "x", "data.frame",
-            "terms", "cterms", "adjto","adjto.data.frame", 
+            "terms", "cterms", "ccterms", "adjto","adjto.data.frame", 
             "model.frame"), se.fit=FALSE, codes=FALSE)
 
 \method{Mean}{lrm}(object, codes=FALSE, \dots)
@@ -29,7 +29,8 @@ arguments passed to \code{predictrms}, such as \code{kint} and \code{newdata}
 \code{predictrms} to see how NAs are handled.
 }
 \item{type}{
-See \code{predict.rms} for \code{"x", "data.frame", "terms", "cterms", "adjto", 
+See \code{predict.rms} for \code{"x", "data.frame", "terms", "cterms",
+  "ccterms", "adjto", 
 "adjto.data.frame"} and \code{"model.frame"}. \code{type="lp"} is used to get
 linear predictors (always using the first intercept). \code{type="fitted"}
 is used to get all the probabilities \eqn{Y\geq

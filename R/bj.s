@@ -187,7 +187,7 @@ bj.fit <- function(x, y, control = NULL) {
       state[ehat == max(ehat)] <- 1
       S <- structure(cbind(ehat, state), class = "Surv", type = "right")
       KM.ehat <-
-        survival:::survfitKM(dummystrat, S, conf.type = "none", se.fit = FALSE)
+        survfitKM(dummystrat, S, conf.type = "none", se.fit = FALSE)
       n.risk <- KM.ehat$n.risk
       surv <- KM.ehat$surv
       repeats <- c(diff( - n.risk), n.risk[length(n.risk)])
@@ -318,50 +318,59 @@ bjplot <- function(fit, which=1:dim(X)[[2]])
   invisible(retlist)
 }
 
-print.bj <- function(x, digits=4, long=FALSE, ...)
+print.bj <- function(x, digits=4, long=FALSE, coefs=TRUE, latex=FALSE, ...)
 {
+  k <- 0
+  z <- list()
   
-  if(x$fail) warning(" bj failed, no summary provided\n")
-		
-  old <- options(digits=digits)
-  on.exit(options(old))
-		
-  cat("Buckley-James Censored Data Regression\n\n")
-  dput(x$call)			; cat('\n')
+  Title <- "Buckley-James Censored Data Regression"
 
-  if(length(z <- x$na.action)) naprint(z)
+  if(length(zz <- x$na.action))
+    {
+      k <- k + 1
+      z[[k]] <- list(type=paste('naprint', class(zz)[1], sep='.'), list(zz))
+    }
+  
   stats <- x$stats
-  print(format.sep(stats), quote=FALSE); cat("\n")
-
+ 
+  misc   <- reVector(Obs=stats['Obs'], Events=stats['Events'])
+  dfstat <- reVector('Regression d.f.' = stats['d.f.'],
+                     sigma=stats['sigma'],
+                     'd.f.'=stats['error d.f.'])
+  disc <- reVector(g = stats['g'], gr = stats['gr'])
+  k <- k + 1
+  z[[k]] <- list(type='stats',
+                 list(headings=list('', '', c('Discrimination','Indexes')),
+                      data=list(misc, c(dfstat,c(NA,digits,NA)), c(disc, 3))))
+  
   cof <- x$coefficients
-  cnames <- names(cof)
-
-  cof <- matrix(rep(cof, 4), ncol = 4)
-  dimnames(cof) <- list(cnames, c("Value", "Std. Error", "Z", "Pr(>|Z|)"))
-  stds <- sqrt(diag(x$var))
-  cof[, 2] <- stds
-  cof[, 3] <- cof[, 1]/stds
-  cof[, 4] <- 2*pnorm(-abs(cof[,3]))
-  print(cof)
+  se <- sqrt(diag(x$var))
+  k <- k + 1
+  z[[k]] <- list(type='coefmatrix',
+                 list(coef = cof, se = se))
 
   p <- length(cof)
-  if(long && p>1)
+  if(long &&  p > 1)
     {
-	  ss <- diag(1/stds)
+	  ss <- diag(1/se)
 	  correl <- ss %*% x$var %*% ss
-	  dimnames(correl) <- list(cnames, cnames)
-	  cat('\n\nCorrelation Matrix for Parameter Estimates\n\n')
+	  dimnames(correl) <- list(names(cof), names(cof))
 	  ll <- lower.tri(correl)
 	  correl[ll] <- format(round(correl[ll], digits=max(digits-2,2)))
 	  correl[!ll] <- ""
-	  print(correl[-1,  - p, drop = FALSE], quote = FALSE)
+      k <- k + 1
+      z[[k]] <- list(type='print',
+                     list(correl[-1, - p, drop = FALSE], quote = FALSE),
+                     title='Correlation Matrix for Parameter Estimates')
 	}
+
+  prModFit(x, title=Title, z, digits=digits, coefs=coefs, latex=latex, ...)
   invisible()
 }
 
 predict.bj <- 
   function(object, newdata,
-           type=c("lp","x","data.frame","terms","cterms","adjto",
+           type=c("lp","x","data.frame","terms","cterms","ccterms","adjto",
              "adjto.data.frame", "model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes, non.slopes, kint=1,

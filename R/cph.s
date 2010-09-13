@@ -70,15 +70,18 @@ cph <- function(formula=formula(data),
       if(method=="model.frame") return(X)
 
       Terms <- if(missing(data))
-        terms(formula, specials=c("strat","cluster"))
+        terms(formula, specials=c("strat","cluster","strata"))
       else
-        terms(formula, specials=c("strat","cluster"), data=data)
+        terms(formula, specials=c("strat","cluster","strata"), data=data)
 
       asm   <- atr$assume.code
       name  <- atr$name
 
-      cluster <- attr(Terms, "specials")$cluster
-      stra    <- attr(Terms, "specials")$strat
+      specials <- attr(Terms, 'specials')
+      if(length(specials$strata))
+        stop('cph supports strat(), not strata()')
+      cluster <- specials$cluster
+      stra    <- specials$strat
 
       if(length(cluster))
         {
@@ -130,7 +133,9 @@ cph <- function(formula=formula(data),
           ff
         }
     
-      if(model) m <- X
+      m <- NULL
+      if(model || packageDescription('survival')$Version >= '2.36-1')
+        m <- X
       
       ##No mf if only strata factors
       if(!xpres)
@@ -193,7 +198,7 @@ cph <- function(formula=formula(data),
       if( method=="breslow" || method =="efron")
         {
           if (ytype== 'right')
-            fitter <- survival:::coxph.fit
+            fitter <- coxph.fit
           else if (ytype=='counting')
             fitter <- survival:::agreg.fit
           else
@@ -201,7 +206,7 @@ cph <- function(formula=formula(data),
                        "\" survival data", sep=''))
         }
       else if (method=='exact')
-        fitter <- survival:::agexact.fit
+        fitter <- agexact.fit
       else
         stop(paste ("Unknown method", method))
 
@@ -210,7 +215,7 @@ cph <- function(formula=formula(data),
       f <- fitter(X, Y, strata=Strata, offset=offset,
                   weights=weights, init=init,
                   method=method, rownames=rnam,
-                  control=survival:::coxph.control(eps=eps, toler.chol=tol,
+                  control=coxph.control(eps=eps, toler.chol=tol,
                     toler.inf=1, iter.max=iter.max))
     }
   if (is.character(f))
@@ -228,7 +233,7 @@ cph <- function(formula=formula(data),
         else
           {
             cat(msg,"\n")
-            return(structure(list(fail=TRUE),class="cph"))
+            return(structure(list(fail=TRUE), class="cph"))
           }
       }
     }
@@ -307,15 +312,8 @@ cph <- function(formula=formula(data),
     }
   if(model) f$model <- m
   
-  if(nstrata > 0)
-    {
-      attr(X, "strata") <- attr(Y, "strata") <- Strata
-      f$strata <- levels(Strata)
-    }
-  
-  if(x) f$x <- X
-  if(y) f$y <- Y
-  
+  if(nstrata > 0) f$strata <- levels(Strata)
+
   if(is.character(surv) || surv)
     {
       Strata <- if(!length(Strata)) rep(1, nnn) else unclass(Strata)
@@ -334,11 +332,18 @@ cph <- function(formula=formula(data),
       g <- list(formula=list(n=sum(f$n), coefficients=f$coefficients,
                   linear.predictors=f$linear.predictors,
                   method=f$method, means=f$means, var=f$var,
-                  x=X, y=Y, strata=Strata, terms=Terms))
-      class(g$formula) <- if(xpres) 'coxph' else 'coxph.null'
+                  x=X,
+                  y=if(packageDescription('survival')$Version >= '2.36-1') Y,
+                  strata=Strata,
+                  terms=Terms, call=call, model=m))
+      class(g$formula) <-
+        if(xpres || packageDescription('survival')$Version >= '2.36-1')
+          'coxph' else 'coxph.null'
 
       if(!missing(type))      g$type      <- type
       if(!missing(vartype))   g$vartype   <- vartype
+      if(packageDescription('survival')$Version >= '2.36-1')
+        g$censor <- FALSE  # don't output censored values
 
       if(length(Strata))
         {
@@ -355,7 +360,7 @@ cph <- function(formula=formula(data),
         {
           j    <- stemp==k
           i    <- i+1
-          yy   <- Y[Strata==i, ny-1]
+          yy   <- Y[Strata==i, ny - 1]
           maxt <- max(yy)
           ##n.risk from surv.fit does not have usual meaning if not Kaplan-Meier
       
@@ -422,7 +427,12 @@ cph <- function(formula=formula(data),
                          std.err=s.e., surv.summary=s.sum))		
         }
     }
-  
+
+  if((x || y) && nstrata > 0)
+    attr(X, "strata") <- attr(Y, "strata") <- Strata
+    if(x) f$x <- X
+  if(y) f$y <- Y
+
   class(f) <- c("cph", "rms", "coxph")
   
   f
@@ -433,18 +443,11 @@ coxphFit <- function(..., method, strata=NULL, rownames=NULL, offset=NULL,
                      type)
 {
   if( method == "breslow" || method == "efron")
-    {
-      fitter <- if (type == 'right')
-        getFromNamespace('coxph.fit', 'survival')
-      else getFromNamespace('agreg.fit', 'survival')
-    }
+    fitter <- if (type == 'right') coxph.fit else survival:::agreg.fit
   else if (method == 'exact')
-    fitter <- getFromNamespace('agexact.fit', 'survival')
+    fitter <- survival:::agexact.fit
   else stop("Unkown method ", method)
   
-  if(!existsFunction('coxph.control'))
-    coxph.control <- getFromNamespace('coxph.control', 'survival')
-
   res <- fitter(..., strata=strata, rownames=rownames,
                 offset=offset, init=init, method=method,
                 control=coxph.control(toler.chol=toler.chol, toler.inf=1,
@@ -629,7 +632,7 @@ Mean.cph <- function(object, method=c("exact","approximate"),
 
 predict.cph <- function(object, newdata=NULL,
                         type=c("lp", "x", "data.frame", "terms", "cterms",
-                          "adjto",  "adjto.data.frame", "model.frame"),
+                          "ccterms", "adjto", "adjto.data.frame", "model.frame"),
                         se.fit=FALSE, conf.int=FALSE,
                         conf.type=c('mean','individual'),
                         incl.non.slopes=NULL, non.slopes=NULL, kint=1,
@@ -642,76 +645,69 @@ predict.cph <- function(object, newdata=NULL,
                na.action, expand.na, center.terms, ...)
   }
 
-#This is Terry Therneau's old print.coxreg with conf.int default to F
-#Add Nagelkerke R2 9Jun92
-#Remove printing hazard ratios 17Jun92
-
-print.cph.fit <- 
-  function(x, table = TRUE, coef = TRUE, conf.int = FALSE, scale = 1,
-           digits = NULL, ...)
-{
-  if(table && !is.null(x$n) && is.matrix(x$n))
-    print(x$n)
-  if(is.null(digits))
-    digits <- 3
-  savedig <- options(digits = digits)
-  on.exit(options(savedig))
-  beta <- x$coef
-  se <- sqrt(diag(x$var))
-  if(is.null(beta) | is.null(se))
-    stop("Input is not valid")
-  if(coef)
-    {
-      tmp <- cbind(beta, se, beta/se, 1 - pchisq((beta/
-                                                  se)^2, 1))
-      dimnames(tmp) <- list(names(beta), c("coef", 
-                                           "se(coef)", "z", "p"))
-      cat("\n")
-      prmatrix(tmp)
-	}
-  if(conf.int)
-    {
-      z <- qnorm((1 + conf.int)/2, 0, 1)
-      beta <- beta * scale
-      se <- se * scale
-      tmp <- cbind(exp(beta), exp( - beta), exp(beta - z * se),
-                   exp(beta + z * se))
-      dimnames(tmp) <- list(names(beta), c("exp(coef)", "exp(-coef)",
-            paste("lower .", round(100 * conf.int, 2), sep = ""),
-			paste("upper .", round(100 * conf.int, 2), sep = "")))
-      cat("\n")
-      prmatrix(tmp)
-	}
-  invisible(x)
-}
-
-print.cph <- function(x, long=FALSE, digits=3, conf.int=FALSE,
-                      table=TRUE,  ...)
+print.cph <- function(x, digits=4, table=TRUE, conf.int=FALSE,
+                      coefs=TRUE, latex=FALSE, ...)
 { 
-
-  cat("\n")
-  if(x$fail) stop("Model Did Not Converge")
-
-
-  cat("Cox Proportional Hazards Model\n\n")
-  dput(x$call)
-  cat("\n")
-  if(length(z <- x$na.action)) naprint(z)
+  k <- 0
+  z <- list()
+  
+  if(length(zz <- x$na.action))
+    {
+      k <- k + 1
+      z[[k]] <- list(type=paste('naprint', class(zz)[1], sep='.'), list(zz))
+    }
+  
+  if(table && length(x$n) && is.matrix(x$n))
+    {
+      k <- k + 1
+      z[[k]] <- list(type='print', list(x$n))
+    }
+  
   if(length(x$coef))
     {
       stats <- x$stats
-      stats[3] <- round(stats[3],2)
-      stats[5] <- round(stats[5],4)
-      stats[6] <- round(stats[6],2)
-      stats[7] <- round(stats[7],4)
-      stats[8] <- round(stats[8],3)
-      stats[9] <- round(stats[9],3)
-      stats[10] <- round(stats[10],3)
-      print(format.sep(stats), quote=FALSE)
-      cat("\n")
-      print.cph.fit(x, digits=digits, conf.int=conf.int, table=table, ...)
-      if(long)cat("Centering constant:",format(x$center),"\n")
+      misc <- reVector(Obs   =stats['Obs'],
+                       Events=stats['Events'],
+                       Center=x$center)
+      lr   <- reVector('LR chi2'     = stats['Model L.R.'],
+                       'd.f.'        = stats['d.f.'],
+                       'Pr(> chi2)'  = stats['P'],
+                       'Score chi2'  = stats['Score'],
+                       'Pr(> chi2)'  = stats['Score P'])
+      disc <- reVector(R2 = stats['R2'],
+                       g  = stats['g'],
+                       gr = stats['gr'])
+      k <- k + 1
+      headings <- list('', 'Model Tests', c('Discrimination', 'Indexes'))
+      data     <- list(c(misc, c(NA,NA,digits)),
+                       c(lr, c(2,NA,4,2,4)),
+                       c(disc,3))
+      z[[k]] <- list(type='stats', list(headings=headings, data=data))
+
+      beta <- x$coef
+      se <- sqrt(diag(x$var))
+      k <- k + 1
+      z[[k]] <- list(type='coefmatrix',
+                     list(coef = x$coef,
+                          se   = sqrt(diag(x$var))))
+      if(conf.int)
+        {
+          
+          zcrit <- qnorm((1 + conf.int)/2)
+          tmp <- cbind(exp(beta), exp( - beta), exp(beta - zcrit * se),
+                       exp(beta + zcrit * se))
+          dimnames(tmp) <- list(names(beta),
+                                c("exp(coef)", "exp(-coef)",
+                                  paste("lower .",
+                                        round(100 * conf.int, 2), sep = ""),
+                                  paste("upper .",
+                                        round(100 * conf.int, 2), sep = "")))
+          k <- k + 1
+          z[[k]] <- list(type='print', list(tmp, digits=digits))
+        }
     }
-  else if(table) print(x$n)
+  
+  prModFit(x, title='Cox Proportional Hazards Model',
+           z, digits=digits, coefs=coefs, latex=latex, ...)
   invisible()
 }

@@ -34,14 +34,19 @@ causes logist to compute statistics at initial estimates.
 }
 \item{eps}{
 difference in \preformatted{-2  log} likelihood for declaring convergence.
-Default is \code{.025}.
+Default is \code{.025}.  If the \preformatted{-2 log} likelihood gets
+worse by eps/10 while the maximum absolute first directive of
+\preformatted{-2 log} likelihood is below 1E-9, convergence is still
+declared.  This handles the case where the initial estimates are MLEs,
+to prevent endless step-halving.
 }
 \item{tol}{
 Singularity criterion. Default is 1E-7
 }
 \item{trace}{
 set to \code{TRUE} to print -2 log likelihood, step-halving
-fraction, and rank of variance matrix at each iteration
+fraction, change in -2 log likelihood, maximum absolute value of first
+derivative, and vector of first derivatives at each iteration.
 }
 \item{penalty.matrix}{
   a self-contained ready-to-use penalty matrix - see \code{lrm}

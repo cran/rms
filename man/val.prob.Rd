@@ -21,8 +21,10 @@ its \eqn{P}-value, Unreliability index \eqn{U}, \eqn{\chi^2}{chi-square}
 with 2 d.f.  for testing unreliability (H0: intercept=0, slope=1), its
 \eqn{P}-value, the quality index \eqn{Q}, \code{Brier} score (average
 squared difference in \code{p} and \code{y}), \code{Intercept}, and
-\code{Slope}, and \eqn{E_{max}}=maximum absolute difference in predicted
-and calibrated probabilities.  If \code{pl=TRUE}, plots fitted logistic
+\code{Slope}, \eqn{E_{max}}=maximum absolute difference in predicted
+and calibrated probabilities, the Spiegelhalter \eqn{Z}-test for
+calibration accuracy, and its two-tailed \eqn{P}-value.  If
+\code{pl=TRUE}, plots fitted logistic 
 calibration curve and optionally a smooth nonparametric fit using
 \code{lowess(p,y,iter=0)} and grouped proportions vs.  mean predicted
 probability in group.  If the predicted probabilities or logits are
@@ -80,7 +82,7 @@ val.prob(p, y, logit, group, weights=rep(1,length(y)), normwt=FALSE,
          xlab="Predicted Probability", ylab="Actual Probability",
          lim=c(0, 1), m, g, cuts, emax.lim=c(0,1),
          legendloc=lim[1] + c(0.55 * diff(lim), 0.27 * diff(lim)), 
-         statloc=c(0,0.9), riskdist="calibrated", cex=.75, mkh=.02,
+         statloc=c(0,0.99), riskdist="calibrated", cex=.7, mkh=.02,
          connect.group=FALSE, connect.smooth=TRUE, g.group=4, 
          evaluate=100, nmin=0)
 
@@ -233,7 +235,8 @@ significant at the 0.01 level and \code{" "} otherwise.
 \value{
 \code{val.prob} without \code{group} returns a vector with the following named
 elements: \code{Dxy}, \code{R2}, \code{D}, \code{D:Chi-sq}, \code{D:p},
-\code{U}, \code{U:Chi-sq}, \code{U:p}, \code{Q}, \code{Brier}, \code{Intercept}, \code{Slope}, \code{Emax}.
+\code{U}, \code{U:Chi-sq}, \code{U:p}, \code{Q}, \code{Brier},
+     \code{Intercept}, \code{Slope}, \code{S:z}, \code{S:p}, \code{Emax}.
 When \code{group} is present \code{val.prob} returns an object of class
 \code{val.prob} containing a list with summary statistics and calibration
 curves for all the strata plus \code{"Overall"}.  
@@ -280,6 +283,8 @@ London: Methuen.
 Spiegelhalter DJ (1986):Probabilistic prediction in patient management.
 Stat in Med 5:421--433.
 
+Rufibach K (2010):Use of Brier score to assess binary predictions.  J
+Clin Epi 63:938-939
 
 Tjur T (2009):Coefficients of determination in logistic regression
 models-A new proposal:The coefficient of discrimination.  Am Statist

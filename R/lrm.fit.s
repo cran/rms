@@ -117,14 +117,13 @@ lrm.fit <- function(x,y,offset,initial,est,
   
   if(missing(initial))
     {
-      ## ncum <- rev(cumsum(rev(numy)))[2:(kint+1)]
-      ## pp <- ncum/n
       ncum <- rev(cumsum(rev(sumwty)))[2:(kint+1)]
-      pp <- ncum/sumwt
-      initial <-logb(pp/(1-pp))
-      if(ofpres) initial <- initial-mean(offset)
+      pp   <- ncum/sumwt
+      initial <- log(pp/(1-pp))
+      if(ofpres) initial <- initial - mean(offset)
     }
-  if(length(initial) < nvi) initial <- c(initial,rep(0,nvi-length(initial)))
+  if(length(initial) < nvi)
+    initial <- c(initial, rep(0, nvi - length(initial)))
   storage.mode(initial) <- "double"
   
   loglik <- -2 * sum(sumwty*logb(sumwty/sum(sumwty)))
@@ -268,9 +267,7 @@ lrm.fit <- function(x,y,offset,initial,est,
   stats <- c(n,max(abs(z$u[elements])),model.lr,model.df,
              model.p,z$opts[8],z$opts[9],
              z$opts[10], z$opts[11], r2, B, g, exp(g), gp)
-  ## was stats <- c(n,max(abs(z$u[elements])),model.lr,model.df,  21Aug97
-  ##	model.p,round(z$opts[8],3),round(z$opts[9],3),
-  ##	round(z$opts[10],3), round(z$opts[11],3), r2, B)
+
   nam <- c("Obs","Max Deriv",
            "Model L.R.","d.f.","P","C","Dxy",
            "Gamma","Tau-a","R2","Brier","g","gr","gp")

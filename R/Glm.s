@@ -82,28 +82,43 @@ Glm <-
   fit
 }
 
-print.Glm <- function(x, digits=4, ...)
+print.Glm <- function(x, digits=4, coefs=TRUE, latex=FALSE, ...)
 {
-  cat('General Linear Model\n\n')
-  dput(x$call); cat('\n\n')
-  if(length(z <- x$na.action)) naprint(z)
+  k <- 0
+  z <- list()
+  
+  Title <- 'General Linear Model'
+
+  if(length(zz <- x$na.action))
+    {
+      k <- k + 1
+      z[[k]] <- list(type=paste('naprint', class(zz)[1], sep='.'), list(zz))
+    }
+
   cof <- coef(x)
   lr <- x$null.deviance - x$deviance
   names(cof) <- ifelse(names(cof)=='(Intercept)','Intercept',names(cof))
   dof <- x$rank - (names(cof)[1]=='Intercept')
   pval <- 1 - pchisq(lr, dof)
-  print(c('Model L.R.'=format(lr,digits=2), 'd.f.'=format(dof),
-          'P'=format(pval,digits=4), 'g'=round(x$g,3)), quote=FALSE)
-  cat('\n')
+
+  misc <- reVector(Obs=length(x$residuals),
+                   'Residual d.f.'=x$df.residual,
+                   g = x$g)
+  lr   <- reVector('LR chi2'     = lr,
+                   'd.f.'        = dof,
+                   'Pr(> chi2)' = pval)
+  headings <- list('',
+                   c('Model Likelihood', 'Ratio Test'))
+  data <-  list(c(misc, c(NA,NA,3)),
+                c(lr,   c(2, NA,-4)))
+  k <- k + 1
+  z[[k]] <- list(type='stats', list(headings=headings, data=data))
+  
   se <- sqrt(diag(vcov(x)))
-  z <- cof/se
-  p <- 1 - pchisq(z^2, 1)
-  w <- cbind(format(cof, digits=digits),
-             format(se,  digits=digits),
-             format(z,   digits=2),
-             format(p,   digits=4))
-  dimnames(w) <- list(names(cof), c('Coef','S.E.','Wald Z','P'))
-  print(w, quote=FALSE)
+  k <- k + 1
+  z[[k]] <- list(type='coefmatrix',
+                 list(coef=cof, se=se))
+  prModFit(x, title=Title, z, digits=digits, coefs=coefs, latex=latex, ...)
   invisible()
 }
 
@@ -124,7 +139,7 @@ vcov.Glm <- function(object, ...) stats:::vcov.glm(object, ...)
 
 predict.Glm <- 
   function(object, newdata,
-           type=c("lp","x","data.frame","terms","cterms", "adjto",
+           type=c("lp","x","data.frame","terms","cterms","ccterms","adjto",
              "adjto.data.frame", "model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes, non.slopes, kint=1,

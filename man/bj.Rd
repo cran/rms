@@ -49,7 +49,7 @@ bj(formula=formula(data), data, subset, na.action=na.delete,
    link="log", control, method='fit', x=FALSE, y=FALSE, 
    time.inc)
 
-\method{print}{bj}(x, digits=4, long=FALSE, \dots)
+\method{print}{bj}(x, digits=4, long=FALSE, coefs=TRUE, latex=FALSE, \dots)
 
 \method{residuals}{bj}(object, type=c("censored","censored.normalized"),\dots)
 
@@ -119,6 +119,12 @@ bj.fit(x, y, control)
   \item{long}{
     set to \code{TRUE} to print the correlation matrix for parameter estimates
   }
+  \item{coefs}{specify \code{coefs=FALSE} to suppress printing the table
+	of model coefficients, standard errors, etc.  Specify \code{coefs=n}
+	to print only the first \code{n} regression coefficients in the
+	model.}
+  \item{latex}{a logical value indicating whether information should be
+	formatted as plain text or as LaTeX markup}
   \item{object}{the result of \code{bj}}
   \item{type}{
     type of residual desired.  Default is censored unnormalized residuals,
@@ -214,7 +220,8 @@ bj.fit(x, y, control)
   \code{\link{rms}}, \code{\link{psm}}, \code{\link{survreg}}, \code{\link{cph}}, \code{\link[survival]{Surv}},
   \code{\link[Hmisc]{na.delete}},
   \code{\link[Hmisc]{na.detail.response}}, \code{\link{datadist}},
-  \code{\link[Hmisc]{rcorr.cens}}, \code{\link{GiniMd}}
+  \code{\link[Hmisc]{rcorr.cens}}, \code{\link{GiniMd}},
+   \code{\link{prModFit}}
 }
 \examples{
 set.seed(1)

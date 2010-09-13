@@ -1,8 +1,8 @@
 Gls <-
   function (model, data = sys.frame(sys.parent()), correlation = NULL, 
-    weights = NULL, subset, method = c("REML", "ML"), na.action = na.fail, 
+    weights = NULL, subset, method = c("REML", "ML"), na.action = na.omit, 
     control = list(), verbose = FALSE, B=0, dupCluster=FALSE,
-            pr=FALSE, opmeth=c('optimize','optim'))
+            pr=FALSE, opmeth=c('optimize','optim'), x=FALSE)
             
 {
     require(nlme)
@@ -50,7 +50,6 @@ Gls <-
         revOrder <- match(origOrder, rn)
       }
     else grps <- NULL
-    
     X <- model.frame(model, dataMod)
     dul <- .Options$drop.unused.levels
     if(!length(dul) || dul)
@@ -245,12 +244,13 @@ Gls <-
                    groups = grps, call = Call, method = method,
                    fitted = Fitted,  
                    residuals = Resid, parAssign = parAssign,
-                   Design=desatr,assign=DesignAssign(desatr,1,mt),
-                   formula=model, opmeth=opmeth,
+                   Design=desatr, assign=DesignAssign(desatr, 1, mt),
+                   formula=model, terms=fTerms, opmeth=opmeth,
                    B=B, boot.Coef=if(B > 0) bootcoef,
                    boot.Corr=if(B > 0) bootcorr,
                    Nboot=if(B > 0) Nboot,
-                   var=if(B > 0) var(bootcoef))
+                   var=if(B > 0) var(bootcoef),
+                   x=if(x) X)
     
     ## Last 2 lines FEH 29mar03
     if (inherits(data, "groupedData"))
@@ -265,80 +265,100 @@ Gls <-
   }
 
 
-print.Gls <- function(x, digits=4, ...)
+print.Gls <- function(x, digits=4, coefs=TRUE, latex=FALSE, ...)
 {
   ## Following taken from print.gls with changes marked FEH
 
   summary.gls <- nlme:::summary.gls
 
+  k <- 0
+  z <- list()
+  
   dd <- x$dims
+  errordf <- dd$N - dd$p
   mCall <- x$call
-  if (inherits(x, "gnls"))
-    cat("Generalized nonlinear least squares fit\n")
-  else
-    {
-      cat("Generalized least squares fit by ")
-      cat(ifelse(x$method == "REML", "REML\n", "maximum likelihood\n"))
-    }
-  cat("  Model:", deparse(mCall$model), "\n")
-  cat("  Data:", deparse(mCall$data), "\n")
-  if (length(mCall$subset))
-    {
-      cat("  Subset:", deparse(asOneSidedFormula(mCall$subset)[[2]]), 
-          "\n")
-    }
-  cat(  '  g-index: ', round(x$g,3), '\n')
-  if (inherits(x, "gnls"))
-    cat("  Log-likelihood: ", format(x$logLik), "\n", sep = "")
-  else
-    {
-      cat("  Log-", ifelse(x$method == "REML", "restricted-", 
-                           ""),
-          "likelihood: ", format(x$logLik), "\n", sep = "")
-  }
-  cat('\n')
+  Title <- if (inherits(x, "gnls")) "Generalized Nonlinear Least Squares Fit"
+  else paste("Generalized Least Squares Fit by",
+             ifelse(x$method == "REML", "REML", "Maximum Mikelihood"))
+
+  ltype <- if (inherits(x, "gnls")) 'Log-likelihood' else
+   paste('Log-', ifelse(x$method == "REML", "restricted-", ""),
+         'likelihood',  sep='')
+  if(latex) ltype <- paste(ltype, ' ', sep='')
+  
+  misc <- reVector(Obs=dd$N,
+                   Clusters=if(length(x$groups)) length(unique(x$groups)) else
+                    dd$N,
+                   g=x$g)
+  
+  llike <- reVector(ll=x$logLik,
+                    'Model d.f.' = dd$p - 1,
+                    sigma  = x$sigma,
+                    'd.f.' = errordf)
+  names(llike)[1] <- ltype
+  k <- k + 1
+  z[[k]] <- list(type='stats',
+                 list(
+                      headings = list('', ''),
+                      data     = list(c(misc, c(NA,NA,3)),
+                                      c(llike, c(2,NA,digits,NA)))))
+
   if(any(names(x)=='var') && length(x$var))
     {
-      cat('Using bootstrap variance estimates\n\n')
       se <- sqrt(diag(x$var))
       beta <- coef(x)
-      zTable <- cbind(Coef=format(beta,digits=digits),
-                      'S.E'=format(se, digits=digits),
-                      Z   =format(beta/se, digits=2),
-                      'Pr(>|Z|)'=format.pval(2*pnorm(-abs(beta/se)),digits=4))
-      print(zTable, quote=FALSE)
+      k <- k + 1
+      z[[k]] <- list(type='coefmatrix',
+                     list(coef = beta, se= se),
+                     title='Using bootstrap variance estimates')
     }
   else
-    print(summary.gls(x)$tTable)
+    {
+      s <- summary.gls(x)$tTable
+      k <- k + 1
+      z[[k]] <- list(type='coefmatrix',
+                     list(coef = s[,'Value'], se = s[,'Std.Error'],
+                          errordf = errordf))
+    }
   
-  cat("\n")
-  if (length(x$modelStruct) > 0)
-    print(summary(x$modelStruct))
 
-  cat("Degrees of freedom:", dd[["N"]], "total;", dd[["N"]] - 
-      dd[["p"]], "residual\n")
-  cat("Residual standard error:", format(x$sigma), "\n")
-  
-  cat('Clusters:',length(unique(x$groups)),'\n')
+  if (length(x$modelStruct) > 0)
+    {
+      k <- k + 1
+      z[[k]] <- list(type='print', list(summary(x$modelStruct)))
+    }
+
   if(x$B > 0)
     {
-      cat('Bootstrap repetitions:',x$B,'\n')
+      k <- k + 1
+      z[[k]] <- list(type='cat', list('Bootstrap repetitions:',x$B))
+
       tn <- table(x$Nboot)
       if(length(tn) > 1)
         {
-          cat('Table of Sample Sizes used in Bootstraps\n')
-          print(tn)
+          k < k + 1
+          z[[k]] <- list(type='print', list(tn), 
+                         title = 'Table of Sample Sizes used in Bootstraps')
         }
       else
-        cat('Bootstraps were all balanced with respect to clusters\n')
+        {
+          k <- k + 1
+          z[[k]] <- list(type='cat',
+                         list('Bootstraps were all balanced with respect to clusters'))
+        }
+      
       dr <- diag(x$varBeta)/diag(x$var)
-      cat('Ratio of Original Variances to Bootstrap Variances\n')
-      print(round(dr,2))
-      cat('Bootstrap Nonparametric 0.95 Confidence Limits for Correlation Parameter\n')
+      k <- k + 1
+      z[[k]] <- list(type='print', list(round(dr, 2)),
+                     title = 'Ratio of Original Variances to Bootstrap Variances')
+      k <- k + 1
       r <- round(quantile(x$boot.Corr, c(.025,.975)),3)
       names(r) <- c('Lower','Upper')
-      print(r)
+      z[[k]] <- list(type='print', list(r),
+                     title = 'Bootstrap Nonparametric 0.95 Confidence Limits for Correlation Parameter')
     }
+  
+  prModFit(x, title=Title, z, digits=digits, coefs=coefs, latex=latex, ...)
   invisible()
 }
 
@@ -348,7 +368,7 @@ vcov.Gls <- function(object, ...)
 
 predict.Gls <- 
   function(object, newdata,
-           type=c("lp","x","data.frame","terms","cterms", "adjto",
+           type=c("lp","x","data.frame","terms","cterms", "ccterms", "adjto",
              "adjto.data.frame", "model.frame"),
            se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
            incl.non.slopes, non.slopes, kint=1,

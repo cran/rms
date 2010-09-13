@@ -18,6 +18,7 @@
 \alias{Getlimi}
 \alias{related.predictors}
 \alias{interactions.containing}
+\alias{combineRelatedPredictors}
 \alias{param.order}
 \alias{Penalty.matrix}
 \alias{Penalty.setup}
@@ -33,6 +34,10 @@
 \alias{residuals.rms}
 \alias{print.lrtest}
 \alias{survest.rms}
+\alias{prModFit}
+\alias{prStats}
+\alias{reVector}
+\alias{formatNP}
 \title{Miscellaneous Design Attributes and Utility Functions}
 \description{
 These functions are used internally to \code{anova.rms},
@@ -65,6 +70,9 @@ function returns indexes of interaction effects containing a given
 predictor.  The \code{param.order} function returns a vector of logical
 indicators for whether parameters are associated with certain types of
 effects (nonlinear, interaction, nonlinear interaction).
+\code{combineRelatedPredictors} creates of list of inter-connected main
+effects and interations for use with \code{predictrms} with
+\code{type='ccterms'} (useful for \code{gIndex}).
 
 
 The \code{Penalty.matrix} function builds a default penalty matrix for
@@ -101,6 +109,27 @@ dispatch them.
 \code{rmsArgs} handles \dots arguments to functions such as
 \code{Predict}, \code{summary.rms}, \code{nomogram} so that variables to
 vary may be specified without values (after an equals sign).
+
+\code{prModFit} is the workhorse for the \code{print} methods for
+highest-level \code{rms} model fitting functions, handling both regular
+and LaTeX printing, the latter resulting in LaTeX code written to the
+terminal, automatically ready for \code{Sweave}.  The work of printing
+summary statistics is done by \code{prStats}, which uses the Hmisc
+\code{print.char.matrix} function to print overall model statistics if
+\code{latex=FALSE}, otherwise it generates customized LaTeX code.  The
+LaTeX needspace package must be in effect to use these LaTeX functions.
+
+\code{reVector} allows one to rename a subset of a named vector,
+ignoring the previous names and not concatenating them as \R does.  It
+also removes (by default) elements that are \code{NA}, as when an
+optional named element is fetched that doesn't exist.
+
+\code{formatNP} is a function to format a vector of numerics.  If
+\code{digits} is specified, \code{formatNP} will make sure that the
+formatted representation has \code{digits} positions to the right of the
+decimal place.  If \code{latex=TRUE} it will translate any scientific
+notation to LaTeX math form.  If \code{pvalue=TRUE}, it will replace
+formatted values with "< 0.0001" (if \code{digits=4}). 
 }
 \usage{
 \method{vcov}{cph}(object, regcoef.only=TRUE, \dots)
@@ -125,6 +154,7 @@ Getlimi(name, Limval, need.all=TRUE)
 
 related.predictors(at, type=c("all","direct"))
 interactions.containing(at, pred)
+combineRelatedPredictors(at)
 param.order(at, term.order)
 
 Penalty.matrix(at, X)
@@ -141,6 +171,14 @@ Newlevels(fit, \dots)
 \method{Newlevels}{rms}(fit, levels, \dots)
 
 rmsFit(fit)  # fit from glm, lm, etc.,then use anova etc. on result
+
+prModFit(x, title, w, digits=4, coefs=TRUE, latex=FALSE, \dots)
+
+prStats(labels, w, latex=FALSE)
+
+reVector(\dots, na.rm=TRUE)
+
+formatNP(x, digits=NULL, pvalue=FALSE, latex=FALSE)
 }
 \arguments{
 \item{fit}{result of a fitting function}
@@ -202,7 +240,8 @@ a design matrix, not including columns for intercepts
 \item{penalty}{
 a vector or list specifying penalty multipliers for types of model terms
 }
-\item{x}{a result of \code{lrtest}}
+\item{x}{a result of \code{lrtest}, or the result of a high-level model
+  fitting function (for \code{prModFit}}
 \item{labels}{
 a character vector specifying new labels for variables in a fit.
 To give new labels for all variables, you can specify \code{labels} of the
@@ -211,13 +250,43 @@ assumed to be the length of all main effect-type variables in the fit and
 in their original order in the model formula.  You may specify a named
 vector to give new labels in random order or for a subset of the 
 variables, e.g., \code{labels=c(age="Age in Years",chol="Cholesterol")}.
+For \code{prStats}, is a list with major column headings, which can
+themselves be vectors that are then stacked vertically.
 }
 \item{levels}{
 a list of named vectors specifying new level labels for categorical
 predictors.  This will override \code{parms} as well as \code{datadist} information
 (if available) that were stored with the fit.  
 }
-\item{\dots}{other arguments}
+\item{title}{a single character string used to specify an overall title
+  for the regression fit, which is printed first by \code{prModFit}}
+\item{w}{For \code{prModFit}, a special list of lists, which each list
+  element specifying information about a block of information to include
+  in the \code{print.} output for a fit.  For \code{prStats}, \code{w}
+  is a list of statistics to print, elements of which can be vectors
+  that are stacked vertically.  Unnamed elements specify number of
+  digits to the right of the decimal place to which to round (\code{NA}
+  means use \code{format} without rounding, as with integers and
+  floating point values).  Negative values of \code{digits} indicate
+  that the value is a P-value to be formatted with \code{formatNP}.
+  Digits are recycled as needed. 
+}
+\item{digits}{number of digits to the right of the decimal point, for
+  formatting numeric values in printed output}
+\item{coefs}{specify \code{coefs=FALSE} to suppress printing the table
+  of model coefficients, standard errors, etc.  Specify \code{coefs=n}
+  to print only the first \code{n} regression coefficients in the
+  model.}
+\item{latex}{a logical value indicating whether information should be
+  formatted as plain text or as LaTeX markup}
+\item{na.rm}{set to \code{FALSE} to keep \code{NA}s in the vector
+  created by \code{reVector}}
+\item{pvalue}{set to \code{TRUE} if you want values below 10 to the
+  minus \code{digits} to be formatted to be less than that value}
+\item{\dots}{other arguments.  For \code{reVector} this contains the
+  elements being extracted.  For \code{prModFit} this information is
+  passed to the \code{Hmisc latexTabular} function when a block of
+  output is a vector to be formatted in LaTeX.}
 }
 \value{
 \code{vcov} returns a variance-covariance matrix, and \code{num.intercepts}
@@ -226,7 +295,8 @@ returns an integer with the number of intercepts in the model.
 \code{Getlim} returns a list with components \code{limits} and \code{values}, either
 stored in \code{fit} or retrieved from the object created by \code{datadist} and
 pointed to in \code{options(datadist=)}.
-\code{related.predictors} returns a list of vectors, and \code{interactions.containing}
+\code{related.predictors} and \code{combineRelatedPredictors} return a
+list of vectors, and \code{interactions.containing} 
 returns a vector.  \code{param.order} returns a logical vector corresponding
 to non-strata terms in the model.
 \code{Penalty.matrix} returns a symmetric matrix with dimension equal to the
@@ -242,9 +312,16 @@ cell in which the parameter is by definition zero.
 \code{rmsFit} returns the original object but with \code{oldClass} of
 \code{"rms"} and with a new attribute \code{"fitFunction"} containing the
 original vector of classes.
+
+\code{reVector} returns a vector of named (by its arguments) elements.
+\code{formatNP} returns a character vector.
 }
 \seealso{
-\code{\link{rms}}, \code{\link{fastbw}}, \code{\link{anova.rms}}, \code{\link{summary.lm}}, \code{\link{summary.glm}}, \code{\link{datadist}}, \code{\link{vif}}, \code{\link{bootcov}}
+\code{\link{rms}}, \code{\link{fastbw}}, \code{\link{anova.rms}},
+\code{\link{summary.lm}}, \code{\link{summary.glm}},
+\code{\link{datadist}}, \code{\link{vif}}, \code{\link{bootcov}},
+\code{\link[Hmisc]{latex}}, \code{\link[Hmisc]{latexTabular}},
+\code{\link[Hmisc]{latexSN}}, \code{\link[Hmisc]{print.char.matrix}}
 }
 \examples{
 \dontrun{

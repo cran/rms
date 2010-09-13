@@ -37,8 +37,6 @@
 \alias{validate.rms}
 \alias{vcov.rms}
 \alias{oos.loglik.rms}
-\alias{makeSteps}
-\alias{.}
 \description{Internal rms functions}
 \details{These are not to be called by the user or are undocumented.}
 \keyword{internal}

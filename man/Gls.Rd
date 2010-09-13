@@ -3,11 +3,11 @@
 \alias{print.Gls}
 \title{Fit Linear Model Using Generalized Least Squares}
 \usage{
-Gls(model, data, correlation, weights, subset, method, na.action,
+Gls(model, data, correlation, weights, subset, method, na.action=na.omit,
     control, verbose, B=0, dupCluster=FALSE, pr=FALSE,
-    opmeth=c('optimize','optim'))
+    opmeth=c('optimize','optim'), x=FALSE)
 
-\method{print}{Gls}(x, digits=4, \dots)
+\method{print}{Gls}(x, digits=4, coefs=TRUE, latex=FALSE, \dots)
 }
 \arguments{
  \item{model}{a two-sided linear formula object describing the
@@ -40,9 +40,8 @@ Gls(model, data, correlation, weights, subset, method, na.action,
    maximizing the restricted log-likelihood.  If \code{"ML"} the
    log-likelihood is maximized.  Defaults to \code{"REML"}.}
  \item{na.action}{a function that indicates what should happen when the
-   data contain \code{NA}s.  The default action (\code{na.fail}) causes
-   \code{gls} to print an error message and terminate if there are any
-   incomplete observations.}
+   data contain \code{NA}s.  The default action (\code{na.omit}) results
+   in deletion of observations having any of the variables of interest missing.}
  \item{control}{a list of control values for the estimation algorithm to
    replace the default values returned by the function \code{glsControl}.
    Defaults to an empty list.}
@@ -57,8 +56,15 @@ Gls(model, data, correlation, weights, subset, method, na.action,
  \item{pr}{set to \code{TRUE} to show progress of bootstrap resampling}
  \item{opmeth}{specifies whether the \code{optimize} or the \code{optim}
    function is to be used for optimization}
- \item{x}{the result of \code{Gls}}
+ \item{x}{for \code{Gls} set to \code{TRUE} to store the design matrix
+   in the fit object; otherwise the result of \code{Gls}}
  \item{digits}{number of significant digits to print}
+ \item{coefs}{specify \code{coefs=FALSE} to suppress printing the table
+  of model coefficients, standard errors, etc.  Specify \code{coefs=n}
+  to print only the first \code{n} regression coefficients in the
+  model.}
+\item{latex}{a logical value indicating whether information should be
+  formatted as plain text or as LaTeX markup}
  \item{\dots}{ignored}
 }
 \description{
@@ -93,6 +99,13 @@ Gls(model, data, correlation, weights, subset, method, na.action,
   Pinheiro J, Bates D (2000): Mixed effects models in S and S-Plus.  New
   York: Springer-Verlag.
 }
+\details{
+  The \code{\link[Hmisc]{na.delete}} function will not work with
+  \code{Gls} due to some nuance in the \code{model.frame.default}
+  function.  This probably relates to \code{na.delete} storing extra
+  information in the \code{"na.action"} attribute of the returned data
+  frame.
+}
 \author{Jose Pinheiro,
   Douglas Bates \email{bates@stat.wisc.edu},
   Frank Harrell \email{f.harrell@vanderbilt.edu},
@@ -102,7 +115,7 @@ Gls(model, data, correlation, weights, subset, method, na.action,
   \code{\link{gls}}
   \code{\link{glsControl}}, \code{\link{glsObject}},
   \code{\link{varFunc}}, \code{\link{corClasses}},
-  \code{\link{varClasses}}, \code{\link{GiniMd}}
+  \code{\link{varClasses}}, \code{\link{GiniMd}}, \code{\link{prModFit}}
 }
 \examples{
 \dontrun{
@@ -133,6 +146,8 @@ summary(f)
 anova(f)
 plot(Predict(f, tim, trt))
 # v <- Variogram(f, form=~tim|id, data=d)
+nlme:::summary.gls(f)$tTable   # print matrix of estimates etc.
+
 options(datadist=NULL)
 }
 }

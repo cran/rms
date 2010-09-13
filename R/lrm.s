@@ -194,41 +194,37 @@ lrm <- function(formula,data,subset,na.action=na.delete,
   f
 }
 
-print.lrm <- function(x, digits=4, strata.coefs=FALSE, ...)
+print.lrm <- function(x, digits=4, strata.coefs=FALSE, coefs=TRUE,
+                      latex=FALSE, ...)
 {
-  sg <- function(x,d)
+  z <- list()
+  k <- 0
+  
+  if(length(x$freq) > 3)
     {
-      oldopt <- options(digits=d)
-      on.exit(options(oldopt))
-      format(x)
+      k <- k + 1
+      z[[k]] <- list(type='print', list(x$freq),
+                     title='Frequencies of Responses')
     }
-  rn <- function(x,d) format(round(as.single(x),d))
-
-  cat("\n")
-  if(x$fail)
-    {
-      cat("Model Did Not Converge\n")
-      return()
-    }
-
-  cat("Logistic Regression Model\n\n")
-  dput(x$call)
-  cat("\n\nFrequencies of Responses\n")
-  print(x$freq)
   if(length(x$sumwty))
     {
-      cat('\n\nSum of Weights by Response Category\n')
-      print(x$sumwty)
+      k <- k + 1
+      z[[k]] <- list(type='print', list(x$sumwty),
+                     title='Sum of Weights by Response Category')
     }
-  cat("\n")
-  if(!is.null(x$nmiss))
-    {  #for backward compatibility
-      cat("Frequencies of Missing Values Due to Each Variable\n")
-      print(x$nmiss)
-      cat("\n")
+  if(!is.null(x$nmiss))  ## for backward compatibility
+    {
+      k <- k + 1
+      z[[k]] <- list(type='print', list(x$nmiss),
+                     title='Frequencies of Missing Values Due to Each Variable')
     }
-  else if(length(x$na.action)) naprint(x$na.action)
-
+  else if(length(x$na.action))
+    {
+      k <- k + 1
+      z[[k]] <- list(type=paste('naprint',class(x$na.action),sep='.'),
+                     list(x$na.action))
+    }
+  
   ns <- x$non.slopes
   nstrata <- x$nstrata
   if(!length(nstrata)) nstrata <- 1
@@ -241,76 +237,80 @@ print.lrm <- function(x, digits=4, strata.coefs=FALSE, ...)
         sqrt(diag(pm))
       penalty.scale <- c(rep(0,ns),psc)
       cof <- matrix(x$coef[-(1:ns)], ncol=1)
-      cat("Penalty factors:\n\n")
-      print(as.data.frame(x$penalty, row.names=''))
-      cat("\nFinal penalty on -2 log L:",
-          rn(t(cof) %*% pm %*% cof,2),"\n\n")
+      k <- k + 1
+      z[[k]] <- list(type='print', list(as.data.frame(x$penalty, row.names='')),
+                     title='Penalty factors')
+      k <- k + 1
+      z[[k]] <- list(type='print',
+                     list(t(cof) %*% pm %*% cof, digits=2),
+                     title='Final penalty on -2 log L')
     }
 
   ## ?ok to have uncommented next 3 lines?
   est.exp <- 1:ns
   if(length(x$est)) est.exp <-
-    c(est.exp, ns + x$est[x$est+ns <= length(x$coefficients)])
+    c(est.exp, ns + x$est[x$est + ns <= length(x$coefficients)])
   vv <- diag(x$var)
   cof <- x$coef
   if(strata.coefs)
     {
       cof <- c(cof, x$strata.coef)
-      vv  <- c(vv,  x$Varcov(x,which='strata.var.diag'))
-      if(length(pm)) penalty.scale <- c(penalty.scale,rep(NA,x$nstrat-1))
+      vv  <- c(vv,  x$Varcov(x, which='strata.var.diag'))
+      if(length(pm)) penalty.scale <- c(penalty.scale, rep(NA, x$nstrata-1))
     }
-  score.there <- nstrata==1 && (length(x$est) < length(x$coef)-ns)
+  score.there <- nstrata==1 && (length(x$est) < length(x$coef) - ns)
   stats <- x$stats
-  stats[2] <- signif(stats[2],1)
-  stats[3] <- round(stats[3],2)
-  stats[4] <- round(stats[4],2)
-  stats[5] <- round(stats[5],4)
-  stats[6] <- round(stats[6],3)
-  stats[7] <- round(stats[7],3)
-  if(nstrata==1)
+
+  maxd <- signif(stats['Max Deriv'], 1)
+  if(latex) maxd <- paste('$', latexSN(maxd), '$', sep='')
+  misc <- reVector(Obs   =stats['Obs'],
+                   'Sum of weights'=stats['Sum of Weights'],
+                   Strata=if(nstrata > 1) nstrata,
+                   'max |deriv|' = maxd)
+  if(length(x$freq) < 4)
     {
-      for(j in 8:13) stats[j] <- round(stats[j], 3)
-      if(length(stats) > 13)
-        {
-          stats[14] <- round(stats[14], 3)
-          if(length(x$weights)) stats[15] <- round(stats[15], 3)
-        }
+      names(x$freq) <- paste(if(latex)'~~' else ' ',
+                             names(x$freq), sep='')
+      misc <- c(misc[1], x$freq, misc[-1])
     }
-  else
-    stats <- c(stats, Strata=x$nstrat)
+  lr   <- reVector('LR chi2'     = stats['Model L.R.'],
+                   'd.f.'        = round(stats['d.f.'],3),
+                   'Pr(> chi2)' = stats['P'])
+  disc <- reVector(R2=stats['R2'], g=stats['g'], gr=stats['gr'],
+                   gp=stats['gp'], Brier=stats['Brier'])
+  discr <-reVector(C=stats['C'], Dxy=stats['Dxy'], gamma=stats['Gamma'],
+                   'tau-a'=stats['Tau-a'])
+  
+  headings <- list('',
+                   c('Model Likelihood','Ratio Test'),
+                   c('Discrimination',' Indexes'),
+                   c('Rank Discrim.','Indexes'))
+  data <- list(misc, c(lr, c(2,NA,-4)), c(disc,3), c(discr,3))
+  k <- k + 1
+  z[[k]] <- list(type='stats', list(headings=headings, data=data))
 
-  nst <- length(stats)
-  cstats <- character(nst)
-  names(cstats) <- names(stats)
-  for(i in 1:nst) cstats[i] <- format(stats[i])
-  print(cstats, quote=FALSE)
-
-  cat("\n")
-
-  z <- cof/sqrt(vv)
-  stats <- cbind(sg(cof,digits), sg(sqrt(vv),digits), 
-                 rn(cof/sqrt(vv),2))
-  stats <- cbind(stats, rn(1-pchisq(z^2,1),4))
-  dimnames(stats) <- list(names(cof),
-                          c("Coef","S.E.","Wald Z","P"))
-  if(length(pm))
-    stats <- cbind(stats, "Penalty Scale"=sg(penalty.scale,digits))
-  print(stats, quote=FALSE)
-  cat("\n")
-
-
+  if(coefs)
+    {
+      k <- k + 1
+      z[[k]] <- list(type='coefmatrix',
+                     list(coef=cof, se=sqrt(vv),
+                          aux=if(length(pm)) penalty.scale,
+                          auxname='Penalty Scale'))
+    }
+  
   if(score.there)
     {
       q <- (1:length(cof))[-est.exp]
       if(length(q)==1) vv <- x$var[q,q] else vv <- diag(x$var[q,q])
-      z <- x$u[q]/sqrt(vv)
-      stats <- cbind(rn(z,2), rn(1-pchisq(z^2,1),4))
+      Z <- x$u[q]/sqrt(vv)
+      stats <- cbind(format(Z,digits=2), format(1-pchisq(Z^2,1),digits=4))
       dimnames(stats) <- list(names(cof[q]),c("Score Z","P"))
-      print(stats,quote=FALSE)
-      cat("\n")
+      k <- k + 1
+      z[[k]] <- list(type='print', list(stats))
     }
+  prModFit(x, title='Logistic Regression Model', z, digits=digits,
+           coefs=coefs, latex=latex, ...)
   invisible()
-
 }
 
 
