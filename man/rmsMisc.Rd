@@ -22,6 +22,8 @@
 \alias{param.order}
 \alias{Penalty.matrix}
 \alias{Penalty.setup}
+\alias{logLik.rms}
+\alias{AIC.rms}
 \alias{lrtest}
 \alias{univarLR}
 \alias{Newlabels}
@@ -81,6 +83,10 @@ estimation.  The \code{Penalty.setup} function takes a constant or list
 describing penalty factors for each type of term in the model and
 generates the proper vector of penalty multipliers for the current model.
 
+\code{logLik.rms} returns the maximized log likelihood for the model,
+whereas \code{AIC.rms} returns the AIC.  The latter function has an
+optional argument for computing AIC on a "chi-square" scale (model
+likelihood ratio chi-square minus twice the regression degrees of freedom.
 
 The \code{lrtest} function does likelihood ratio tests for
 two nested models, from fits that have \code{stats} components with
@@ -160,6 +166,9 @@ param.order(at, term.order)
 Penalty.matrix(at, X)
 Penalty.setup(at, penalty)
 
+\method{logLik}{rms}(object, \dots)
+\method{AIC}{rms}(object, \dots, k=2, type=c('loglik', 'chisq'))
+
 lrtest(fit1, fit2)
 \method{print}{lrtest}(x, \dots)
 
@@ -226,8 +235,13 @@ set to \code{FALSE} to prevent \code{Getlim} or \code{Getlimi} from issuing an e
 if data for a variable are not found
 }
 \item{type}{
-set to \code{"direct"} to return lists of indexes of directly related
-factors only (those in interactions with the predictor)
+For \code{related.predictors}, set to \code{"direct"} to return lists of
+indexes of directly related factors only (those in interactions with the
+predictor).  For \code{AIC.rms}, \code{type} specifies the basis on
+which to return AIC.  The default is minus twice the maximized log
+likelihood plus \code{k} times the degrees of freedom counting
+intercept(s).  Specify \code{type='chisq'} to get a penalized model
+likelihood ratio chi-square instead.
 }
 \item{term.order}{
 1 for all parameters, 2 for all parameters associated with either nonlinear
@@ -240,6 +254,8 @@ a design matrix, not including columns for intercepts
 \item{penalty}{
 a vector or list specifying penalty multipliers for types of model terms
 }
+\item{k}{the multiplier of the degrees of freedom to be used in
+  computing AIC.  The default is 2.}
 \item{x}{a result of \code{lrtest}, or the result of a high-level model
   fitting function (for \code{prModFit}}
 \item{labels}{

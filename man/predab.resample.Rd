@@ -18,7 +18,7 @@ predab.resample(fit.orig, fit, measure,
                 method=c("boot","crossvalidation",".632","randomization"),
                 bw=FALSE, B=50, pr=FALSE,
                 rule="aic", type="residual", sls=.05, aics=0,
-                strata=FALSE, tol=1e-12, non.slopes.in.x=TRUE, kint=1,
+                tol=1e-12, non.slopes.in.x=TRUE, kint=1,
                 cluster, subset, group=NULL, \dots)
 }
 \arguments{
@@ -98,10 +98,6 @@ Significance level for stopping in fastbw if \code{rule="p"}. Default is \code{.
 Stopping criteria for \code{rule="aic"}. Stops deleting factors when
 chi-square - 2 times d.f. falls below \code{aics}. Default is \code{0}.
 }
-\item{strata}{set to \code{TRUE} if \code{fit.orig} has an \code{x}
-  element that contains a \code{"strata"} attribute which is a vector
-  that should be sampled the same way as the observations in \code{x}
-  and \code{y}}
 \item{tol}{
 Tolerance for singularity checking.  Is passed to \code{fit} and \code{fastbw}.
 }

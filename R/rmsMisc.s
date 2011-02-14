@@ -110,11 +110,10 @@ oos.loglik.psm <- function(fit, lp, y, ...) {
   else stop('not implemented for psm models')
 }
 
-oos.loglik.Glm <-
-  function(fit, lp, y, ...) {
-    if(missing(lp)) return(deviance(fit))
-    glm.fit.null(x=NULL,y=as.vector(y),offset=lp,family=fit$family)$deviance
-  } 
+oos.loglik.Glm <- function(fit, lp, y, ...)
+  if(missing(lp)) deviance(fit) else
+  glm.fit(x=NULL, y=as.vector(y), offset=lp, family=fit$family)$deviance
+
   
 #Function to retrieve limits and values, from fit (if they are there)
 #or from a datadist object.  If need.all=F and input is coming from datadist,
@@ -452,8 +451,8 @@ lrtest <- function(fit1, fit2)
   if(df1==df2) stop('models are not nested')
 
   lp1 <- length(fit1$parms);  lp2 <- length(fit2$parms)
-  if(lp1!=lp2) warning('fits do not have same number of scale parameters') else 
-  if(lp1==1 && abs(fit1$parms-fit2$parms)>1e-6)
+  if(lp1 != lp2) warning('fits do not have same number of scale parameters') else 
+  if(lp1 == 1 && abs(fit1$parms-fit2$parms)>1e-6)
     warning('fits do not have same values of scale parameters.\nConsider fixing the scale parameter for the reduced model to that from the larger model.')
 
   chisq <- abs(chisq1-chisq2)
@@ -1025,3 +1024,23 @@ formatNP <- function(x, digits=NULL, pvalue=FALSE, latex=FALSE)
       }
     f
   }
+
+logLik.rms <- function(object, ...)
+  {
+    w <- object$loglik
+    if(length(w)) return(w[length(w)])
+    w <- object$deviance
+    -0.5*w[length(w)]
+  }
+
+AIC.rms <- function(object, ..., k=2, type=c('loglik','chisq'))
+  {
+    type <- match.arg(type)
+    dof <- object$stats['d.f.'] +
+      ifelse(type=='loglik', num.intercepts(object), 0)
+    unname(switch(type,
+                  loglik=-2*logLik(object) + k * dof,
+                  chisq = object$stats['Model L.R.'] - k * dof))
+  }
+
+    

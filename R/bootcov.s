@@ -29,12 +29,9 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=FALSE,
       fixed <-  NULL
       dist <-   fit$dist
       parms <-  fit$parms
-      Strata <- NULL
     }
 
-  if(nfit=='cph') Strata <- NULL
-
-  if(nfit=='Glmd') fitFamily <- fit$family
+  if(nfit=='Glm') fitFamily <- fit$family
   
   penalty.matrix <- fit$penalty.matrix
 
@@ -55,8 +52,8 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=FALSE,
                  lrm.fit(x,y,maxit=maxit,tol=1E-11,
                          penalty.matrix=penalty.matrix)
                }, 
-               cph=function(x,y,maxit=15,...) {
-                 coxphFit(x,y, strata=Strata, iter.max=maxit, 
+               cph=function(x,y,strata=NULL,maxit=15,...) {
+                 coxphFit(x,y, strata=strata, iter.max=maxit, 
                           eps=.0001, method="efron", toler.chol=1e-11, type='right')
                },
                psm=function(x,y,maxit=15,...) {
@@ -98,7 +95,7 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=FALSE,
   vname <- names(fit$coef)
   if(sc.pres)
     {
-      p <- p+1
+      p <- p + 1
       vname <- c(vname, "log scale")
     }
     
@@ -109,14 +106,8 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=FALSE,
   
   Y <- as.matrix(if(is.category(Y)) oldUnclass(Y) else Y)
   ny <- ncol(Y)
-  
-  str.pres <- FALSE
-  if(coxcph)
-    {
-      str.pres <- TRUE
-      str <- attr(X, "strata")
-      str.pres <- length(str)
-    }
+
+  Strata <- fit$Strata
   
   nac <- fit$na.action
   
@@ -157,11 +148,10 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=FALSE,
                 }
             }
           else j <- sample(1:n, n, replace=TRUE)
-          
-          if(str.pres) Strata <- str[j]
-          
+
+          ## Note: If Strata is NULL, NULL[j] is still NULL
           f <- fitter(X[j,,drop=FALSE], Y[j,,drop=FALSE], maxit=maxit, 
-                      penalty.matrix=penalty.matrix)
+                      penalty.matrix=penalty.matrix, strata=Strata[j])
           
           if(length(f$fail) && f$fail) next
           
@@ -234,10 +224,9 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=FALSE,
               obs <- unlist(Obsno[j])
             }
 
-          if(str.pres) Strata <- str[obs]
-          
           f <- fitter(X[obs,,drop=FALSE], Y[obs,,drop=FALSE], 
-                      maxit=maxit, penalty.matrix=penalty.matrix)
+                      maxit=maxit, penalty.matrix=penalty.matrix,
+                      strata=Strata[obs])
           
           if(length(f$fail) && f$fail) next
           
@@ -337,7 +326,7 @@ bootplot <- function(obj, which, X,
       for(j in 1:nq)
         {
           histdensity(qoi[j,], xlab=labels.[j], ...)
-          quan[j,] <- quantile(qoi[j,],probs)
+          quan[j,] <- quantile(qoi[j,], probs, na.rm=TRUE)
           abline(v=quan[j,], lty=2)
           title(sub=paste('Fraction of effects>',fun(0),' = ',
                   format(mean(qoi[j,]>fun(0))),sep=''),adj=0)
@@ -403,7 +392,9 @@ confplot <- function(obj, X, against,
   if(method=='pointwise')
     {
       pred <- X %*% t(boot.Coef)   ## n x B
-      p <- fun(apply(pred, 1, quantile, probs=c((1-conf.int)/2,1-(1-conf.int)/2)))
+      p <- fun(apply(pred, 1, quantile,
+                     probs=c((1 - conf.int)/2, 1 - (1 - conf.int)/2),
+                     na.rm=TRUE))
       lower <- p[1,]
       upper <- p[2,]
     }
@@ -413,7 +404,7 @@ confplot <- function(obj, X, against,
       loglik    <- obj$boot.loglik
       if(length(loglik)==0) stop('did not specify "loglik=TRUE" to bootcov')
       
-      crit <- quantile(loglik, conf.int)
+      crit <- quantile(loglik, conf.int, na.rm=TRUE)
       qual <- loglik <= crit
       boot.Coef <- boot.Coef[qual,,drop=FALSE]
       pred   <- X %*% t(boot.Coef)  ## n x B

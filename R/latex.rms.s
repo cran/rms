@@ -484,7 +484,8 @@ latexrms <- function(object,
              ##Strat factor doesn't exist as main effect, but keep variable
              ##names and their lengths if they will appear in interactions later
              { # 8 - strat
-               if(length(Nam[[i]])==0 && any(interaction==i))
+               ## if(length(Nam[[i]])==0 && any(interaction==i)) 22Nov10
+               if(any(interaction == i))
                  {
                    nam.coef[[i]] <- paste(name[i], "=", oprm[-1], sep="")
                    Nam[[i]] <- prm[-1]
