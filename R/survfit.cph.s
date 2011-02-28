@@ -46,7 +46,11 @@ survfit.cph <- function(formula, newdata, se.fit=TRUE, conf.int=.95,
       xcenter <- object$means
       X <- X - rep(xcenter, rep.int(n, ncol(X)))
     }
-  else X <- matrix(0, nrow=nrow(y), ncol=1)
+  else
+    {
+      n <- nrow(y)
+      X <- matrix(0, nrow=n, ncol=1)
+    }
 
   strata <- object$Strata
   if(!length(strata)) strata <- rep(0,  n)
@@ -64,6 +68,11 @@ survfit.cph <- function(formula, newdata, se.fit=TRUE, conf.int=.95,
   else id <- NULL
   if (individual && type != "counting") 
     stop("The individual option is  only valid for start-stop data")
+  
+  ## Compute confidence limits for survival based on -log survival,
+  ## constraining to be in [0,1]; d = std.error of cum hazard * z value
+  ciupper <- function(surv, d) ifelse(surv==0, 0, pmin(1, surv*exp(d)))
+  cilower <- function(surv, d) ifelse(surv==0, 0, surv*exp(-d))
   
   risk <- rep(exp(object$linear.predictors), length=n)
   ## need to center offset??
@@ -113,8 +122,8 @@ survfit.cph <- function(formula, newdata, se.fit=TRUE, conf.int=.95,
     {
       kfun <- function(x, keep)
         {
-          if (is.matrix(x)) x[keep,, drop=F] 
-          else if (length(x)==length(keep)) x[keep] else x
+          if (is.matrix(x)) x[keep,, drop=FALSE] 
+          else if (length(x) == length(keep)) x[keep] else x
         }
       keep <- g$n.event > 0
       if(length(g$strata))
@@ -136,15 +145,9 @@ survfit.cph <- function(formula, newdata, se.fit=TRUE, conf.int=.95,
                          conf.type='plain', conf.int=conf.int))
         }
       if (conf.type=='log')
-        {
-          xx <- ifelse(g$surv==0,1,g$surv)  #avoid some "log(0)" messages
-          u <- ifelse(g$surv==0, 0*g$std.err, 
-                      exp(log(xx) + zval* g$std.err))
-          z <- ifelse(g$surv==0, 0*g$std.err, 
-                      exp(log(xx) - zval* g$std.err))
-          g <- c(g, list(upper=pmin(u,1), lower=z,
-                         conf.type='log', conf.int=conf.int))
-        }
+        g <- c(g, list(upper=ciupper(g$surv, zval * g$std.err),
+                       lower=cilower(g$surv, zval * g$std.err),
+                       conf.type='log', conf.int=conf.int))
       if (conf.type=='log-log')
         {
           who <- (g$surv==0 | g$surv==1) #special cases
