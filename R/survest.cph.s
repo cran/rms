@@ -31,7 +31,7 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
   if(!se.fit) conf.int <- 0
   
   if(individual && (length(fit$x)==0 || length(fit$y)==0 || 
-                    attr(fit$y,'type')!='counting')) 
+                    attr(fit$y,'type') != 'counting')) 
     stop('must specify x=TRUE, y=TRUE, and start and stop time to cph when individual=TRUE')
 
   if(missing(fun)) fun <-
@@ -50,8 +50,8 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
   if(!missing(linear.predictors) && length(fit$surv)==0)
     stop('when using linear.predictors= must have specified surv=TRUE to cph')
 
-  if(length(fit$y) && (f==0 || length(fit$x)) &&
-     ((conf.int > 0 && f > 0) | length(fit$surv)==0) &
+  if(length(fit$y) && (f == 0 || length(fit$x)) &&
+     ((conf.int > 0 && f > 0) | length(fit$surv) == 0) &
      (!missing(newdata) | (missing(linear.predictors) && missing(x))))
     {
       if(!missing(linear.predictors) | !missing(x))
@@ -156,6 +156,10 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
       else
         {
           g <- summary(g, print.it=FALSE, times=times)
+          ## summary.survfit returns std. err of S(t) unlike other
+          ## survival package functions
+          g$std.err <- ifelse(g$surv == 0, NA, g$std.err / g$surv)
+          
           if(!individual && nf > 0)
             { ##delete extra cells added by survfit for strat
               if(length(g$time) != length(times)*num.strata)
@@ -215,7 +219,7 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
       if(is.category(str) || is.numeric(str)) return(as.integer(str))
       
       i <- match(str, strata.levels, nomatch=0)
-      if(any(i==0)) stop(paste('illegal strata:',
+      if(any(i == 0)) stop(paste('illegal strata:',
                paste(str[i==0],collapse=' ')))
       i
     }
@@ -283,10 +287,10 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
   
   if(what=='parallel')
     {
-      if(length(times)>1 && length(times) != n)
+      if(length(times) >1 && length(times) != n)
         stop('length of times must equal 1 or number of subjects being predicted')
       if(!length(fit$surv)) stop('must specify surv=TRUE to cph')
-      if(diff(range(strata))==0)
+      if(diff(range(strata)) == 0)
         {
           estsurv <- approx(fit$time, fit$surv, xout=times,
                             method="constant", f=0, ties=mean)$y
@@ -295,7 +299,7 @@ survest.cph <- function(fit, newdata, linear.predictors, x, times, fun,
       est.surv <- double(n)
       for(zs in unique(strata))
         {
-          this <- strata==zs
+          this <- strata == zs
           estsurv <- approx(fit$time[[zs]], fit$surv[[zs]],
                             xout=if(length(times)==1)times else times[this],
                             method='constant', f=0, ties=mean)$y

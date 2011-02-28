@@ -1,6 +1,7 @@
 \name{validate}
 \alias{validate}
 \alias{print.validate}
+\alias{latex.validate}
 \title{
   Resampling Validation of a Fitted Model's Indexes of Fit
 }
@@ -13,8 +14,12 @@
 # fit <- fitting.function(formula=response ~ terms, x=TRUE, y=TRUE)
 validate(fit, method="boot", B=40,
          bw=FALSE, rule="aic", type="residual", sls=0.05, aics=0, 
-         pr=FALSE, \dots)
-\method{print}{validate}(x, digits=4, ...)
+         force=NULL, pr=FALSE, \dots)
+\method{print}{validate}(x, digits=4, B=Inf, \dots)
+\method{latex}{validate}(object, digits=4, B=Inf, file='', append=FALSE,
+                         title=first.word(deparse(substitute(x))),
+                         caption=NULL, table.env=FALSE,
+                         size='normalsize', extracolsize=size, \dots)
 }
 \arguments{
   \item{fit}{
@@ -29,7 +34,11 @@ validate(fit, method="boot", B=40,
   }
   \item{B}{
     number of repetitions.  For \code{method="crossvalidation"}, is the
-    number of groups of omitted observations.
+    number of groups of omitted observations.  For \code{print.validate}
+	and \code{latex.validate}, \code{B} is an upper limit on the number
+	of resamples for which information is printed about which variables
+	were selected in each model re-fit.  Specify zero to suppress
+	printing.  Default is to print all re-samples.
   }
   \item{bw}{
     \code{TRUE} to do fast step-down using the \code{fastbw} function,
@@ -52,13 +61,15 @@ validate(fit, method="boot", B=40,
   \item{aics}{
     cutoff on AIC when \code{rule="aic"}.
   }
+  \item{force}{see \code{\link{fastbw}}}
   \item{pr}{
     \code{TRUE} to print results of each repetition
   }
   \item{\dots}{
     parameters for each specific validate function, and parameters to
     pass to \code{predab.resample} (note especially the \code{group},
-    \code{cluster}, amd \code{subset} parameters).
+    \code{cluster}, amd \code{subset} parameters).  For \code{latex},
+	optional arguments to \code{\link[Hmisc]{latex.default}}.
     
     For \code{psm}, you can pass the \code{maxiter} parameter here (passed to 
     \code{survreg.control}, default is 15 iterations) as well as a \code{tol} parameter 
@@ -68,8 +79,19 @@ validate(fit, method="boot", B=40,
 
 	For \code{print.validate} \ldots is ignored.
   }
-  \item{x}{an object produced by one of the \code{validate} functions}
+  \item{x,object}{an object produced by one of the \code{validate} functions}
   \item{digits}{number of decimal places to print}
+\item{file}{file to write LaTeX output.  Default is standard output.}
+\item{append}{set to \code{TRUE} to append LaTeX output to an existing
+  file}
+\item{title, caption, table.env, extracolsize}{see
+  \code{\link[Hmisc]{latex.default}}.  If \code{table.env} is
+  \code{FALSE} and \code{caption} is given, the character string
+  contained in \code{caption} will be placed before the table,
+  centered.}
+\item{size}{size of LaTeX output.  Default is \code{'normalsize'}.  Must
+  be a defined LaTeX size when prepended by double slash.
+  }
 }
 \details{
   It provides bias-corrected indexes that are specific to each type
