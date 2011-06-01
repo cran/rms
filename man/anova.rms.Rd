@@ -33,7 +33,7 @@ to \code{latex.default} for conversion to LaTeX.
 }
 \usage{
 \method{anova}{rms}(object, \ldots, main.effect=FALSE, tol=1e-9, 
-      test=c('F','Chisq'), ss=TRUE)
+      test=c('F','Chisq'), india=TRUE, indnl=TRUE, ss=TRUE)
 
 \method{print}{anova.rms}(x, which=c('none','subscripts','names','dots'), \dots)
 
@@ -78,6 +78,10 @@ singularity criterion for use in matrix inversion
 \item{test}{
 For an \code{ols} fit, set \code{test="Chisq"} to use Wald \eqn{\chi^2} tests rather than F-tests.
 }
+\item{india}{set to \code{FALSE} to exclude individual tests of
+  interaction from the table}
+\item{indnl}{set to \code{FALSE} to exclude individual tests of
+  nonlinearity from the table}
 \item{ss}{
 For an \code{ols} fit, set \code{ss=FALSE} to suppress printing partial sums of squares, mean
 squares, and the Error SS and MS.
@@ -238,7 +242,7 @@ options(datadist=NULL)
 
 set.seed(123)
 age <- rnorm(500, 50, 15)
-treat <- factor(sample(c('a','b','c'), 500,TRUE))
+treat <- factor(sample(c('a','b','c'), 500, TRUE))
 bp  <- rnorm(500, 120, 10)
 y   <- ifelse(treat=='a', (age-50)*.05, abs(age-50)*.08) + 3*(treat=='c') +
        pmax(bp, 100)*.09 + rnorm(500)
@@ -259,6 +263,35 @@ tab <- pantext(an, 1.2, .6, lattice=FALSE, fontfamily='Helvetica')
 tab()                            # execute it; could do tab(cex=.65)
 plot(an)                         # new plot - dot chart of chisq-d.f.
 # latex(an)                      # nice printout - creates anova.f.tex
+
+
+## Example to save partial R^2 for all predictors, along with overall
+## R^2, from two separate fits, and to combine them with a lattice plot
+
+require(lattice)
+set.seed(1)
+n <- 100
+x1 <- runif(n)
+x2 <- runif(n)
+y  <- (x1-.5)^2 + x2 + runif(n)
+group <- c(rep('a', n/2), rep('b', n/2))
+A <- NULL
+for(g in c('a','b'))
+  {
+    f <- ols(y ~ pol(x1,2) + pol(x2,2) + pol(x1,2) \%ia\% pol(x2,2),
+             subset=group==g)
+    a <- plot(anova(f),
+              what='partial R2', pl=FALSE, rm.totals=FALSE, sort='none')
+    a <- a[-grep('NONLINEAR', names(a))]
+    d <- data.frame(group=g, Variable=factor(names(a), names(a)),
+                    partialR2=unname(a))
+    A <- rbind(A, d)
+  }
+dotplot(Variable ~ partialR2 | group, data=A,
+        xlab=ex <- expression(partial~R^2))
+dotplot(group ~ partialR2 | Variable, data=A, xlab=ex)
+dotplot(Variable ~ partialR2, groups=group, data=A, xlab=ex,
+        auto.key=list(corner=c(.5,.5)))
 
 # Suppose that a researcher wants to make a big deal about a variable 
 # because it has the highest adjusted chi-square.  We use the

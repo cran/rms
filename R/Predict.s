@@ -35,6 +35,7 @@ Predict <-
       names(res) <- nams
 
       i <- 0
+      info <- NULL # handles case where nams is empty, when no predictors
       for(nam in nams)
         {
           i <- i + 1
@@ -183,7 +184,7 @@ Predict <-
 
       if(length(xx)==0)
         stop("model has no covariables and survival not plotted")
-      xb <- if(conf.int) xx$linear.predictors else xx
+      xb <- if(is.list(xx)) xx$linear.predictors else xx
     }
   else   ## time specified
     {
