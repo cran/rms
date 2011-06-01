@@ -12,7 +12,6 @@ predictrms <-
            na.action=na.keep, expand.na=TRUE,
            center.terms=type=="terms", ref.zero=FALSE, ...)
 {
-
   type <- match.arg(type)
   conf.type <- match.arg(conf.type)
   ## R does not preserve missing(x)
@@ -110,8 +109,9 @@ predictrms <-
                   {
                     if(kint>1)
                       warning("se.fit is retrieved from the fit but it corresponded to kint=1")
-                    retlist <- list(linear.predictors=LP,
-                                    se.fit=naresid(naa,fit$se.fit))
+                    retlist <- list(linear.predictors=LP)
+                    if(se.fit) retlist$se.fit <-
+                      naresid(naa, fit$se.fit)
                     if(conf.int)
                       {
                         plminus <- zcrit*sqrt(retlist$se.fit^2 + vconstant)
@@ -357,9 +357,11 @@ predictrms <-
         {
           xb <- if(length(offset) && any(offset != 0)) offset else numeric(0)
           if(nstrata > 0) attr(xb, 'strata') <- naresid(naa, strata)
-          return(structure(list(linear.predictors=xb, se.fit=numeric(0)),
+          return(structure(if(se.fit) list(linear.predictors=xb,
+                                           se.fit=rep(NA, length(xb))) else
+                           xb,
                  na.action=if(expand.na) NULL else naa))
-        }
+    }
       xb <- naresid(naa, xb)
       if(nstrata > 0) attr(xb,"strata") <- naresid(naa,strata)
       ycenter <- if(ref.zero && somex) matxv(adjto, cof) - Center else 0
@@ -369,13 +371,20 @@ predictrms <-
           if(cox || ref.zero) X <- sweep(X, 2, adjto) #Center columns
           se <- drop(sqrt(((X %*% cov) * X) %*% rep(1, ncol(X))))
           names(se) <- rnam
-          retlist <-
-            structure(list(linear.predictors=xb - ycenter,
-                           se.fit=naresid(naa,se)),
-                      na.action=if(expand.na) NULL else naa)
+
+          sef <- naresid(naa, se)
+          ww <- if(conf.int || se.fit)
+            {
+              if(se.fit)
+                list(linear.predictors = xb - ycenter, se.fit = sef) else
+                list(linear.predictors = xb - ycenter)
+            }
+          else xb - ycenter
+          retlist <- structure(ww, 
+                               na.action=if(expand.na) NULL else naa)
           if(conf.int)
             {
-              plminus <- zcrit*sqrt(retlist$se.fit^2 + vconstant)
+              plminus <- zcrit*sqrt(sef^2 + vconstant)
               retlist$lower <- xb - plminus - ycenter
               retlist$upper <- xb + plminus - ycenter
             }
