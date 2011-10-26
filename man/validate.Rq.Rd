@@ -20,13 +20,15 @@ operating characteristic curve area using the formula \eqn{0.5(D_{xy} +
 1)}. See \code{predab.resample} for the list of
 resampling methods.
 
-The LaTeX needspace package must be in effect to use the \code{latex} method.
+The LaTeX \code{needspace} package must be in effect to use the
+\code{latex} method. 
 }
 \usage{
 # fit <- fitting.function(formula=response ~ terms, x=TRUE, y=TRUE)
 \method{validate}{Rq}(fit, method="boot", B=40,
          bw=FALSE, rule="aic", type="residual", sls=0.05, aics=0, 
-         force=NULL, pr=FALSE, u=NULL, rel=">", tolerance=1e-7, \dots)
+         force=NULL, estimates=TRUE, pr=FALSE, u=NULL, rel=">",
+         tolerance=1e-7, \dots)
 }
 \arguments{
 \item{fit}{
@@ -34,7 +36,7 @@ a fit derived by \code{Rq}. The options \code{x=TRUE} and \code{y=TRUE}
 must have been specified.  See \code{validate} for a description of
 arguments \code{method} - \code{pr}.
 }
-\item{method,B,bw,rule,type,sls,aics,force,pr}{see
+\item{method,B,bw,rule,type,sls,aics,force,estimates,pr}{see
   \code{\link{validate}} and \code{\link{predab.resample}} and
   \code{\link{fastbw}}}
 \item{u}{

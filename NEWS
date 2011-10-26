@@ -1,4 +1,21 @@
-Chagnes in version 3.5-0 (2012-03-xx)
+Changes in version 3.6-1 (2012-11-??)
+   * predab.resample, calibrate.cph, calibrate.default, calibrate.psm: stopped putting results from overall initial fit into .Global and instead had predab.resample put them in attribute keepinfo, obtained from measure() 
+
+Changes in version 3.6-0 (2012-10-26)
+   * Gls: Updated optimization calls - had become inconsistent with gls and failed if > 1 correlation parameter (thanks: Mark Seeto <markseeto@gmail.com>); removed opmeth argument
+   * print.fastbw: added argument: estimates
+   * survplot.survfit: handled fact that survival:::summary.survfit may not preserve order of strata levels.  Also fixed survit.cph and cph; Thanks: William.Fulp@moffitt.org
+   * plot.Predict: added example showing how to rename variables in plot
+   * print(fit object, latex=TRUE): added latex.naprint.delete, used new Hmisc latexDotchart function to make a dot chart of number of NAs due to each model variable if at least 4 variables have NAs
+   * added trans argument to plot.anova.rms to allow transformed scales
+   * Corrected cph to use model.offset(); thanks: Simon Thornley <s.thornley@auckland.ac.nz>
+   * Changed latex.anova.rms to use REGRESSION instead of TOTAL label
+   * Changed gendata, contrast.rms to allow expand=FALSE to prevent expand.grid from being called to generate all combinations of predictors
+   * Added type= to plot.Predict to allow user to specify a different default line/point type (especially useful when x is categorical)
+   * Corrected bug in offset in psm - made default offset the length of X
+   * Corrected bug in calibrate.psm (fixed -> parms)
+
+Changes in version 3.5-0 (2012-03-24)
    * contrast.rms: saved conf.type and conf.int in returned object, added to print method
    * Added debug= to predab.resample so user can see all the training and test sample subscripts
    * Added validate.Rq function
@@ -6,6 +23,7 @@ Chagnes in version 3.5-0 (2012-03-xx)
    * Added how to reorder predictors if using plot(Predict(fit))
    * Added new function perlcode written by Jeremy Stephens and Thomas Dupont; converts result of Function to Perl code
    * Fixed partial argument matches in many functions to pass new R checks
+   * Changed matrx and DesignAssign to allow validate.Rq to consider null models; neatened code
 
 Changes in version 3.4-0 (2012-01-17)
    * psm: fixed logcorrect logic (thanks: Rob Kushler)
