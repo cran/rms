@@ -106,15 +106,16 @@ RqFit <- function(fit, wallow=TRUE, passdots=FALSE)
     g
   }
 
-print.Rq <- function(x, digits=4, coefs=TRUE, latex=FALSE, ...)
+print.Rq <- function(x, digits=4, coefs=TRUE, latex=FALSE, title, ...)
   {
     k <- 0
     z <- list()
 
     ftau <- format(round(x$tau, digits))
-    Title <- if(latex)
-      paste('Quantile Regression~~~~$\\tau$', ftau, sep='=') else
-      paste('Quantile Regression\t\ttau:',     ftau)
+    if(missing(title))
+      title <- if(latex)
+        paste('Quantile Regression~~~~$\\tau$', ftau, sep='=') else
+        paste('Quantile Regression\t\ttau:',     ftau)
 
     if(length(zz <- x$na.action))
       {
@@ -145,7 +146,7 @@ print.Rq <- function(x, digits=4, coefs=TRUE, latex=FALSE, ...)
         z[[k]] <- list(type='cat', list(mes, '\n'))
       }
 
-    prModFit(x, title=Title, z, digits=digits, coefs=coefs, latex=latex, ...)
+    prModFit(x, title=title, z, digits=digits, coefs=coefs, latex=latex, ...)
   }
 
 latex.Rq <-
@@ -175,3 +176,6 @@ latex.Rq <-
     latexrms(f, file=file, append=TRUE, which=which, inline=inline,
              varnames=varnames, columns=columns, caption, ...)
   }
+
+predict.Rq <- function(object, ..., se.fit=FALSE)
+  predictrms(object, ..., se.fit=se.fit)

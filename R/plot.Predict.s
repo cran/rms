@@ -1,8 +1,8 @@
 plot.Predict <-
   function(x, formula, groups=NULL, cond=NULL, varypred=FALSE, subset,
            xlim, ylim, xlab, ylab,
-           data=NULL, col.fill=gray(seq(.95, .75, length=5)),
-           adj.subtitle, cex.adj, perim=NULL,
+           data=NULL, subdata, col.fill=gray(seq(.95, .75, length=5)),
+           adj.subtitle, cex.adj, cex.axis, perim=NULL,
            digits=4, nlevels=3, nlines=FALSE, addpanel,
            scat1d.opts=list(frac=0.025, lwd=0.3), ...)
 {
@@ -15,6 +15,9 @@ plot.Predict <-
   predpres <- length(x$.predictor.)
   if(missing(addpanel)) addpanel <- function(...) {}
 
+  subdatapres <- !missing(subdata)
+  if(subdatapres) subdata <- substitute(subdata)
+  
   doscat1d <- function(x, y, col)
     {
       so <- scat1d.opts
@@ -153,6 +156,7 @@ plot.Predict <-
         }
       scales <- list(x=list(relation='free', limits=limits,
                        at=at, labels=labels))
+      if(!missing(cex.axis)) scales$x$cex <- cex.axis
       r <- list(formula=formula, groups=gr, subset=subset, type='l',
                 method=if(conf.int) 'filled bands' else 'bars',
                 col.fill=col.fill,
@@ -260,6 +264,7 @@ plot.Predict <-
           xv <- as.factor(xv)
           xlev <- levels(xv)
           xscale <- list(x=list(at=1:length(xlev), labels=xlev))
+          if(!missing(cex.axis)) xscale$x$cex <- cex.axis
           x[[xvar]] <- as.integer(xv)
         }
       
@@ -276,8 +281,17 @@ plot.Predict <-
           panel.xYplot(x, yy, groups=groups, subscripts=subscripts, ...)
           col <- trellis.par.get('superpose.line')$col
 
+          xd <- data[[xvar]]
+          use <- TRUE
+          if(length(xd) && subdatapres)
+            {
+              use <- eval(subdata, data)
+              if(length(use) != nrow(data))
+                stop('subdata must evaluate to a length of nrow(data)')
+            }
+
           if(length(groups) && length(gd <- data[[gname]]) &&
-             length(xd <- data[[xvar]]))
+             length(xd))
             {
               g <- groups[subscripts]
               j <- 0
@@ -287,15 +301,15 @@ plot.Predict <-
                   z  <- g==w
                   xg <- x[z]
                   yg <- y[z]
-                  x1 <- xd[gd==w]
+                  x1 <- xd[use & gd==w]
                   x1 <- x1[!is.na(x1)]
                   doscat1d(x1, approx(xg, yg, xout=x1, rule=2, ties=mean)$y,
                            col=col[j])
                 }
             }
-          else if(length(xd <- data[[xvar]]))
+          else if(length(xd))
             {
-              xd <- xd[!is.na(xd)]
+              xd <- xd[use & !is.na(xd)]
               doscat1d(xd, approx(x, y, xout=xd, rule=2, ties=mean)$y,
                        col=col[1])
             }

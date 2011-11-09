@@ -469,8 +469,12 @@ lrtest <- function(fit1, fit2)
 
 print.lrtest <- function(x, ...)
 {
-  cat('\nModel 1: '); print(x$formula1)
-  cat('Model 2: '); print(x$formula2); cat('\n')
+  f1 <- x$formula1
+  f2 <- x$formula2
+  attributes(f1) <- NULL
+  attributes(f2) <- NULL
+  cat('\nModel 1: '); print(f1)
+  cat('Model 2: '); print(f2); cat('\n')
   print(x$stats)
   cat('\n')
   invisible()
@@ -732,7 +736,8 @@ rmsArgs <- function(.object, envir=parent.frame(2))
 ## General function to print model fit objects using latex or regular
 ## print (the default)
 
-prModFit <- function(x, title, w, digits=4, coefs=TRUE, latex=FALSE, ...)
+prModFit <- function(x, title, w, digits=4, coefs=TRUE,
+                     latex=FALSE, lines.page=40, long=TRUE, needspace, ...)
   {
     bverb <- function() if(latex) cat('\\begin{verbatim}\n')
     everb <- function() if(latex) cat('\\end{verbatim}\n')
@@ -776,13 +781,17 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, latex=FALSE, ...)
         return()
       }
 
-    if(latex) cat('\\needspace{13\\baselineskip}\n')
-    catl(title, pre=1, bold=TRUE)
-    
-    bverb()
-    dput(x$call)
-    cat('\n')
-    everb()
+    if(!missing(needspace) && latex)
+      cat('\\Needspace{', needspace, '}\n', sep='')
+    if(title != '') catl(title, pre=1, bold=TRUE)
+
+    if(long)
+      {
+        bverb()
+        dput(x$call)
+        cat('\n')
+        everb()
+      }
 
     for(z in w)
       {
@@ -810,10 +819,12 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, latex=FALSE, ...)
                 Z    <- beta/se
                 P    <- if(length(errordf)) 2*(1 - pt(abs(Z), errordf)) else
                         1 - pchisq(Z^2, 1)
-                U    <- cbind('\\textrm{Coef}' =
-                              formatNP(beta, digits, latex=latex),
-                              '\\textrm{S.E.}' =
-                              formatNP(se,   digits, latex=latex),
+                pad <- function(x)
+                  if(latex) paste('~', x, '~', sep='') else x
+                U    <- cbind('\\textrm{~Coef~}' =
+                              pad(formatNP(beta, digits, latex=latex)),
+                              '\\textrm{~S.E.~}' =
+                              pad(formatNP(se,   digits, latex=latex)),
                               '\\textrm{Wald~} Z'  =
                               formatNP(Z,    2, latex=latex),
                               '\\textrm{Pr}(>|Z|)' =
@@ -839,7 +850,11 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, latex=FALSE, ...)
                         U <- rbind(U, rep('', ncol(U)))
                         rownames(U)[nrow(U)] <- '\\dots'
                       }
-                    latex(U, file='', first.hline.double=FALSE, table=FALSE,
+                    if(!missing(needspace) && latex)
+                      cat('\\Needspace{', needspace, '}\n', sep='')
+                    latex(U, file='', first.hline.double=FALSE,
+                          table=FALSE, longtable=TRUE,
+                          lines.page=lines.page,
                           col.just=rep('r',4), rowlabel='',
                           math.col.names=TRUE)
                   }
@@ -952,6 +967,7 @@ prStats <- function(labels, w, latex=FALSE)
             k <- latexTranslate(names(w[[i]]), greek=TRUE)
             k[k=='Dxy']   <- '$D_{xy}$'
             k[k=='LR chi2']  <- 'LR $\\chi^{2}$'
+            k[k=='Score chi2'] <- 'Score $\\chi^{2}$'
             k[k=='Pr($>$ chi2)'] <- 'Pr$(>\\chi^{2})$'
             k[k=='$\\tau$-a'] <- '$\\tau_{a}$'
             k[k=='R2']    <- '$R^{2}$'
@@ -1032,10 +1048,11 @@ logLik.rms <- function(object, ...)
   {
     dof <- unname(object$stats['d.f.'] + num.intercepts(object))
     if(inherits(object, 'psm')) dof <- dof + 1  # for sigma
+    nobs <- nobs(object)
     w <- object$loglik
-    if(length(w)) return(structure(w[length(w)], df=dof, class='logLik'))
+    if(length(w)) return(structure(w[length(w)], nobs=nobs, df=dof, class='logLik'))
     w <- object$deviance
-    structure(-0.5*w[length(w)], df=dof, class='logLik')
+    structure(-0.5*w[length(w)], nobs=nobs, df=dof, class='logLik')
   }
 
 AIC.rms <- function(object, ..., k=2, type=c('loglik','chisq'))
@@ -1045,4 +1062,12 @@ AIC.rms <- function(object, ..., k=2, type=c('loglik','chisq'))
     stats <- object$stats
     dof <- stats['d.f.']
     unname(stats['Model L.R.'] - k * dof)
+  }
+
+nobs.rms <- function(object, ...)
+  {
+    st <- object$stats
+    if(inherits(object,'Gls')) length(object$residuals)
+    else if(any(names(st) == 'Obs')) unname(st['Obs'])
+    else unname(st['n'])
   }
