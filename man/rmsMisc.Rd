@@ -25,6 +25,7 @@
 \alias{logLik.ols}
 \alias{logLik.rms}
 \alias{AIC.rms}
+\alias{nobs.rms}
 \alias{lrtest}
 \alias{univarLR}
 \alias{Newlabels}
@@ -91,6 +92,8 @@ likelihood ratio chi-square minus twice the regression degrees of
 freedom.  \code{logLik.ols} handles the case for \code{ols}, just by
 invoking \code{logLik.lm} in the \code{stats} package.
 
+\code{nobs.rms} returns the number of observations used in the fit.
+
 The \code{lrtest} function does likelihood ratio tests for
 two nested models, from fits that have \code{stats} components with
 \code{"Model L.R."} values.  For models such as \code{psm, survreg, ols, lm} which have
@@ -126,7 +129,8 @@ terminal, automatically ready for \code{Sweave}.  The work of printing
 summary statistics is done by \code{prStats}, which uses the Hmisc
 \code{print.char.matrix} function to print overall model statistics if
 \code{latex=FALSE}, otherwise it generates customized LaTeX code.  The
-LaTeX needspace package must be in effect to use these LaTeX functions.
+LaTeX longtable package must be in effect to use these
+LaTeX functions.
 
 \code{reVector} allows one to rename a subset of a named vector,
 ignoring the previous names and not concatenating them as \R does.  It
@@ -172,6 +176,7 @@ Penalty.setup(at, penalty)
 \method{logLik}{ols}(object, \dots)
 \method{logLik}{rms}(object, \dots)
 \method{AIC}{rms}(object, \dots, k=2, type=c('loglik', 'chisq'))
+\method{nobs}{rms}(object, \dots)
 
 lrtest(fit1, fit2)
 \method{print}{lrtest}(x, \dots)
@@ -185,7 +190,8 @@ Newlevels(fit, \dots)
 
 rmsFit(fit)  # fit from glm, lm, etc.,then use anova etc. on result
 
-prModFit(x, title, w, digits=4, coefs=TRUE, latex=FALSE, \dots)
+prModFit(x, title, w, digits=4, coefs=TRUE, latex=FALSE, lines.page=40,
+long=TRUE, needspace, \dots)
 
 prStats(labels, w, latex=FALSE)
 
@@ -279,7 +285,8 @@ predictors.  This will override \code{parms} as well as \code{datadist} informat
 (if available) that were stored with the fit.  
 }
 \item{title}{a single character string used to specify an overall title
-  for the regression fit, which is printed first by \code{prModFit}}
+  for the regression fit, which is printed first by \code{prModFit}.
+  Set to \code{""} to suppress the title}
 \item{w}{For \code{prModFit}, a special list of lists, which each list
   element specifying information about a block of information to include
   in the \code{print.} output for a fit.  For \code{prStats}, \code{w}
@@ -299,6 +306,14 @@ predictors.  This will override \code{parms} as well as \code{datadist} informat
   model.}
 \item{latex}{a logical value indicating whether information should be
   formatted as plain text or as LaTeX markup}
+\item{lines.page}{see \code{\link[Hmisc]{latex}}}
+\item{long}{set to \code{FALSE} to suppress printing of formula and
+  certain other model output}
+\item{needspace}{optional character string to insert inside a LaTeX
+  needspace macro call before the statistics table and before the
+  coefficient matrix, to avoid bad page splits.  This assumes the LaTeX
+  needspace style is available.  Example:
+  \code{needspace='6\\baselineskip'} or \code{needspace='1.5in'}.}
 \item{na.rm}{set to \code{FALSE} to keep \code{NA}s in the vector
   created by \code{reVector}}
 \item{pvalue}{set to \code{TRUE} if you want values below 10 to the

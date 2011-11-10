@@ -18,7 +18,10 @@
   there is a \code{groups} (superposition) variable that generated separate
   curves, the data density specific to each class of points is shown.
   This assumes that the second variable was a factor variable.  The rug plots
-  are drawn by \code{scat1d}.
+  are drawn by \code{scat1d}.  When the same predictor is used on all
+  \eqn{x}-axes, and multiple panels are drawn, you can use
+  \code{subdata} to specify an expression to subset according to other
+  criteria in addition.
 
   To plot effects instead of estimates (e.g., treatment differences as a
   function of interacting factors) see \code{contrast.rms} and
@@ -32,8 +35,8 @@
 \method{plot}{Predict}(x, formula, groups=NULL,
      cond=NULL, varypred=FALSE, subset,
      xlim, ylim, xlab, ylab, 
-     data=NULL, col.fill=gray(seq(.95, .75, length=5)),
-     adj.subtitle, cex.adj, perim=NULL, digits=4, nlevels=3,
+     data=NULL, subdata, col.fill=gray(seq(.95, .75, length=5)),
+     adj.subtitle, cex.adj, cex.axis, perim=NULL, digits=4, nlevels=3,
      nlines=FALSE, addpanel, scat1d.opts=list(frac=0.025, lwd=0.3), ...)
 
 pantext(object, x, y, cex=.5, adj=0, fontfamily="Courier", lattice=TRUE)
@@ -54,9 +57,10 @@ pantext(object, x, y, cex=.5, adj=0, fontfamily="Courier", lattice=TRUE)
   \code{groups} does not contain the groups data as is customary in
   \code{lattice}; it is only a single character string specifying the
   name of the grouping variable.}
-\item{cond}{when plotting effects of different predictors, \code{code}
+\item{cond}{when plotting effects of different predictors, \code{cond}
   is a character string that specifies a single variable name in
-  \code{x} that can be used to form panels.}
+  \code{x} that can be used to form panels.  Only applies if using
+  \code{rbind} to combine several \code{Predict} results.}
 \item{varypred}{set to \code{TRUE} if \code{x} is the result of
   passing multiple \code{Predict} results, that represent different
   predictors, to \code{rbind.Predict}.  This will cause the \code{.set.}
@@ -93,6 +97,17 @@ variable for \code{ols}, \code{TRUE} or \code{log(TRUE)} for \code{psm}, or \cod
   needed variables, the original data are added to the graph in the form
   of a rug plot using \code{scat1d}.
 }
+\item{subdata}{if \code{data} is specified, an expression to be
+  evaluated in the \code{data} environment that evaluates to a logical
+  vector specifying which observations in \code{data} to keep.  This
+  will be intersected with the criterion for the \code{groups}
+  variable.  Example: if conditioning on two paneling variables using
+  \code{|a*b} you can specify
+  \code{subdata=b==levels(b)[which.packet()[2]]}, where the \code{2}
+  comes from the fact that \code{b} was listed second after the
+  vertical bar (this assumes \code{b} is a \code{factor} in
+  \code{data}.  Another example:
+  \code{subdata=sex==c('male','female')[current.row()]}.}
 \item{col.fill}{
   a vector of colors used to fill confidence bands for successive
   superposed groups.  Default is inceasingly dark gray scale.
@@ -105,6 +120,9 @@ settings of non-graphed adjustment values.
 \code{cex} parameter for size of adjustment settings in subtitles.  Default is
 0.75 times \code{par("cex")}.
 }
+\item{cex.axis}{
+  \code{cex} parameter for x-axis tick labels
+  }
 \item{perim}{
 \code{perim} specifies a function having two
 arguments.  The first is the vector of values of the first variable that

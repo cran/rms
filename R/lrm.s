@@ -196,7 +196,7 @@ lrm <- function(formula, data,subset, na.action=na.delete,
 }
 
 print.lrm <- function(x, digits=4, strata.coefs=FALSE, coefs=TRUE,
-                      latex=FALSE, ...)
+                      latex=FALSE, title='Logistic Regression Model', ...)
 {
   z <- list()
   k <- 0
@@ -231,6 +231,7 @@ print.lrm <- function(x, digits=4, strata.coefs=FALSE, coefs=TRUE,
   if(!length(nstrata)) nstrata <- 1
 
   pm <- x$penalty.matrix
+  penaltyFactor <- NULL
   if(length(pm))
     {
       psc <- if(length(pm)==1) sqrt(pm)
@@ -241,10 +242,7 @@ print.lrm <- function(x, digits=4, strata.coefs=FALSE, coefs=TRUE,
       k <- k + 1
       z[[k]] <- list(type='print', list(as.data.frame(x$penalty, row.names='')),
                      title='Penalty factors')
-      k <- k + 1
-      z[[k]] <- list(type='print',
-                     list(t(cof) %*% pm %*% cof, digits=2),
-                     title='Final penalty on -2 log L')
+      penaltyFactor <- as.vector(t(cof) %*% pm %*% cof)
     }
 
   ## ?ok to have uncommented next 3 lines?
@@ -274,9 +272,10 @@ print.lrm <- function(x, digits=4, strata.coefs=FALSE, coefs=TRUE,
                              names(x$freq), sep='')
       misc <- c(misc[1], x$freq, misc[-1])
     }
-  lr   <- reVector('LR chi2'     = stats['Model L.R.'],
-                   'd.f.'        = round(stats['d.f.'],3),
-                   'Pr(> chi2)' = stats['P'])
+  lr   <- reVector('LR chi2'    = stats['Model L.R.'],
+                   'd.f.'       = round(stats['d.f.'],3),
+                   'Pr(> chi2)' = stats['P'],
+                   Penalty      = penaltyFactor)
   disc <- reVector(R2=stats['R2'], g=stats['g'], gr=stats['gr'],
                    gp=stats['gp'], Brier=stats['Brier'])
   discr <-reVector(C=stats['C'], Dxy=stats['Dxy'], gamma=stats['Gamma'],
@@ -286,7 +285,7 @@ print.lrm <- function(x, digits=4, strata.coefs=FALSE, coefs=TRUE,
                    c('Model Likelihood','Ratio Test'),
                    c('Discrimination',' Indexes'),
                    c('Rank Discrim.','Indexes'))
-  data <- list(misc, c(lr, c(2,NA,-4)), c(disc,3), c(discr,3))
+  data <- list(misc, c(lr, c(2,NA,-4,2)), c(disc,3), c(discr,3))
   k <- k + 1
   z[[k]] <- list(type='stats', list(headings=headings, data=data))
 
@@ -309,7 +308,7 @@ print.lrm <- function(x, digits=4, strata.coefs=FALSE, coefs=TRUE,
       k <- k + 1
       z[[k]] <- list(type='print', list(stats))
     }
-  prModFit(x, title='Logistic Regression Model', z, digits=digits,
+  prModFit(x, title=title, z, digits=digits,
            coefs=coefs, latex=latex, ...)
   invisible()
 }

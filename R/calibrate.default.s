@@ -70,7 +70,12 @@ calibrate.default <- function(fit, predy,
     switch(model,
            lr=lrm.fit(x, y, penalty.matrix=penalty.matrix, tol=1e-13),
            ol=c(if(length(penalty.matrix)==0)
-                  lm.fit.qr.bare(x, y, intercept=FALSE)
+             {
+                  w <- lm.fit.qr.bare(x, y, intercept=FALSE, xpxi=TRUE)
+                  w$var <- w$xpxi * sum(w$residuals^2) /
+                    (length(y) - length(w$coefficients))
+                  w
+                }
                 else 
                   lm.pfit(x, y, penalty.matrix=penalty.matrix), fail=FALSE))
   }
@@ -171,6 +176,7 @@ plot.calibrate.default <- function(x, xlab, ylab, xlim, ylim, legend=TRUE,
   
   plot(p, p.app, xlim=xlim, ylim=ylim, xlab=xlab, ylab=ylab, type="n", ...)
   predicted <- at$predicted
+  err <- NULL
   if(length(predicted))
     {  ## for downward compatibility
       s <- !is.na(p + p.cal)
@@ -196,5 +202,5 @@ plot.calibrate.default <- function(x, xlab, ylab, xlim, ylim, legend=TRUE,
       legend(legend, c("Apparent", "Bias-corrected", "Ideal"),
              lty=c(3,1,2), bty="n")
     }
-  invisible()
+  invisible(err)
 }

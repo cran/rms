@@ -229,7 +229,7 @@ p <- Predict(g, age, treat="b")
 s <- anova(g)
 # Usually omit fontfamily to default to 'Courier'
 # It's specified here to make R pass its package-building checks
-plot(p, addpanel=pantext(s, 28, 1.9, fontfamily='Helvetica'))
+plot(p, addpanel=pantext(s, 28, 1.9,  fontfamily='Helvetica'))
 
 plot(s)                          # new plot - dot chart of chisq-d.f.
 # latex(s)                       # nice printout - creates anova.g.tex
@@ -327,7 +327,7 @@ if(require(boot))
                        data=mydata)),
                        sort='none', pl=FALSE)
       predictor <- as.factor(names(original.chisq))
-      predictor <- reorder.factor(predictor, -original.chisq)
+      predictor <- reorder(predictor, -original.chisq)
 
       Dotplot(predictor ~ Cbind(Rank, lim), pch=3, xlab='Rank', 
               main=if(.R.) expression(paste(
@@ -340,5 +340,3 @@ if(require(boot))
 \keyword{htest}
 \keyword{aplot}
 \concept{bootstrap}
-
-
