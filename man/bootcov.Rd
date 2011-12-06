@@ -236,7 +236,8 @@ of regression coefficients (with a log scale element added if
 applicable).  \code{boot.Coef} is added if \code{coef.reps=TRUE}.
 \code{boot.loglik} is added if \code{loglik=TRUE}.  If \code{stat} is
 specified an additional vector \code{boot.stats} will be contained in
-the returned object.
+the returned object.  \code{B} contains the number of successfully fitted
+bootstrap resamples.
 
 
 \code{bootplot} returns a (possible matrix) of quantities of interest and
@@ -280,9 +281,12 @@ Presented at the Joint Statistical Meetings,
 Chicago, August 1996.
 }
 \seealso{
-\code{\link{robcov}}, \code{\link{sample}}, \code{\link{rms}}, \code{\link{lm.fit}}, \code{\link{lrm.fit}}, \code{\link[survival]{survival-internal}}, \code{\link[survival]{survival-internal}},
-\code{\link{predab.resample}}, \code{\link{rmsMisc}}, \code{\link{Predict}}, \code{\link{gendata}},
-\code{\link{contrast.rms}}
+\code{\link{robcov}}, \code{\link{sample}}, \code{\link{rms}},
+\code{\link{lm.fit}}, \code{\link{lrm.fit}},
+\code{\link[survival]{survival-internal}}, 
+\code{\link{predab.resample}}, \code{\link{rmsMisc}},
+\code{\link{Predict}}, \code{\link{gendata}}, 
+\code{\link{contrast.rms}}, \code{\link{Predict}}
 }
 \examples{
 set.seed(191)
