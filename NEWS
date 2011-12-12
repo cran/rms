@@ -1,3 +1,13 @@
+Changes in version 3.3-3 (2011-12-06)
+   * robcov: used vcov to get var-cov matrix
+   * vcov.Glm: gave precedence to $var object in fit
+   * Added residuals.Glm to force call to residuals.glm, and make robcov fail as type="score" is not implemented for glm
+   * Fixed bootcov for Glm to sense NA in coefficients and skip that iteration
+   * Fixed digit -> digits error in latex.rms
+   * Fixed f$coef error in pentrace; thanks christopher.hane@optum.com
+   * Added new feature for Predict() to plot bootstrap nonparametric confidence limits if fit was run through bootcov with coef.reps=TRUE
+   * Added ylim argument to plot.residuals.lrm
+
 Changes in version 3.3-2 (2011-11-09)
    * calibrate.default: add var-cov matrix to ols objects
    * print.lrtest: discarded two formula attributes before printing
