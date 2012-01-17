@@ -136,7 +136,10 @@ psm <- function(formula=formula(data),
         tranfun <- dlist$trans
         exactsurv <- Y[,ncol(Y)] ==1
         if (any(exactsurv))
-          logcorrect <- sum(logb(dlist$dtrans(Y[exactsurv,1])))
+          logcorrect <-
+            ifelse(length(weights),
+                   sum(weights[exactsurv]*logb(dlist$dtrans(Y[exactsurv, 1]))),
+                   sum(logb(dlist$dtrans(Y[exactsurv, 1]))))
 
         if (type=='interval')
           {
@@ -325,7 +328,8 @@ predict.psm <-
   function(object, newdata,
            type=c("lp","x","data.frame","terms","cterms","ccterms","adjto",
              "adjto.data.frame",  "model.frame"),
-           se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual'),
+           se.fit=FALSE, conf.int=FALSE,
+           conf.type=c('mean','individual','simultaneous'),
            incl.non.slopes, non.slopes, kint=1,
            na.action=na.keep, expand.na=TRUE, center.terms=type=="terms", ...)
   {
