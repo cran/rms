@@ -49,7 +49,7 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
                 weights   = weights,
                 residuals = drop(fit$residuals),
                 rho       = rho,
-                fitted.values = drop(fit$fitted.values),
+#                fitted.values = drop(fit$fitted.values),
                 model     = mf,
                 Design    = desatr,
                 assign    = DesignAssign(desatr, 1, mt),
@@ -57,7 +57,7 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
                 stats     = stats))
   attr(fit, "na.message") <- attr(m, "na.message")
   
-  s <- summary.rq(fit, cov=TRUE, se=se, hs=hs)
+  s <- summary.rq(fit, covariance=TRUE, se=se, hs=hs)
   k <- s$coefficients
   nam <- names(fit$coefficients)
   rownames(k) <- nam
@@ -65,6 +65,9 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
   cov <- s$cov
   dimnames(cov) <- list(nam, nam)
   fit$var <- cov
+  fit$method <- method
+  fit$se <- se
+  fit$hs <- hs
   
   ## Remove the following since summary.rq has done its job
   if(!model) fit$model <- NULL
