@@ -12,6 +12,7 @@ predab.resample <-
            aics=0,
            tol=1e-12,
            force=NULL,
+           estimates=TRUE,
            non.slopes.in.x=TRUE,
            kint=1,
            cluster,
@@ -153,7 +154,7 @@ predab.resample <-
     fbw <- fastbw(fit.orig, rule=rule, type=type, sls=sls, aics=aics,
                   eps=tol, force=force)
 
-    print(fbw)
+    print(fbw, estimates=estimates)
 
     orig.col.kept <- fbw$parms.kept
     if(!length(orig.col.kept))
@@ -180,6 +181,7 @@ predab.resample <-
     measure(xb[subset], y[subset,,drop=FALSE], strata=stra[subset],
             fit=fit.orig,
             iter=0, evalfit=FALSE, fit.orig=fit.orig, kint=kint, ...)
+  keepinfo <- attr(index.orig, 'keepinfo')
   
   test.stat <- double(length(index.orig))
   train.stat <- test.stat
@@ -315,7 +317,7 @@ predab.resample <-
               f <- fastbw(f, rule=rule, type=type, sls=sls, aics=aics,
                           eps=tol, force=force)
               
-              if(pr) print(f)
+              if(pr) print(f, estimates=estimates)
 
               varin[j + 1, f$factors.kept] <- TRUE
               col.kept <- f$parms.kept
@@ -427,6 +429,6 @@ predab.resample <-
       varin <- varin[1:j, ,drop=FALSE]
       dimnames(varin) <- list(rep("", j), name)
     }
-  structure(res, class='validate', kept=if(bw) varin)
+  structure(res, class='validate', kept=if(bw) varin, keepinfo=keepinfo)
 }
   

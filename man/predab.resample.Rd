@@ -18,7 +18,8 @@ predab.resample(fit.orig, fit, measure,
                 method=c("boot","crossvalidation",".632","randomization"),
                 bw=FALSE, B=50, pr=FALSE,
                 rule="aic", type="residual", sls=.05, aics=0,
-                tol=1e-12, force=NULL, non.slopes.in.x=TRUE, kint=1,
+                tol=1e-12, force=NULL, estimates=TRUE,
+                non.slopes.in.x=TRUE, kint=1,
                 cluster, subset, group=NULL, debug=FALSE, \dots)
 }
 \arguments{
@@ -102,6 +103,7 @@ chi-square - 2 times d.f. falls below \code{aics}. Default is \code{0}.
 Tolerance for singularity checking.  Is passed to \code{fit} and \code{fastbw}.
 }
 \item{force}{see \code{\link{fastbw}}}
+\item{estimates}{see \code{\link{print.fastbw}}}
 \item{non.slopes.in.x}{set to \code{FALSE} if the design matrix \code{x}
 does not have columns for intercepts and these columns are needed}
 \item{kint}{
@@ -164,7 +166,10 @@ average \code{training-test} except for \code{method=".632"} - is .632 times
 }
 \item{n}{
 number of successful repetitions with the given index non-missing
-}}
+}.
+Also contains an attribute \code{keepinfo} if \code{measure} returned
+such an attribute when run on the original fit.
+}
 \details{
 For \code{method=".632"}, the program stops with an error if every observation
 is not omitted at least once from a bootstrap sample.  Efron's ".632" method

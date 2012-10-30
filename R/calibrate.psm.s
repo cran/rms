@@ -1,7 +1,8 @@
 calibrate.psm <- function(fit, cmethod=c('hare', 'KM'),
                           method="boot", u, m=150, pred, cuts, B=40,
                           bw=FALSE, rule="aic",
-                          type="residual", sls=.05, aics=0, force=NULL,
+                          type="residual", sls=.05, aics=0,
+                          force=NULL, estimates=TRUE,
                           pr=FALSE, what="observed-predicted",
                           tol=1e-12, maxiter=15, rel.tolerance=1e-5,
                           maxdim=5, ...)
@@ -73,8 +74,8 @@ calibrate.psm <- function(fit, cmethod=c('hare', 'KM'),
           dist <- if(what=='observed') pred.obs$actualseq
           else                         pred.obs$actualseq - pred
         }
-      
-      if(iter==0) storeTemp(pred.obs)
+
+      if(iter == 0) structure(dist, keepinfo=list(pred.obs=pred.obs)) else
       dist
     }
 
@@ -96,16 +97,18 @@ calibrate.psm <- function(fit, cmethod=c('hare', 'KM'),
                         pr=pr, B=b, bw=bw, rule=rule, type=type,  
                         u=u, m=m, what=what,
                         dist=dist, inverse=inverse, parms=parms,
-                        fixed=fixed, family=family,
-                        sls=sls, aics=aics, force=force, strata=FALSE,
+                        family=family,
+                        sls=sls, aics=aics, force=force, estimates=estimates,
+                        strata=FALSE,
                         tol=tol, pred=pred, orig.cuts=cuts, maxiter=maxiter,
                         rel.tolerance=rel.tolerance, maxdim=maxdim, ...)
-      kept <- attr(reliability, 'kept') # TODO: accumulate over reps
-      n <- reliability[,"n"]
-      rel <- rel + n * reliability[,"index.corrected"]
-      opt <- opt + n * reliability[,"optimism"]
-      nrel <- nrel + n
-      B <- B + max(n)	
+      kept     <- attr(reliability, 'kept') # TODO: accumulate over reps
+      keepinfo <- attr(reliability, 'keepinfo')
+      n        <- reliability[,"n"]
+      rel      <- rel + n * reliability[,"index.corrected"]
+      opt      <- opt + n * reliability[,"optimism"]
+      nrel     <- nrel + n
+      B        <- B + max(n)	
       if(pr) print(reliability)
     }
 
@@ -118,6 +121,7 @@ calibrate.psm <- function(fit, cmethod=c('hare', 'KM'),
       print(rel)
     }
 
+  pred.obs <- keepinfo$pred.obs
   if(cmethod=='KM')
     {
       pred <- pred.obs[,"x"]
