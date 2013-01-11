@@ -23,7 +23,6 @@
 #	value.chk
 #		Check a given list of values for a factor for validity,
 #		or if list is NA, return list of possible values
-#	var.inner - stripped down terms.inner, returns character strings
 #	
 # Default label is attr(x,"label") or argument name if label= omitted.
 # First argument can be as follows, using asis as an example:
