@@ -64,7 +64,6 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
       ##Handle case where a function has two arguments that are names,
       ##e.g. rcs(x,knots) -> want x only
       inner.name <- unique(var.inner(Terms))
-      ## var.inner is stripped down version of terms.inner (see rms.trans)
       ##Note: these exclude interaction terms and %ia% terms
     }
 

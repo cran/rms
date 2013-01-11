@@ -1,9 +1,9 @@
-b6103b0ae0b5f5802adb8f0110f3c270 *DESCRIPTION
+1b2a1179982b94debea1688b9ca30543 *DESCRIPTION
 212687531df0e8b5e1bfb277f4a4155f *INDEX
 3ba0fb6c387fea7cc2bd881636cd1573 *NAMESPACE
-fd314da42abeb7c9a65dcba33b13793f *NEWS
+590fe341a1b6edbe8e13f016518603ac *NEWS
 4e4054c23d32383e52efaacef7daf683 *R/Function.rms.s
-5605756a6182df0adbbdac9c4d94241b *R/Glm.s
+97a6e39019b366aff3f064ea3e011c4f *R/Glm.s
 034ebc9888701b5a47abcf266d759f72 *R/Gls.s
 a82a4eed1e65fbd042ee8fc274f1c9ef *R/Predict.s
 4c5cf99e32616da5674bce847d029460 *R/Rq.s
@@ -50,10 +50,10 @@ bef1c87e767607e144970aeec7a1c427 *R/predab.resample.s
 76c4698b2e52ea0cab325d09b1d8036f *R/print.psm.s
 4d9ff1d670ad301c3a2cfdeaf99ee9d5 *R/psm.s
 1fb2a2c731fb4c91a27e3734800896f2 *R/residuals.cph.s
-ff55da0e8073431ceb3c4befe963be24 *R/residuals.lrm.s
+3bf0edd3de1cc57e3bf3ef4d98cfb3e1 *R/residuals.lrm.s
 c3881044202f50fe407f2ee34d60684f *R/residuals.ols.s
-de481b4e494b282f3eb9fd51c6b8e063 *R/rms.s
-1c24fc8b66204464695f17f44d34b273 *R/rms.trans.s
+5925b727f666429f582c27db9585253d *R/rms.s
+7da2e976b3567ea419d999385844d63d *R/rms.trans.s
 3a78203e3dccf4ecc36a739fcddd296b *R/rmsMisc.s
 aa2bde58b14a6f094f6c1aac353ad0e3 *R/robcov.s
 af584a45bed8129b46da99b2df93e015 *R/sensuc.s
@@ -80,7 +80,7 @@ a1aa352b346fa5a9b33f990e4c8d1a9d *README
 80ddce7f0a779bd8f7c8c6cb50e3d403 *demo/00Index
 8689f64f606f4757b54f67cf61113104 *demo/all.R
 c82f2857c17436f9e4b7bf042fc3c06e *man/Function.Rd
-5c4e3349668fcbb8e67daf6fe6a4378d *man/Glm.Rd
+8d2391f132918206b8059b61d649ade6 *man/Glm.Rd
 470d6e8a3ee2758ab1094cabc92077d0 *man/Gls.Rd
 f9fe23b1ff540366a85830f4ef3209f0 *man/Predict.Rd
 43a72c0c242d7d8edc541f5e716cfdd7 *man/Rq.Rd
@@ -117,7 +117,7 @@ b331473acabfe7b76ba2502d3bcdb419 *man/predict.lrm.Rd
 9159fd916d51a025df2e2bb3c72dc062 *man/print.ols.Rd
 a0e686003dd68d047c8600c95544e3a5 *man/psm.Rd
 7309d3819f51a633678d88699054602e *man/residuals.cph.Rd
-62e97bcc4a63aefe675a43a62494d2d7 *man/residuals.lrm.Rd
+fe1231dee96ce4c8b011741a4f6a6b65 *man/residuals.lrm.Rd
 01995a79bae686a4bd72d057952f6bda *man/residuals.ols.Rd
 fd8f4a39d180a6d83612da57b3833b86 *man/rms-internal.Rd
 f3dcf58bc9672ac1ea9f2f4e7af7d05a *man/rms.Rd
