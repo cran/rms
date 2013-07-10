@@ -38,7 +38,7 @@ cph <- function(formula=formula(data),
     ## I allow a formula with no right hand side
     ## The dummy function stops an annoying warning message "Looking for
     ##  'formula' of mode function, ignored one of mode ..."
-    if (inherits(formula,"Surv")) {
+    if (inherits(formula,"Surv") || inherits(formula,"Srv")) {
       xx <- function(x) formula(x)
       
       formula <- xx(paste(deparse(substitute(formula)), 1, sep="~"))
@@ -111,8 +111,8 @@ cph <- function(formula=formula(data),
       
     xpres <- length(asm) && any(asm != 8)
     Y <- model.extract(X, 'response')
-    if(!inherits(Y,"Surv"))
-      stop("response variable should be a Surv object")
+    if(!(inherits(Y,"Surv") || inherits(Y,"Srv")))
+      stop("response variable should be a Srv or Surv object")
     n <- nrow(Y)
     
     weights <- model.extract(X, 'weights')
@@ -137,8 +137,8 @@ cph <- function(formula=formula(data),
     Terms <- terms(formula)
     yy <- attr(terms(formula),"variables")[1]
     Y <- eval(yy, data)
-    if(!inherits(Y,"Surv"))
-      stop("response variable should be a Surv object")
+    if(!(inherits(Y,"Surv") || inherits(Y,"Srv")))
+      stop("response variable should be a Srv or Surv object")
     
     Y <- Y[!is.na(Y)]
     assign  <- NULL
@@ -240,10 +240,11 @@ cph <- function(formula=formula(data),
     R2 <- (1 - exp(-logtest/n))/R2.max
     P  <- 1 - pchisq(logtest,nvar)
     gindex <- GiniMd(f$linear.predictors)
+    dxy <- dxy.cens(f$linear.predictors, Y, type='hazard')['Dxy']
     stats <- c(n, nevent, logtest, nvar, P, f$score, 
-               1-pchisq(f$score,nvar), R2, gindex, exp(gindex))
+               1-pchisq(f$score,nvar), R2, dxy, gindex, exp(gindex))
     names(stats) <- c("Obs", "Events", "Model L.R.", "d.f.", "P", 
-                      "Score", "Score P", "R2", "g", "gr")
+                      "Score", "Score P", "R2", "Dxy", "g", "gr")
   }
   else {
     stats <- c(n, nevent)
@@ -452,43 +453,44 @@ Quantile.cph <- function(object, ...) {
 
 
 Mean.cph <- function(object, method=c("exact","approximate"),
-                     type=c("step","polygon"), n=75, tmax, ...) {
+                     type=c("step","polygon"), n=75, tmax=NULL, ...) {
   method <- match.arg(method)
   type   <- match.arg(type)
   
   if(!length(object$time) || !length(object$surv))
-    stop("did not specify surv=T with cph")
+    stop("did not specify surv=TRUE with cph")
   
-  if(method=="exact") {
+  if(method == "exact") {
     f <- function(lp=0, stratum=1, type=c("step","polygon"),
                   tmax=NULL, time, surv) {
       type <- match.arg(type)
-      if(length(stratum)>1) stop("does not handle vector stratum")
+      if(length(stratum) > 1) stop("does not handle vector stratum")
       if(is.list(time)) {time <- time[[stratum]]; surv <- surv[[stratum]]}
       Q <- lp
       if(!length(tmax)) {
-        if(min(surv)>1e-3)
+        if(min(surv) > 1e-3)
           warning(paste("Computing mean when survival curve only defined down to",
-                        format(min(surv)),"\n Mean is only a lower limit"))
-        k <- rep(TRUE,length(time))
+                        format(min(surv)), "\n Mean is only a lower limit"))
+        k <- rep(TRUE, length(time))
       }
       else {
-        if(tmax>max(time)) stop(paste("tmax=",format(tmax),
+        if(tmax > max(time)) stop(paste("tmax=", format(tmax),
                                       "> max follow-up time=",
                                       format(max(time))))
-        k <- (1:length(time))[time<=tmax]
+        k <- (1:length(time))[time <= tmax]
       }
       for(j in 1:length(lp)) {
-        s <- surv^exp(lp[j])
-        Q[j] <- if(type=="step") sum(c(diff(time[k]),0) * s[k]) else 
-        trap.rule(time[k], s[k])
+        s <- surv ^ exp(lp[j])
+        Q[j] <- if(type=="step") sum(c(diff(time[k]), 0) * s[k]) else 
+          trap.rule(time[k], s[k])
       }
       Q
     }
-    formals(f) <- alist(lp=0, stratum=1,
-                        type=if(!missing(type))type else c("step","polygon"),
-                        tmax=tmax,
-                        time=object$time, surv=object$surv)
+    formals(f) <- list(lp=0, stratum=1,
+                       type=c("step","polygon"),
+                       tmax=tmax,
+                       time=object$time, surv=object$surv)
+    return(f)
   }
   else {
     lp     <- object$linear.predictors
@@ -503,35 +505,35 @@ Mean.cph <- function(object, method=c("exact","approximate"),
       tim <- if(nstrat==1) time else time[[is]]
       srv <- if(nstrat==1) surv else surv[[is]]
       if(!length(tmax)) {
-        if(min(srv)>1e-3)
+        if(min(srv) > 1e-3)
           warning(paste("Computing mean when survival curve only defined down to",
                         format(min(srv)),
                         "\n Mean is only a lower limit"))
-        k <- rep(TRUE,length(tim))
+        k <- rep(TRUE, length(tim))
       }
           else {
-            if(tmax>max(tim)) stop(paste("tmax=",format(tmax),
-                                         "> max follow-up time=",
-                                         format(max(tim))))
-            k <- (1:length(tim))[tim<=tmax]
+            if(tmax > max(tim)) stop(paste("tmax=",format(tmax),
+                                           "> max follow-up time=",
+                                           format(max(tim))))
+            k <- (1:length(tim))[tim <= tmax]
           }
       ymean <- lp.seq
       for(j in 1:length(lp.seq)) {
-        s <- srv^exp(lp.seq[j])
+        s <- srv ^ exp(lp.seq[j])
         ymean[j] <- if(type=="step") sum(c(diff(tim[k]),0) * s[k]) else 
         trap.rule(tim[k], s[k])
       }
       areas[[is]] <- ymean
     }
-    if(nstrat>1) names(areas) <- names(time)
+    if(nstrat > 1) names(areas) <- names(time)
 
     f <- function(lp=0, stratum=1, lp.seq, areas) {
       
-      if(length(stratum)>1) stop("does not handle vector stratum")
+      if(length(stratum) > 1) stop("does not handle vector stratum")
       area <- areas[[stratum]]
-      if(length(lp.seq)==1 && all(lp==lp.seq))
-        ymean <- rep(area,length(lp)) else
-      ymean <- approx(lp.seq, area, xout=lp, ties=mean)$y
+      if(length(lp.seq) == 1 && all(lp == lp.seq))
+        ymean <- rep(area, length(lp))
+      else ymean <- approx(lp.seq, area, xout=lp, ties=mean)$y
       if(any(is.na(ymean)))
         warning("means requested for linear predictor values outside range of linear\npredictor values in original fit")
       names(ymean) <- names(lp)
@@ -539,7 +541,7 @@ Mean.cph <- function(object, method=c("exact","approximate"),
     }
     formals(f) <- list(lp=0, stratum=1, lp.seq=lp.seq, areas=areas)
   }
-  eval(f)
+  f
 }
 
 predict.cph <- function(object, newdata=NULL,
@@ -547,12 +549,12 @@ predict.cph <- function(object, newdata=NULL,
                           "ccterms", "adjto", "adjto.data.frame", "model.frame"),
                         se.fit=FALSE, conf.int=FALSE,
                         conf.type=c('mean','individual','simultaneous'),
-                        incl.non.slopes=NULL, non.slopes=NULL, kint=1,
+                        kint=1,
                         na.action=na.keep, expand.na=TRUE,
                         center.terms=type=="terms", ...) {
   type <- match.arg(type)
   predictrms(object, newdata, type, se.fit, conf.int, conf.type,
-             incl.non.slopes, non.slopes, kint,
+             kint,
              na.action, expand.na, center.terms, ...)
 }
 
@@ -584,13 +586,14 @@ print.cph <- function(x, digits=4, table=TRUE, conf.int=FALSE,
                      'Score chi2'  = stats['Score'],
                      'Pr(> chi2)'  = stats['Score P'])
     disc <- reVector(R2 = stats['R2'],
+                     Dxy = stats['Dxy'],
                      g  = stats['g'],
                      gr = stats['gr'])
     k <- k + 1
     headings <- list('', 'Model Tests', c('Discrimination', 'Indexes'))
     data     <- list(c(misc, c(NA,NA,digits)),
-                     c(lr, c(2,NA,4,2,4)),
-                     c(disc,3))
+                     c(lr,   c(2,NA,4,2,4)),
+                     c(disc, 3))
     z[[k]] <- list(type='stats', list(headings=headings, data=data))
     
     beta <- x$coef

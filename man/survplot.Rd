@@ -104,8 +104,8 @@ the limits will be computed from the data.  For \code{what="hazard"}, default
 limits are computed from the first hazard function plotted.
 }
 \item{xlab}{
-x-axis label.  Default is \code{units} attribute of failure time variable given to
-\code{Surv}.
+x-axis label.  Default is \code{units} attribute of failure time
+variable given to \code{Srv} or \code{Surv}.
 }
 \item{ylab}{
 y-axis label.  Default is \code{"Survival Probability"} or 
@@ -276,9 +276,7 @@ would issue \code{par(mar=c(5,4,4,2)+.1)}.
 \code{survplot} will not work for Cox models with time-dependent covariables.
 Use \code{survest} or \code{survfit} for that purpose.
 
-
-Use \code{ps.slide}, \code{win.slide}, \code{gs.slide} to set up nice defaults for
-plotting.  These also set a system option \code{mgp.axis.labels} to allow x
+There is a set a system option \code{\link[Hmisc]{mgp.axis.labels}} to allow x
 and y-axes to have differing \code{mgp} graphical parameters (see \code{par}).
 This is important when labels for y-axis tick marks are to be written
 horizontally (\code{par(las=1)}), as a larger gap between the labels and
@@ -293,7 +291,6 @@ component of \code{mgp} using \code{mgp.axis.labels(c(xvalue,yvalue))}.
 \code{\link{survfit}}, \code{\link[survival]{survreg.distributions}},
 \code{\link[Hmisc]{labcurve}},
 \code{\link[Hmisc]{mgp.axis}}, \code{\link{par}},
-\code{\link[Hmisc]{ps.slide}}
 }
 \examples{
 # Simulate data from a population model in which the log hazard
@@ -312,7 +309,7 @@ dt <- pmin(dt, cens)
 units(dt) <- "Year"
 dd <- datadist(age, sex)
 options(datadist='dd')
-S <- Surv(dt,e)
+S <- Srv(dt,e)
 
 # When age is in the model by itself and we predict at the mean age,
 # approximate confidence intervals are ok

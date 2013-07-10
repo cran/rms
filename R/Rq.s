@@ -26,7 +26,8 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
   Rho <- function(u, tau) u * (tau - (u < 0))
   if (length(tau) > 1)
     stop('does not allow more than one quantile to be estimated simultaneously')
-  require(quantreg)
+  ## The following keeps quantreg from overriding latex generic in Hmisc
+  library(quantreg, pos=length(search()) + 1)
   fit <- if (length(weights)) 
     rq.wfit(X, Y, tau = tau, weights, method, ...)
   else rq.fit(X, Y, tau = tau, method, ...)
@@ -35,7 +36,8 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
   
   stats <- c(n=length(fit$residuals),
              p=length(fit$coefficients),
-             g=GiniMd(fit$fitted.values))
+             g=GiniMd(fit$fitted.values),
+             mad=mean(abs(fit$residuals), na.rm=TRUE))
   
   fit <- c(fit,
            list(
@@ -128,8 +130,10 @@ print.Rq <- function(x, digits=4, coefs=TRUE, latex=FALSE, title, ...)
     
     s <- x$stats
     n <- s['n']; p <- s['p']; errordf <- n - p; g <- s['g']
+    mad <- s['mad']
 
-    misc <- reVector(Obs=n, p=p, 'Residual d.f.'=errordf)
+    misc <- reVector(Obs=n, p=p, 'Residual d.f.'=errordf,
+                     'mean |Y-Yhat|'=mad)
     disc <- reVector(g=g)
     headings <- list('', c('Discrimination', 'Index'))
     data     <- list(misc, c(disc,3))

@@ -2,6 +2,7 @@
 \alias{latex.cph}
 \alias{latex.lrm}
 \alias{latex.ols}
+\alias{latex.orm}
 \alias{latex.pphsm}
 \alias{latex.psm}
 \title{LaTeX Representation of a Fitted Cox Model}
@@ -24,6 +25,10 @@ digits=.Options$digits, size="", \dots) # for lrm fit
 \method{latex}{ols}(object, title, file, append, which, varnames,
 columns, inline, before, after, pretrans, caption,
 digits=.Options$digits, size="", \dots) # ols fit
+
+\method{latex}{orm}(object, title, file, append, which, varnames,
+columns, inline, before, after, pretrans, caption,
+digits=.Options$digits, size="", intercepts=nrp < 10, \dots) # for lrm fit
 
 \method{latex}{pphsm}(object, title, file, append, which=NULL, varnames,
 columns, inline, before, after, pretrans, caption,
@@ -59,6 +64,9 @@ last entry in \code{object$surv.summary}, underlying survival estimates at
 \item{digits}{see \link{latexrms}}
 \item{size}{a LaTeX size to use, without the slash.  Default is the
   prevailing size}
+\item{intercepts}{for \code{orm} fits.  Default is to print intercepts
+	if they are fewer than 10 in number.  Set to \code{TRUE} or
+	\code{FALSE} to force.}
 \item{\dots}{ignored}
 }
 \value{
@@ -71,12 +79,13 @@ Department of Biostatistics, Vanderbilt University\cr
 f.harrell@vanderbilt.edu
 }
 \seealso{
-\code{\link{latex.rms}}, \code{\link[Hmisc]{rcspline.restate}}, \code{\link[Hmisc]{latex}}
+\code{\link{latex.rms}}, \code{\link[Hmisc]{rcspline.restate}},
+\code{\link[Hmisc]{latex}}
 }
 \examples{
 \dontrun{
 units(ftime) <- "Day"
-f <- cph(Surv(ftime, death) ~ rcs(age)+sex, surv=TRUE, time.inc=60)
+f <- cph(Srv(ftime, death) ~ rcs(age)+sex, surv=TRUE, time.inc=60)
 w <- latex(f)  #Interprets fitted model and makes table of S0(t)
                #for t=0,60,120,180,\dots   Creates file f.tex
 w              #displays image, if viewer installed

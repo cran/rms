@@ -35,7 +35,7 @@
 \method{plot}{Predict}(x, formula, groups=NULL,
      cond=NULL, varypred=FALSE, subset,
      xlim, ylim, xlab, ylab, 
-     data=NULL, subdata, col.fill=gray(seq(.95, .75, length=5)),
+     data=NULL, subdata, col.fill=gray(seq(.825, .55, length=5)),
      adj.subtitle, cex.adj, cex.axis, perim=NULL, digits=4, nlevels=3,
      nlines=FALSE, addpanel, scat1d.opts=list(frac=0.025, lwd=0.3),
      type=NULL, ...)
@@ -337,11 +337,11 @@ e <- ifelse(t<=cens,1,0)
 t <- pmin(t, cens)
 units(t) <- "Year"
 ddist <- datadist(age, sex)
-Srv <- Surv(t,e)
+Srv <- Srv(t,e)
 
 
 # Fit log-normal survival model and plot median survival time vs. age
-f <- psm(Surv(t, e) ~ rcs(age), dist='lognormal')
+f <- psm(Srv(t, e) ~ rcs(age), dist='lognormal')
 med <- Quantile(f)       # Creates function to compute quantiles
                          # (median by default)
 p <- Predict(f, age, fun=function(x) med(lp=x))
