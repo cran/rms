@@ -20,11 +20,12 @@ plotting predicted values but there is also a \code{print} method.
 When the first argument to \code{Predict} is a fit object created by
 \code{bootcov} with \code{coef.reps=TRUE}, confidence limits come from
 the stored matrix of bootstrap repetitions of coefficients, using 
-bootstrap percentile nonparametric confidence limits.  Such confidence
+bootstrap percentile nonparametric confidence limits, basic bootstrap,
+or BCa limits.  Such confidence 
 intervals do not make distributional assumptions.  You can force
 \code{Predict} to instead use the bootstrap covariance matrix by setting
-\code{usebootcov=TRUE}.  If \code{coef.reps} was \code{FALSE},
-\code{usebootcov=TRUE} is the default.
+\code{usebootcoef=FALSE}.  If \code{coef.reps} was \code{FALSE},
+\code{usebootcoef=FALSE} is the default.
 
 There is a \code{plot} method for \code{Predict} objects that makes it
 easy to show predicted values and confidence bands.
@@ -47,9 +48,9 @@ Predict(x, ..., fun,
         type = c("predictions", "model.frame", "x"),
         np = 200, conf.int = 0.95,
         conf.type = c("mean", "individual","simultaneous"),
-        usebootcov=FALSE,
+        usebootcoef=TRUE, boot.type=c("percentile","bca","basic"),
         adj.zero = FALSE, ref.zero = FALSE,
-        non.slopes, time = NULL, loglog = FALSE, digits=4, name, factors=NULL)
+        kint=NULL, time = NULL, loglog = FALSE, digits=4, name, factors=NULL)
 
 \method{print}{Predict}(x, \dots)
 
@@ -116,9 +117,12 @@ Predict(x, ..., fun,
 	confidence bands for mean predictions with family-wise coverage of
 	\code{conf.int}.
   }
-  \item{usebootcov}{set to \code{TRUE} to force the use of the bootstrap
+  \item{usebootcoef}{set to \code{FALSE} to force the use of the bootstrap
 	covariance matrix estimator even when bootstrap coefficient reps are
-	present} 
+	present}
+  \item{boot.type}{set to \code{'bca'} to compute BCa confidence
+	limits or \code{'basic'} to use the basic bootstrap.  The default is
+	to compute percentile intervals} 
   \item{adj.zero}{
 	Set to \code{TRUE} to adjust all non-plotted variables to 0 (or
 	reference cell for categorical variables) and to omit intercept(s)
@@ -129,13 +133,11 @@ Predict(x, ..., fun,
 	before plotting so that the reference value of the \code{x}-variable
 	yields \code{y=0}.  This is done before applying function \code{fun}.
   }
-  \item{non.slopes}{
+  \item{kint}{
 	This is only useful in a multiple intercept model such as the ordinal
 	logistic model. There to use to second of three intercepts, for example,
-	specify \code{non.slopes=c(0,1,0)}. The default is
-	\code{non.slopes=rep(0,k)} if \code{adj.zero=TRUE}, where \code{k}
-	is the number of intercepts in the model.  If \code{adj.zero=FALSE},
-	the default is \code{(1,0,0,\dots,0)}, i.e., the first intercept is used.
+	specify \code{kint=2}. The default is 1 for \code{lrm} and the middle
+	intercept corresponding to the median \code{y} for \code{orm}.
   }
   \item{time}{
 	Specify a single time \code{u} to cause function \code{survest} to
@@ -205,7 +207,8 @@ f.harrell@vanderbilt.edu
 \code{\link{contrast.rms}}, \code{\link{summary.rms}},  
 \code{\link{rms}}, \code{\link{rms.trans}}, \code{\link{survest}},
 \code{\link{survplot}}, \code{\link{rmsMisc}},
-\code{\link[Hmisc]{transace}}, \code{rbind}, \code{\link{bootcov}}
+\code{\link[Hmisc]{transace}}, \code{rbind}, \code{\link{bootcov}},
+\code{\link{bootBCa}}, \code{\link[boot]{boot.ci}}
 }
 \examples{
 n <- 1000    # define sample size
@@ -270,10 +273,10 @@ e <- ifelse(t<=cens,1,0)
 t <- pmin(t, cens)
 units(t) <- "Year"
 ddist <- datadist(age, sex)
-Srv <- Surv(t,e)
+Srv <- Srv(t,e)
 
 # Fit log-normal survival model and plot median survival time vs. age
-f <- psm(Surv(t, e) ~ rcs(age), dist=if(.R.)'lognormal' else 'gaussian')
+f <- psm(Srv(t, e) ~ rcs(age), dist='lognormal')
 med <- Quantile(f)       # Creates function to compute quantiles
                          # (median by default)
 Predict(f, age, fun=function(x)med(lp=x))

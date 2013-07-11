@@ -5,7 +5,7 @@ predab.resample <-
            method=c("boot","crossvalidation",".632","randomization"),
            bw=FALSE,
            B=50,
-           pr=FALSE,
+           pr=FALSE, prmodsel=TRUE,
            rule="aic",
            type="residual",
            sls=.05,
@@ -18,6 +18,7 @@ predab.resample <-
            cluster,
            subset,
            group=NULL,
+           allow.varying.intercepts=FALSE,
            debug=FALSE,
            ...)
 {
@@ -31,28 +32,35 @@ predab.resample <-
   if(any(match(c("x", "y"), names(fit.orig), 0) == 0))
     stop("must have specified x=T and y=T on original fit")
   
-  fparms <- fit.orig[c("non.slopes", "assign", "terms", "Design")]
+  fparms  <- fit.orig[c("terms", "Design")]
+  oassign <- fit.orig$assign
   
-  non.slopes <- num.intercepts(fit.orig)
+  non.slopes <- num.intercepts(fit.orig, 'coef')
 
-  x.index <- if(non.slopes==0 || non.slopes.in.x) function(i,...) i
-  else
-    function(i, ns) {
-      if(any(i > ns)) i[i > ns] - ns
-      else NULL
-    }
-
-  Xb <- function(x, b, non.slopes, non.slopes.in.x, n, kint=1) {
-    if(length(x)) {
-      if(non.slopes == 0 || non.slopes.in.x) x %*% b
-      else b[kint] + x %*% b[-(1:non.slopes)]
-    }
-    else {
-      if(non.slopes==0) rep(0,n)
-      else
-        rep(b[kint],n)
-    }
+#  x.index <- if(non.slopes==0 || non.slopes.in.x) function(i,...) i
+#  else
+#    function(i, ns) {
+#      if(any(i > ns)) i[i > ns] - ns
+#      else NULL
+#    }
+  x.index <- function(i, ns)
+    if(ns == 0) i else setdiff(i, 1:ns) - ns
+  
+  Xb <- function(x, b, non.slopes, n, kint=1) {
+    if(length(x)) matxv(x, b, kint=kint)
+    else if(non.slopes == 0 || !length(kint)) rep(0, n)
+    else rep(b[kint], n)
   }
+#    if(length(x)) {
+#      if(non.slopes == 0 || non.slopes.in.x) x %*% b
+#      else b[kint] + x %*% b[-(1:non.slopes)]
+#    }
+#    else {
+#      if(non.slopes==0) rep(0, n)
+#      else
+#        rep(b[kint], n)
+#    }
+#  }
 
   nac <- fit.orig$na.action
   
@@ -64,7 +72,7 @@ predab.resample <-
 
   y <- fit.orig$y
   
-  if(is.category(y)) y <- oldUnclass(y)
+  if(is.category(y)) y <- unclass(y)
 
   if(!is.Surv(y)) y <- as.matrix(y)
 
@@ -125,10 +133,10 @@ predab.resample <-
     if(any(is.na(subset))) stop('subset has NAs')
     
     if(!is.logical(subset)) {
-      subset2 <- rep(FALSE, n)
+      subset2         <- rep(FALSE, n)
       subset2[subset] <- TRUE
-      subset <- subset2
-      subset2 <- NULL
+      subset          <- subset2
+      subset2         <- NULL
     }
   }
   
@@ -141,14 +149,16 @@ predab.resample <-
     fbw <- fastbw(fit.orig, rule=rule, type=type, sls=sls, aics=aics,
                   eps=tol, force=force)
 
-    print(fbw, estimates=estimates)
+    if(prmodsel) print(fbw, estimates=estimates)
 
     orig.col.kept <- fbw$parms.kept
     if(!length(orig.col.kept))
       stop("no variables kept in original model")
+    ## Check that x.index works if allow.varying.intercepts
     
     xcol <- x.index(orig.col.kept, non.slopes)
-    fit.orig <- fit(x[,xcol,drop=FALSE], y, strata=stra,
+    ## Refit subset of predictors on whole sample
+    fit.orig <- fit(x[, xcol, drop=FALSE], y, strata=stra,
                     iter=0, tol=tol, xcol=xcol, ...)
     
   }
@@ -156,7 +166,7 @@ predab.resample <-
 
   b <- fit.orig$coef
   xcol <- x.index(orig.col.kept, non.slopes)
-  xb <- Xb(x[,xcol,drop=FALSE], b, non.slopes, non.slopes.in.x, n,
+  xb <- Xb(x[, xcol, drop=FALSE], b, non.slopes, n,
            kint=kint)
 
   index.orig <- if(missing(subset))
@@ -205,14 +215,19 @@ predab.resample <-
            "in bootstrap samples.\nRe--run with larger B")
     
     W <- apply(W / nomit, 2, sum) / n
-    cat("\n\nWeights for .632 method (ordinary bootstrap weights ",
-        format(1 / B), ")\n", sep="")
-    
-    print(summary(W))
+    if(pr) {
+      cat("\n\nWeights for .632 method (ordinary bootstrap weights ",
+          format(1 / B), ")\n", sep="")
+      print(summary(W))
+    }
   }
-  
+  pb <- setPb(B, type=if(method=='crossvalidation') 'Cross' else 'Boot',
+              onlytk=!pr,
+              every=1*(B < 20) + 5*(B >= 20 & B < 50) +
+                10*(B >= 50 & B < 100) + 20*(B >= 100 & B < 1000) +
+                50*(B >= 1000))
   for(i in 1:B) {
-    if(pr) cat('Iteration',i,'\r')
+    pb(i)
     
     switch(method,
            crossvalidation = {
@@ -265,11 +280,12 @@ predab.resample <-
     f <- tryCatch(fit(x[xtrain,,drop=FALSE], y[train,,drop=FALSE],
                       strata=stra[train], iter=i, tol=tol, ...), error=efit)
     f$assign <- NULL  #Some programs put a NULL assign (e.g. ols.val fit)
- 
+    ni <- num.intercepts(f)
+    
     fail <- f$fail
     if(!fail) {
       ## Following if..stop was before f$assign above
-      if((ni <- num.intercepts(f)) != non.slopes) {
+      if(!allow.varying.intercepts && ni != non.slopes) {
         stop('A training sample has a different number of intercepts (', ni ,')\n',
              'than the original model fit (', non.slopes, ').\n',
              'You probably fit an ordinal model with sparse cells and a re-sample\n',
@@ -279,8 +295,14 @@ predab.resample <-
       }
       
       clf <- attr(f, "class")  # class is removed by c() below
-      
+
       f[names(fparms)] <- fparms
+      assign <- oassign
+      ## Slopes are shifted to the left when fewer unique values of Y
+      ## occur (especially for orm models) resulting in fewer intercepts
+      if(non.slopes != ni) for(z in 1:length(assign))
+        assign[[z]] <- assign[[z]] - (non.slopes - ni)
+      f$assign <- assign
       attr(f, "class") <- clf
       if(!bw) {
         coef <- f$coef
@@ -290,7 +312,7 @@ predab.resample <-
         f <- fastbw(f, rule=rule, type=type, sls=sls, aics=aics,
                     eps=tol, force=force)
         
-        if(pr) print(f, estimates=estimates)
+        if(pr && prmodsel) print(f, estimates=estimates)
         
         varin[j + 1, f$factors.kept] <- TRUE
         col.kept <- f$parms.kept
@@ -299,9 +321,9 @@ predab.resample <-
           f <- tryCatch(fit(NULL, y[train,, drop=FALSE], stra=stra[xtrain],
                             iter=i, tol=tol,...), error=efit)
         else {
-          xcol <- x.index(col.kept, non.slopes)
-          f <- tryCatch(fit(x[xtrain,xcol,drop=FALSE], strata=stra[xtrain],
-                            y[train,,drop=FALSE],
+          xcol <- x.index(col.kept, ni)
+          f <- tryCatch(fit(x[xtrain, xcol, drop=FALSE], strata=stra[xtrain],
+                            y[train,, drop=FALSE],
                             iter=i, tol=tol, xcol=xcol, ...), error=efit)
         }
 
@@ -312,10 +334,8 @@ predab.resample <-
     
     if(!fail) {
       j <- j + 1
-      xcol <- x.index(col.kept, non.slopes)
-      xb <- Xb(x[,xcol,drop=FALSE], coef, non.slopes,
-               non.slopes.in.x, n,
-               kint=kint)
+      xcol <- x.index(col.kept, ni)
+      xb <- Xb(x[,xcol,drop=FALSE], coef, ni, n, kint=kint)
       
       if(missing(subset)) {
         train.statj <-

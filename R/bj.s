@@ -83,7 +83,7 @@ bj <- function(formula=formula(data), data,
   fit$formula <- as.vector(attr(Terms, "formula"))
   fit$call    <- call
   fit$Design  <- atr
-  if (x) fit$x <- X
+  if (x) fit$x <- X[, -1, drop=FALSE]
   if (y)
     {
       oldClass(Y) <- 'Surv'
@@ -242,7 +242,7 @@ bjplot <- function(fit, which=1:dim(X)[[2]])
 {
   if(!all(c('x','y') %in% names(fit)))
 	stop('must specify x=TRUE,y=TRUE to bj to use bjplot')
-  X <- (fit$x)[,-1,drop=FALSE]
+  X <- fit$x
   Y <- fit$y
   xnam <- dimnames(X)[[2]]
   yy <- fit$y.imputed
@@ -373,12 +373,12 @@ predict.bj <-
              "adjto.data.frame", "model.frame"),
            se.fit=FALSE, conf.int=FALSE,
            conf.type=c('mean','individual','simultaneous'),
-           incl.non.slopes, non.slopes, kint=1,
+           kint=1,
            na.action=na.keep, expand.na=TRUE, center.terms=type=="terms", ...)
   {
     type <- match.arg(type)
     predictrms(object, newdata, type, se.fit, conf.int, conf.type,
-               incl.non.slopes, non.slopes, kint,
+               kint,
                na.action, expand.na, center.terms, ...)
   }
 
@@ -409,7 +409,7 @@ validate.bj <-
   function(fit, method="boot", B=40,
            bw=FALSE, rule="aic", type="residual", sls=.05, aics=0,
            force=NULL, estimates=TRUE, pr=FALSE,
-           dxy=TRUE, tol=1e-7, rel.tolerance=1e-3, maxiter=15, ...)
+           tol=1e-7, rel.tolerance=1e-3, maxiter=15, ...)
 {
 
   if(!(length(fit$x) && length(fit$y)))
@@ -420,18 +420,17 @@ validate.bj <-
 
   ##Note: fit$y already has been transformed by the link function by psm
 
-  distance <- function(x,y,fit,iter,evalfit=FALSE,fit.orig,dxy=TRUE,
+  distance <- function(x,y,fit,iter,evalfit=FALSE,fit.orig,
                        maxiter=15, tol=1e-7, rel.tolerance=1e-3, ...)
     {
       ##Assumes y is matrix with 1st col=time, 2nd=event indicator
-      rcorr.cens(x,y)["Dxy"]
+      dxy.cens(x, y)["Dxy"]
     }
 
   predab.resample(fit, method=method,
                   fit=bj.fit2, measure=distance,
                   pr=pr, B=B, bw=bw, rule=rule, type=type,
                   sls=sls, aics=aics, force=force, estimates=estimates,
-                  dxy=dxy,
                   maxiter=maxiter, tol=tol,
                   rel.tolerance=rel.tolerance, ...)
 }

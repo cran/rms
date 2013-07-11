@@ -1,6 +1,6 @@
 bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE, 
-                    loglik=FALSE, pr=FALSE, maxit=15, group=NULL,
-                    stat=NULL) {
+                    loglik=FALSE, pr=FALSE, maxit=15, eps=.0001,
+                    group=NULL, stat=NULL) {
 
   coxcph <- inherits(fit,'coxph') || inherits(fit,'cph') ||
     (length(fit$fitFunction) && any(c('cph','coxph') %in%
@@ -21,7 +21,7 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
 
   if(nfit=='psm') {
     fixed <- fit$fixed   #psm only
-    fixed <- if(length(fixed)==1 && is.logical(fixed) && !fixed) list()
+    fixed <- if(length(fixed) == 1 && is.logical(fixed) && !fixed) list()
     else list(scale=TRUE)
     
     fixed <-  NULL
@@ -29,7 +29,14 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
     parms <-  fit$parms
   }
 
-  if(nfit=='Glm') fitFamily <- fit$family
+  if(nfit %in% c('Glm','orm')) fitFamily <- fit$family
+
+  ## For orm fits, find y cutoff target for intercept (from median of
+  ## original sample)
+  ytarget <- if(nfit == 'orm')
+    with(fit,
+         ifelse(is.numeric(yunique), yunique[interceptRef + 1L],
+                interceptRef + 1L))
   
   penalty.matrix <- fit$penalty.matrix
 
@@ -37,34 +44,59 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
     fitter <-
       switch(nfit,
              ols=if(length(penalty.matrix)) {
-               function(x,y,penalty.matrix,...) {
-                 lm.pfit(x,y,penalty.matrix=penalty.matrix,tol=1e-11,
+               function(x, y, penalty.matrix,...) {
+                 lm.pfit(x, y, penalty.matrix=penalty.matrix, tol=1e-11,
                          regcoef.only=TRUE)
                }
              }
-             else function(x,y,...) {
-               lm.fit.qr.bare(x,y,tolerance=1e-11,intercept=FALSE)
+             else function(x, y, ...) {
+               lm.fit.qr.bare(x, y, tolerance=1e-11, intercept=FALSE)
              }, 
-             lrm=function(x,y,maxit=15,penalty.matrix,...) {
-               lrm.fit(x,y,maxit=maxit,tol=1E-11,
+             lrm=function(x, y, maxit=15, eps=.0001, penalty.matrix,...) {
+               lrm.fit(x, y, maxit=maxit, tol=1E-11, eps=eps,
                        penalty.matrix=penalty.matrix)
              }, 
-             cph=function(x,y,strata=NULL,maxit=15,...) {
-               coxphFit(x,y, strata=strata, iter.max=maxit, 
-                        eps=.0001, method="efron", toler.chol=1e-11, type='right')
+             cph=function(x, y, strata=NULL, maxit=15, eps=.0001,...) {
+               coxphFit(x, y, strata=strata, iter.max=maxit, 
+                        eps=eps, method="efron", toler.chol=1e-11, type='right')
              },
-             psm=function(x,y,maxit=15,...) {
+             psm=function(x, y, maxit=15,...) {
                survreg.fit2(x, y, dist=dist, parms=parms, fixed=fixed,
                             offset=NULL, init=NULL, maxiter=maxit)
              },
-             bj=function(x,y,maxit=15,eps=.0001,...) {
-               bj.fit(x,y, control=list(iter.max=maxit,eps=1e-4))
+             bj=function(x, y, maxit=15, eps=.0001, ...) {
+               bj.fit(x, y, control=list(iter.max=maxit, eps=eps))
              },
-             Glm=function(x,y,...) {
+             Glm=function(x, y, ...) {
                glm.fit(x,as.vector(y), family=fitFamily)
              },
-             Rq=RqFit(fit, wallow=FALSE)
-             )
+             Rq=RqFit(fit, wallow=FALSE),
+             orm=function(x, y, maxit=14L, eps=.005, tol=1e-7,
+               ytarget=NULL, ...) {
+               f <- orm.fit(x, y, family=fitFamily,
+                            maxit=maxit, eps=eps, tol=tol)
+               ns  <- f$non.slopes
+               cof <- f$coefficients
+               if(length(ytarget)) {
+                 ## Y values corresponding to intercepts
+                 yu <- f$yunique[-1]
+                 ## Linearly interpolate to return an intercept aimed
+                 ## at Y >= ytarget
+                 intcept <- approx(yu, cof[1:ns], xout=ytarget)$y
+                 ## if(min(abs(intcept - cof[1:ns])) > 1e-9) cat('****')
+                 intattr <- approx(yu, 1:ns, xout=ytarget)$y
+               }
+               else {
+                 k       <- f$interceptRef
+                 intattr <- k
+                 intcept <- cof[k]
+               }
+               names(intcept) <- 'Intercept'
+               cof <- c(intcept, cof[(ns + 1) : length(cof)])
+               attr(cof, 'intercepts') <- intattr
+               f$coefficients          <- cof
+               f
+             })
   }
   
   if(!length(fitter)) stop("fitter not valid")
@@ -82,16 +114,20 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
         stop('loglik=TRUE but no oos.loglik method for model in rmsMisc')
       
       Loglik <- double(B+1)
-      
       Loglik[B+1] <- oosl(fit)
     }
   else Loglik <- NULL
   
-  n <- nrow(X)
-  p <- length(fit$coef)
-  vname <- names(fit$coef)
+  n     <- nrow(X)
+  cof   <- fit$coefficients
+  if(nfit == 'orm') {
+    iref <- fit$interceptRef
+    cof <- cof[c(iref, (ns + 1L) : length(cof))]
+  }
+  p     <- length(cof)
+  vname <- names(cof)
   if(sc.pres) {
-    p <- p + 1
+    p     <- p + 1L
     vname <- c(vname, "log scale")
   }
 
@@ -106,7 +142,7 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
     ## where all observed values are carried forward and the first is
     ## also carried backward.  cfr na.locf from zoo library.
     L <- !is.na(S)
-    c(S[L][1], S[L])[cumsum(L)+1]
+    c(S[L][1L], S[L])[cumsum(L) + 1L]
   }
   ## vn = names of full coefficient vector
   ## ns = # non-slopes (intercepts) in full vector (target)
@@ -115,25 +151,25 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
     p <- length(vn)
     if(length(cof) == p) return(cof)
     nc <- ns - (p - length(cof))
-    cints <- cof[1:nc]  ## current intercepts
-    ints <- rep(NA, ns)
-    names(ints) <- vn[1:ns]
+    cints              <- cof[1L : nc]  ## current intercepts
+    ints               <- rep(NA, ns)
+    names(ints)        <- vn[1L : ns]
     ints[names(cints)] <- cints
     ## Set not just last intercept to -Inf if missing but set all
     ## NA intercepts at the right end to -Inf.  This will later lead to
     ## cell probabilities of zero for bootstrap-omitted levels of Y
     if(is.na(ints[ns])) {
       l <- ns
-      if(ns > 1) {
-        for(j in (ns-1):1) {
+      if(ns > 1L) {
+        for(j in (ns - 1L) : 1L) {
           if(!is.na(ints[j])) break
           l <- j
         }
       }
-      ints[l:ns] <- -Inf  ## probability zero of exceeding unobserved high Y
+      ints[l : ns] <- -Inf  ## probability zero of exceeding unobserved high Y
     }
     #### CHANGE TO FILL IN ONLY INTERCEPTS
-    c(rev(fillInTheBlanks(rev(ints))), cof[-(1:nc)])
+    c(rev(fillInTheBlanks(rev(ints))), cof[-(1L : nc)])
   }
     
   bar <- rep(0, p)
@@ -141,7 +177,7 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
   if(coef.reps) coefs <- matrix(NA, nrow=B, ncol=p, dimnames=list(NULL,vname))
   if(length(stat)) stats <- numeric(B)
   
-  Y <- as.matrix(if(is.category(Y)) oldUnclass(Y) else Y)
+  Y <- as.matrix(if(is.category(Y)) unclass(Y) else Y)
   ny <- ncol(Y)
 
   Strata <- fit$Strata
@@ -166,32 +202,35 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
   else ngroup <- 0
 
   anyinf <- FALSE
-  
+
+  if(!exists('.Random.seed')) runif(1)
+  seed <- .Random.seed
   if(missing(cluster)) {
     b <- 0
+    pb <- setPb(B, type='Boot', onlytk=!pr, every=20)
     for(i in 1:B) {
-      if(pr) cat(i,"\r")
+      pb(i)
       
       if(ngroup) {
         j <- integer(n)
-        for(si in 1:ngroup) {
-          gi <- group.inds[[si]]
+        for(si in 1L : ngroup) {
+          gi    <- group.inds[[si]]
           j[gi] <- sample(gi, length(gi), replace=TRUE)
         }
       }
-      else j <- sample(1:n, n, replace=TRUE)
+      else j <- sample(1L : n, n, replace=TRUE)
       
       ## Note: If Strata is NULL, NULL[j] is still NULL
       
       f <- tryCatch(fitter(X[j,,drop=FALSE], Y[j,,drop=FALSE], maxit=maxit, 
+                           eps=eps, ytarget=ytarget,
                            penalty.matrix=penalty.matrix, strata=Strata[j]),
                     error=function(...) list(fail=TRUE))
-          
       if(length(f$fail) && f$fail) next
           
       cof <- f$coefficients
       if(any(is.na(cof))) next   # glm
-      b <- b + 1
+      b <- b + 1L
           
       if(sc.pres) cof <- c(cof, 'log scale' = log(f$scale))
 
@@ -211,7 +250,6 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
       
       if(loglik) Loglik[b] <- oosl(f, matxv(X,cof), Y)
     }
-    if(pr) cat('\n')
   }
   else {
     if(length(cluster) > n) {
@@ -234,13 +272,15 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
     Obsno <- split(1:n, cluster)
     
     b <- 0
-    for(i in 1:B) {
-      if(pr) cat(i,"\r")
+    pb <- setPb(B, type='Boot', onlytk=!pr, every=20)
+
+    for(i in 1L : B) {
+      pb(i)
       
       ## Begin addition Bill Pikounis
       if(ngroup) {
-        j <- integer(0)
-        for(si in 1:ngroup) {
+        j <- integer(0L)
+        for(si in 1L : ngroup) {
           gi <- group.inds[[si]]
           cluster.gi <- cluster[gi]
           clusters.gi <- unique(cluster.gi)
@@ -259,21 +299,21 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
       }
       
       f <- tryCatch(fitter(X[obs,,drop=FALSE], Y[obs,,drop=FALSE], 
-                           maxit=maxit, penalty.matrix=penalty.matrix,
+                           maxit=maxit, eps=eps, ytarget=ytarget,
+                           penalty.matrix=penalty.matrix,
                            strata=Strata[obs]),
                     error=function(...) list(fail=TRUE))
-          
       if(length(f$fail) && f$fail) next
       
       cof <- f$coefficients
       if(any(is.na(cof))) next  # glm
-      b <- b + 1
+      b <- b + 1L
           
       if(sc.pres) cof <- c(cof, 'log scale' = log(f$scale))
       
       cof <- fill(cof, vname, ns)
       if(any(is.infinite(cof))) anyinf <- TRUE
-      if(coef.reps) coefs[b,] <- cof
+      if(coef.reps)    coefs[b,] <- cof
       if(length(stat)) stats[b] <- f$stats[stat]
       
       bar <- bar + cof
@@ -281,40 +321,39 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
       cov <- cov + cof %*% t(cof)
       if(loglik) Loglik[b] <- oosl(f, matxv(X,cof), Y)
     }
-    if(pr) cat('\n')
   }
   
   if(b < B) {
     warning(paste('fit failure in',B-b,
                   'resamples.  Might try increasing maxit'))
-    if(coef.reps) coefs <- coefs[1:b,,drop=FALSE]
-    
-    Loglik <- Loglik[1:b]
+    if(coef.reps) coefs <- coefs[1L : b,,drop=FALSE]
+    Loglik <- Loglik[1L : b]
   }
+  if(nfit == 'orm') attr(coefs, 'intercepts') <- iref
   
   if(anyinf) warning('at least one resample excluded highest Y values, invalidating bootstrap covariance matrix estimate')
   
-  bar <- bar/b
-  fit$B <- b
-  names(bar) <- vname
+  bar           <- bar / b
+  fit$B         <- b
+  fit$seed      <- seed
+  names(bar)    <- vname
   fit$boot.coef <- bar
   if(coef.reps) fit$boot.Coef <- coefs
   
   bar <- as.matrix(bar)
-  cov <- (cov - b * bar %*% t(bar))/(b-1)
+  cov <- (cov - b * bar %*% t(bar)) / (b - 1L)
   fit$orig.var <- fit$var
   fit$var <- cov
   fit$boot.loglik <- Loglik
   if(length(stat)) fit$boot.stats <- stats
   if(nfit=='Rq') {
     newse <- sqrt(diag(cov))
-    newt <- fit$summary[,1]/newse
-    newp <- 2 * (1 - pt(abs(newt), fit$stats['n']-fit$stats['p']))
-    fit$summary[,2:4] <- cbind(newse, newt, newp)
+    newt <- fit$summary[, 1L]/newse
+    newp <- 2. * (1. - pt(abs(newt), fit$stats['n'] - fit$stats['p']))
+    fit$summary[, 2L : 4L] <- cbind(newse, newt, newp)
   }
   fit
 }
-
   
 bootplot <- function(obj, which, X,
                      conf.int=c(.9,.95,.99),
@@ -329,7 +368,7 @@ bootplot <- function(obj, which, X,
   if(missing(which)) {
     if(!is.matrix(X)) X <- matrix(X, nrow=1)
     
-    qoi <- X %*% t(Coef)   ##nxp pxB = nxB
+    qoi <- matxv(X, Coef, bmat=TRUE)  # X %*% t(Coef)   ##nxp pxB = nxB
     if(missing(labels.)) {
       labels. <- dimnames(X)[[1]]
       if(length(labels.)==0) {
@@ -338,7 +377,7 @@ bootplot <- function(obj, which, X,
     }
   }
   else {
-    qoi <- t(Coef[,which,drop=FALSE])
+    qoi <- t(Coef[, which, drop=FALSE])
     nns <- num.intercepts(obj)
     if(missing(labels.)) {
       labels. <- paste(ifelse(which > nns, 'Coefficient of ', ''), 
@@ -400,9 +439,9 @@ histdensity <- function(y, xlab, nclass, width, mult.width=1, ...) {
 
 
 confplot <- function(obj, X, against, 
-                     method=c('simultaneous','pointwise'),
+                     method=c('simultaneous', 'pointwise'),
                      conf.int=0.95,
-                     fun=function(x)x, 
+                     fun=function(x) x, 
                      add=FALSE, lty.conf=2, ...) {
 
   method <- match.arg(method)
@@ -413,10 +452,10 @@ confplot <- function(obj, X, against,
   
   if(!is.matrix(X)) X <- matrix(X, nrow=1)
   
-  fitted <- fun(X %*% obj$coefficients)
+  fitted <- fun(matxv(X, obj$coefficients))
   
   if(method=='pointwise') {
-    pred <- X %*% t(boot.Coef)   ## n x B
+    pred <- matxv(X, boot.Coef, bmat=TRUE)   ## n x B
     p <- fun(apply(pred, 1, quantile,
                    probs=c((1 - conf.int)/2, 1 - (1 - conf.int)/2),
                    na.rm=TRUE))
@@ -428,10 +467,10 @@ confplot <- function(obj, X, against,
     loglik    <- obj$boot.loglik
     if(length(loglik)==0) stop('did not specify "loglik=TRUE" to bootcov')
     
-    crit <- quantile(loglik, conf.int, na.rm=TRUE)
-    qual <- loglik <= crit
+    crit  <- quantile(loglik, conf.int, na.rm=TRUE)
+    qual  <- loglik <= crit
     boot.Coef <- boot.Coef[qual,,drop=FALSE]
-    pred   <- X %*% t(boot.Coef)  ## n x B
+    pred   <- matxv(X, boot.Coef, bmat=TRUE)  ## n x B
     upper  <- fun(apply(pred, 1, max))
     lower  <- fun(apply(pred, 1, min))
     pred   <- fun(pred)
@@ -449,4 +488,52 @@ confplot <- function(obj, X, against,
   }
   if(missing(against)) list(fitted=fitted, upper=upper, lower=lower)
   else invisible(list(fitted=fitted, upper=upper, lower=lower))
+}
+
+# Construct object suitable for boot:boot.ci
+# Use boot package to get BCa confidence limits for a linear combination of
+# model coefficients, e.g. bootcov results boot.Coef
+# If boot.ci fails return only ordinary percentile CLs
+bootBCa <- function(estimate, estimates, type=c('percentile','bca','basic'),
+                    n, seed, conf.int=0.95) {
+  type <- match.arg(type)
+  if(type != 'percentile' && !require(boot)) stop('boot package not installed')
+  estimate <- as.vector(estimate)
+  ne <- length(estimate)
+  if(!is.matrix(estimates)) estimates <- as.matrix(estimates)
+  if(ncol(estimates) != ne)
+    stop('no. columns in estimates != length of estimate')
+  if(type == 'percentile') {
+    a <- apply(estimates, 2, quantile,
+                 probs=c((1-conf.int)/2, 1-(1-conf.int)/2), na.rm=TRUE)
+    if(ne == 1) a <- as.vector(a)
+    return(a)
+  }
+  lim <- matrix(NA, nrow=2, ncol=ne, dimnames=list(c('Lower','Upper'),NULL))
+  R <- nrow(estimates)
+  for(i in 1:ne) {
+    w <- list(sim= 'ordinary',
+              stype = 'i',
+              t0 = estimate[i],
+              t  = estimates[,i,drop=FALSE],
+              R  = R,
+              data    = 1:n,
+              strata  = rep(1,   n),
+              weights = rep(1/n, n),
+              seed = seed,
+              statistic = function(...) 1e10,
+              call = match.call())
+
+    cl <- try(boot.ci(w, type=type, conf=conf.int), silent=TRUE)
+    if(inherits(cl, 'try-error')) {
+      cl <- c(NA,NA)
+    warning('could not obtain bootstrap confidence interval')
+    } else {
+      cl <- if(type == 'bca') cl$bca else cl$basic
+      m <- length(cl)
+      cl <- cl[c(m - 1, m)]
+    }
+    lim[,i] <- cl
+  }
+  if(ne==1) as.vector(lim) else lim
 }

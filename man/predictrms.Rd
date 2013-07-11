@@ -15,60 +15,58 @@ predicted values from either the data used to fit the model (if
 \code{type="adjto"} or \code{"adjto.data.frame"} or if \code{x=TRUE} or
 \code{linear.predictors=TRUE} were specified to the modeling function), or from
 a new dataset. Parameters such as knots and factor levels used in creating 
-the design
-matrix in the original fit are "remembered".
+the design matrix in the original fit are "remembered".
 See the \code{Function} function for another method for computing the
 linear predictors.
 }
 \usage{
 \method{predict}{bj}(object, newdata,
-        type=c("lp", "x", "data.frame",
-                 "terms", "cterms", "ccterms", "adjto", "adjto.data.frame", "model.frame"),
+        type=c("lp", "x", "data.frame", "terms", "cterms", "ccterms",
+               "adjto", "adjto.data.frame", "model.frame"), 
         se.fit=FALSE, conf.int=FALSE,
         conf.type=c('mean','individual','simultaneous'),
-        incl.non.slopes, non.slopes, kint=1,
+        kint=1,
         na.action=na.keep, expand.na=TRUE,
         center.terms=type=="terms", \dots) # for bj
 
-\method{predict}{cph}(object, newdata,
-        type=c("lp", "x",
-                 "data.frame", "terms", "cterms", "ccterms", "adjto", "adjto.data.frame",
-                 "model.frame"),
-        se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual','simultaneous'),
-        incl.non.slopes=NULL,
-        non.slopes=NULL, kint=1, na.action=na.keep, expand.na=TRUE,
+\method{predict}{cph}(object, newdata=NULL,
+        type=c("lp", "x", "data.frame", "terms", "cterms", "ccterms",
+               "adjto", "adjto.data.frame", "model.frame"),
+        se.fit=FALSE, conf.int=FALSE,
+        conf.type=c('mean','individual','simultaneous'),
+        kint=1, na.action=na.keep, expand.na=TRUE,
         center.terms=type=="terms", \dots) # cph
 
 \method{predict}{Glm}(object, newdata,
-        type= c("lp", "x", "data.frame",
-                 "terms", "cterms", "ccterms", "adjto", "adjto.data.frame", "model.frame"),
-        se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual','simultaneous'),
-        incl.non.slopes,
-        non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
+        type= c("lp", "x", "data.frame", "terms", "cterms", "ccterms",
+                "adjto", "adjto.data.frame", "model.frame"),
+        se.fit=FALSE, conf.int=FALSE,
+        conf.type=c('mean','individual','simultaneous'),
+        kint=1, na.action=na.keep, expand.na=TRUE,
         center.terms=type=="terms", \dots) # Glm
 
 \method{predict}{Gls}(object, newdata,
-        type=c("lp", "x", "data.frame",
-                 "terms", "cterms", "ccterms", "adjto", "adjto.data.frame", "model.frame"),
-        se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual','simultaneous'),
-        incl.non.slopes,
-        non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
+        type=c("lp", "x", "data.frame", "terms", "cterms", "ccterms",
+               "adjto", "adjto.data.frame", "model.frame"),
+        se.fit=FALSE, conf.int=FALSE,
+        conf.type=c('mean','individual','simultaneous'),
+        kint=1, na.action=na.keep, expand.na=TRUE,
         center.terms=type=="terms", \dots) # Gls
 
 \method{predict}{ols}(object, newdata,
-        type=c("lp", "x", "data.frame",
-                 "terms", "cterms", "ccterms", "adjto", "adjto.data.frame", "model.frame"),
-        se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual','simultaneous'),
-        incl.non.slopes,
-        non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
+        type=c("lp", "x", "data.frame", "terms", "cterms", "ccterms",
+               "adjto", "adjto.data.frame", "model.frame"),
+        se.fit=FALSE, conf.int=FALSE,
+        conf.type=c('mean','individual','simultaneous'),
+        kint=1, na.action=na.keep, expand.na=TRUE,
         center.terms=type=="terms", \dots) # ols
 
 \method{predict}{psm}(object, newdata,
-        type=c("lp", "x", "data.frame",
-                 "terms", "cterms", "ccterms", "adjto", "adjto.data.frame", "model.frame"),
-        se.fit=FALSE, conf.int=FALSE, conf.type=c('mean','individual','simultaneous'),
-        incl.non.slopes,
-        non.slopes, kint=1, na.action=na.keep, expand.na=TRUE,
+        type=c("lp", "x", "data.frame", "terms", "cterms", "ccterms",
+               "adjto", "adjto.data.frame", "model.frame"),
+        se.fit=FALSE, conf.int=FALSE,
+        conf.type=c('mean','individual','simultaneous'),
+        kint=1, na.action=na.keep, expand.na=TRUE,
         center.terms=type=="terms", \dots) # psm
 }
 \arguments{
@@ -120,9 +118,12 @@ will attempt to return information stored with the fit object if the
 appropriate options were used with the modeling function (e.g., \code{x, y, linear.predictors, se.fit}).
 }
 \item{se.fit}{
-Defaults to \code{FALSE}.  If \code{type="linear.predictors"}, set \code{se.fit=TRUE} to return
-a list with components \code{linear.predictors} and \code{se.fit} instead of just
-a vector of fitted values.
+Defaults to \code{FALSE}.  If \code{type="linear.predictors"}, set
+\code{se.fit=TRUE} to return a list with components
+\code{linear.predictors} and \code{se.fit} instead of just a vector of
+fitted values.   For Cox model fits, standard errors of linear
+predictors are computed after subtracting the original column means from
+the new design matrix.
 }
 \item{conf.int}{
 Specify \code{conf.int} as a positive fraction to obtain upper and lower
@@ -135,24 +136,10 @@ specifies the type of confidence interval.  Default is for the mean.
 For \code{ols} fits there is the option of obtaining confidence limits for
 individual predicted values by specifying \code{conf.type="individual"}.
 }
-\item{incl.non.slopes}{
-Default is \code{TRUE} if \code{non.slopes} or \code{kint} is specified, the model has a scale
-parameter (e.g., a parametric survival model), or \code{type!="x"}.
-Otherwise the default is \code{FALSE}.
-Set to \code{TRUE} to use an intercept in the prediction if the model has
-any intercepts (except for \code{type="terms"} which doesn't need
-intercepts).  Set to \code{FALSE} to get predicted \eqn{X\beta}{X beta} ignoring intercepts.
-}
-\item{non.slopes}{
-For models such as the ordinal logistic models containing more than
-one intercept, this specifies dummy variable values to pick off intercept(s)
-to use in computing predictions.  For example, if there are 3 intercepts,
-use \code{non.slopes=c(0,1,0)} to use the second.  Default is
-\code{c(1,0,\dots,0)}.  You may alternatively specify \code{kint}.
-}
 \item{kint}{
 a single integer specifying the number of the intercept to use in
-multiple-intercept models
+multiple-intercept models.  The default is 1 for \code{lrm} and the
+        reference median intercept for \code{orm}.
 }
 \item{na.action}{
 Function to handle missing values in \code{newdata}.  For predictions
@@ -190,6 +177,7 @@ f.harrell@vanderbilt.edu
 \seealso{
 \code{\link{plot.Predict}}, \code{\link{summary.rms}},
 \code{\link{rms}}, \code{\link{rms.trans}}, \code{\link{predict.lrm}},
+\code{\link{predict.orm}},
 \code{\link{residuals.cph}}, \code{\link{datadist}},
 \code{\link{gendata}}, \code{\link{gIndex}},
 \code{\link{Function.rms}}, \code{\link[Hmisc]{reShape}}, 
@@ -298,7 +286,7 @@ Key()
 d <- gendata(fit, treat=levels(treat), sex=levels(sex), age=seq(30,80,by=10))
 x <- predict(fit, d, type="x")
 betas <- fit$coef
-cov   <- fit$var
+cov   <- vcov(fit, intercepts='none')
 
 
 i <- d$treat=="a"; xa <- x[i,]; Sex <- d$sex[i]; Age <- d$age[i]
@@ -307,7 +295,7 @@ i <- d$treat=="c"; xc <- x[i,]
 
 
 doit <- function(xd, lab) {
-  xb <- xd\%*\%betas
+  xb <- matxv(xd, betas)
   se <- apply((xd \%*\% cov) * xd, 1, sum)^.5
   q <- qnorm(1-.01/2)   # 0.99 confidence limits
   lower <- xb - q * se; upper <- xb + q * se
@@ -318,8 +306,8 @@ doit <- function(xd, lab) {
   for(sx in levels(Sex)) {
     j <- Sex==sx
     errbar(Age[j], xb[j], upper[j], lower[j], xlab="Age", 
-           ylab=paste(lab,"Odds Ratio"), ylim=c(.1,20), log='y')
-    title(paste("Sex:",sx))
+           ylab=paste(lab, "Odds Ratio"), ylim=c(.1, 20), log='y')
+    title(paste("Sex:", sx))
     abline(h=1, lty=2)
   }
 }
