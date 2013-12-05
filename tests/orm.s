@@ -48,12 +48,12 @@ plot(coef(g)[1:999], coef(h)[1:999])
 tapply(y, x1, mean)
 
 m <- Mean(g)
-m(w <- k[1] + k['x1']*c(0,1))
+m(w <- k[g$interceptRef] + k['x1']*c(0,1))
 #mf <- Mean(f)
 #k <- coef(f)
 #mf(k[1] + k['x1']*c(0,1))
 mh <- Mean(h)
-wh <- coef(h)[1] + coef(h)['x1']*c(0,1)
+wh <- coef(h)[h$interceptRef] + coef(h)['x1']*c(0,1)
 mh(wh)
 
 qu <- Quantile(g)
@@ -72,6 +72,7 @@ k <- coef(g)
 plot(1:999, k[1:999])
 m <- Mean(g)
 m(w <- k[1] + k['x1']*c(0,1))
+m(w <- k[g$interceptRef] + k['x1']*c(0,1))
 tapply(y, x1, mean)
 
 qu <- Quantile(g)
@@ -88,7 +89,7 @@ qu <- Quantile(g)
 ## Prob Y <= j, j = 1, ... 10 = .1, .2, ..., 1
 ## .1 quantile = 1, .2 quantile = 2, ..., .9 quantile = 9
 formals(qu) <- list(q=.5, lp=0, intercepts=qlogis(seq(.9,.1,by=-.1)),
-                    values=1:10, cumprob=plogis, inverse=qlogis)
+                    values=1:10, interceptRef=1, cumprob=plogis, inverse=qlogis)
 for(a in c(.01, seq(0, 1, by=.05), .99))
   cat(a, qu(a, qlogis(.9)), '\n')
 
@@ -198,3 +199,30 @@ for(i in 1:B) {
   meds2[i] <- median(y2[s])
 }
 table(meds1); table(meds2)
+
+
+# See how to check intercepts against linear model assumptions
+require(rms)
+set.seed(1)
+n <- 1000
+x1 <- runif(n)
+y <- 30 + x1 + rnorm(n)
+f <- orm(y ~ x1, family=probit)
+y2 <- y + 20
+f2 <- orm(y2 ~ x1, family=probit)
+plot(coef(f), coef(f2)) # unaffected by shift
+
+g  <- ols(y ~ x1)
+yu <- f$yunique[-1]
+ns <- num.intercepts(f)
+s  <- g$stats['Sigma']
+alphas <- coef(f)[1:ns]
+plot(-yu/s, alphas, type='l',
+     xlab=expression(-y/s), ylab=expression(alpha[y]))
+co <- coef(lm.fit(cbind(1, -yu/s), alphas))
+text(-32, 2, paste('Slope:', round(co[2], 4)))
+abline(a=co[1], b=co[2], col='gray70')
+
+## Compare coefficients with those from partial likelihood (Cox model)
+orm(y ~ pol(x1,2), family=loglog)
+cph(Srv(y) ~ pol(x1,2))

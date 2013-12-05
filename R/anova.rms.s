@@ -16,8 +16,7 @@ anova.rms <- function(object, ..., main.effect=FALSE, tol=1e-9,
   misstest <- missing(test)
   test <- match.arg(test)
   vnames <- match.arg(vnames)
-  is.ols <- inherits(object,'ols') ||
-   (length(object$fitFunction) && any(object$fitFunction=='ols'))
+  is.ols <- inherits(object,'ols')
 
   if(misstest) test <- if(is.ols) 'F' else 'Chisq'
   if(!is.ols && test=='F') stop('F-test not allowed for this type of model')
@@ -435,7 +434,7 @@ print.anova.rms <- function(x, which=c('none','subscripts',
     }
   }
 
-  sn <- dimnames(cstats)[[2]]
+  sn <- colnames(cstats)
   
   for(j in 1:ncol(cstats))
     cstats[,j] <- format(round(stats[,j], digits[sn[j]]))
@@ -443,13 +442,13 @@ print.anova.rms <- function(x, which=c('none','subscripts',
   cstats[is.na(stats)] <- ''
   j <- sn=='P'
   cstats[stats[,j] < 0.00005,j] <- '<.0001'
-  cstats <- cbind(dimnames(stats)[[1]], cstats)
+  cstats <- cbind(rownames(stats), cstats)
   
   dimnames(cstats) <- list(rep("",nrow(stats)),
-                           c("Factor    ",dimnames(stats)[[2]]))
+                           c("Factor    ",colnames(stats)))
 
   heading <- paste("                ",
-                   if(any(dimnames(stats)[[2]]=='F'))"Analysis of Variance"
+                   if(any(colnames(stats) == 'F')) "Analysis of Variance"
                    else "Wald Statistics",
                    "          Response: ", 
                    as.character(attr(stats, "formula")[2]), sep = "")
@@ -485,8 +484,8 @@ latex.anova.rms <-
            psmall=TRUE,
            dec.chisq=2, dec.F=2, dec.ss=NA,
            dec.ms=NA, dec.P=4, table.env=TRUE, caption=NULL, ...) {
-    sn   <- dimnames(object)[[2]]
-    rowl <- dimnames(object)[[1]]
+    sn   <- colnames(object)
+    rowl <- rownames(object)
     if(any(sn=='MS'))
       rowl[rowl=='TOTAL'] <- 'REGRESSION'
     
@@ -537,18 +536,20 @@ latex.anova.rms <-
 plot.anova.rms <-
   function(x, what=c("chisqminusdf","chisq","aic",
                 "P","partial R2","remaining R2",
-                "proportion R2"),
+                "proportion R2", "proportion chisq"),
            xlab=NULL,
            pch=16, rm.totals=TRUE, rm.ia=FALSE,
            rm.other=NULL, newnames,
            sort=c("descending","ascending","none"),
-           pl=TRUE, trans=NULL, ...) {
+           margin=NULL,
+           pl=TRUE, trans=NULL, ntrans=40, ...) {
     what <- match.arg(what)
     sort <- match.arg(sort)
 
     if(!length(xlab)) xlab <-
       switch(what,
              chisq=expression(chi^2),
+             "proportion chisq"=expression(paste("Proportion of Overall", ~chi^2)),
              chisqminusdf=expression(chi^2~-~df),
              aic="Akaike Information Criterion",
              P="P-value",
@@ -563,55 +564,106 @@ plot.anova.rms <-
             " Nonlinear"," All Interactions", "ERROR",
             " f(A,B) vs. Af(B) + Bg(A)", rm.other)
     
-    rn <- dimnames(x)[[1]]
-    rm <- c(rm, rn[substring(rn,2,10)=="Nonlinear"])
+    rn <- rownames(x)
+    rm <- c(rm, rn[substring(rn, 2, 10) == "Nonlinear"])
     k <- !(rn %in% rm)
     if(rm.ia) k[grep("\\*", rn)] <- FALSE
     
-    an <- x[k,,drop=FALSE]
-    
-    dof <- an[,'d.f.']
-    P <- an[,'P']
-    chisq <- if(any(dimnames(an)[[2]]=='F')) an[,'F']*dof
-    else an[,'Chi-Square']
+    an <- x[k,, drop=FALSE]
     
     
     if(what %in% c("partial R2","remaining R2","proportion R2")) {
-      if("Partial SS" %nin% dimnames(x)[[2]])
-        stop('to plot R2 you must have an ols model and must not have specified ss=F to anova')
+      if("Partial SS" %nin% colnames(x))
+        stop('to plot R2 you must have an ols model and must not have specified ss=FALSE to anova')
       
-      sse <- x['ERROR','Partial SS']
-      ssr <- x['TOTAL','Partial SS']
+      sse <- x ['ERROR', 'Partial SS']
+      ssr <- x ['TOTAL', 'Partial SS']
+      pss <- an[, 'Partial SS']
       sst <- sse + ssr
     }
     
-    an <- switch(what,
-                 chisq=chisq,
-                 chisqminusdf=chisq-dof,
-                 aic=chisq-2*dof,
-                 P=P,
-                 "partial R2" = an[,"Partial SS"]/sst,
-                 "remaining R2" = (ssr - an[,"Partial SS"]) / sst,
-                 "proportion R2" = an[,"Partial SS"] / ssr)
+    dof <- an[, 'd.f.']
+    P   <- an[, 'P']
+
+    if(any(colnames(an) == 'F')) {
+      chisq    <- an[, 'F'] * dof
+      totchisq <- x['TOTAL', 'F'] * x['TOTAL', 'd.f.']
+    }
+    else {
+      chisq    <- an[, 'Chi-Square']
+      totchisq <- x['TOTAL', 'Chi-Square']
+    }
+
+    w <- switch(what,
+                chisq           = chisq,
+                chisqminusdf    = chisq - dof,
+                aic             = chisq - 2 * dof,
+                P               = P,
+                "partial R2"    = pss / sst,
+                "remaining R2"  = (ssr - pss) / sst,
+                "proportion R2" = pss / ssr,
+                "proportion chisq" = chisq / totchisq)
     
     if(missing(newnames))
-      newnames <- sedit(names(an),"  (Factor+Higher Order Factors)", "")
+      newnames <- sedit(names(w),"  (Factor+Higher Order Factors)", "")
     
-    names(an) <- newnames
-    an <- switch(sort,
-                 descending=-sort(-an),
-                 ascending=sort(an),
-                 none=an)
-  
+    names(w) <- newnames
+    is <- switch(sort,
+                descending =  order(-w),
+                ascending  =  order( w),
+                none       =  1 : length(w))
+    w     <- w [is]
+    an    <- an[is,, drop=FALSE ]
+    chisq <- chisq[is]
+    dof   <- dof[is]
+    P     <- P[is]
+
     if(pl) {
+      auxtitle <- auxdata <- NULL
+      fn <- function(x, right) {
+        m <- max(abs(x), na.rm=TRUE)
+        left <- max(floor(log10(m)) + 1, 1)
+        nFm(x, left, right)
+      }
+
+      if(any(c('partial R2', 'remaining R2') %in% margin)) {
+        if("Partial SS" %nin% colnames(x))
+          stop('to show R2 you must have an ols model and must not have specified ss=FALSE to anova')
+        sse <- x['ERROR', 'Partial SS']
+        ssr <- x['TOTAL', 'Partial SS']
+        sst <- sse + ssr
+        pss <- an[, 'Partial SS']
+      }
+
+      if(length(margin)) for(marg in margin) {
+        aux <-
+          switch(marg, 
+                 chisq = list('chi^2', fn(chisq, 1)),
+                 'proportion chisq' =
+                 list('Proportion~chi^2', fn(chisq / totchisq, 2)),
+                 'd.f.' = list('d.f.', fn(dof, 0)),
+                 P = list('P', fn(P, 4)),
+                 'partial R2' = list('Partial~R^2',       fn(pss / sst, 2)),
+                 'proportion R2' = list('Proportion~R^2', fn(pss / ssr, 2)))
+        
+        if(length(auxtitle)) auxtitle <- paste(auxtitle, aux[[1]], sep='~~')
+         else auxtitle <- aux[[1]]
+        if(length(auxdata))  auxdata  <- paste(auxdata,  aux[[2]], sep='  ')
+         else auxdata  <- aux[[2]]
+      }
+      ## convert to expression
+      if(length(auxtitle)) auxtitle <- parse(text = auxtitle)
+      
       if(length(trans)) {
-        nan <- names(an)
-        an <- pmax(0, an)
-        pan <- pretty(an)
-        tan <- trans(an); names(tan) <- nan
-        dotchart2(tan, xlab=xlab, pch=pch,
-                  axisat=trans(pan), axislabels=pan, ...)
-      } else dotchart2(an, xlab=xlab, pch=pch, ...)
+        nan <- names(w)
+        w <- pmax(0, w)
+        pan <- pretty(w, n=ntrans)
+        tan <- trans(w); names(tan) <- nan
+        dotchart3(tan, xlab=xlab, pch=pch,
+                  axisat=trans(pan), axislabels=pan,
+                  auxtitle=auxtitle, auxdata=auxdata, ...)
+      } else dotchart3(w, xlab=xlab, pch=pch,
+                       auxtitle=auxtitle, auxdata=auxdata, ...)
     }
-    invisible(an)
+    invisible(w)
   }

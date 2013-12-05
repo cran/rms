@@ -1,3 +1,29 @@
+Changes in version 4.1-0 (2013-12-05)
+   * Fixed orm.fit to not create penalty matrix if not needed (penalties are not yet implemented anyway)
+   * Added yscale argument to plot.Predict
+   * Added Wald test simulation to orm help file
+   * Added example in help file for plot.anova.rms of adding a line combining the effects of two predictors in dot chart
+   * Fixed grid interpretation error in survplot.survfit
+   * Changed plot.anova.rms to use dotchart3 instead of dotchart2
+   * Fixed bug in summary.rms - was taking reciprocal of effect ratio with orm even if not loglog family (thanks: Yong Hao Pua <puayonghao@gmail.com>
+   * Removed link to print.lm, summary.lm in ols.Rd
+   * Added ntrans argument to plot.anova.rms
+   * Fixed handling of intercepts in Rq, validate.Rq
+   * Removed residuals.Glm, residuals.rms (also from Rd, NAMESPACE)
+   * Removed other .rms methods and other remnants from fooling S+ dispatcher
+   * Fixed bug in lm.pfit when penalty used (thanks: Yong Hao Pua <puayonghao@gmail.com>)
+   * Fixed bug in calibrate.default for ols (thanks: Andy Bush)
+   * Change print.contrast.rms to insert NA for SE if fun is not the identity function
+   * Added margin argument to plot.anova.rms to print selected stats in right margin of dot chart
+   * Added anova argument to plot.Predict to allow overall association test statistics to be added to panels
+   * Fixed bug in val.prob in which the logistic model was re-fitted instead of fixing coefficients at 0,1.  This resulted in model statistics (including c-index) to always be favorable even when predictions were worse than change.  Thanks: Kirsen Van Hoorde <Kirsten.VanHoorde@esat.kuleuven.be>
+   * Fixed bug in survdiffplot where conf.int was always overridden by value from survfit.  Thanks: Kamil Fijorek <kamilfijorek@gmail.com>
+   * Fixed bug in grid= for survplot.* and survdiffplot.  Thanks: Kamil Fijorek
+   * Fixed rms.s to account for possible offset in names(nmiss).  Thanks: Larry Hunsicker
+   * Fixed psm.s to not compute Dxy if simple right censoring is not in effect.  Thanks: I.M. Nolte
+   * rcs: respect system option fractied, passed to rcspline.eval; can be used to get old behavior
+   * Gls: as nlme 3.1-113 exports more functions, removed nlme:::
+
 Changes in version 4.0-0 (2013-07-10)
    * Cleaned up label logic in Surv, made it work with interval2 (thanks:Chris Andrews)
    * Fixed bug in val.prob - wrong denominator for Brier score if obs removed for logistic calibration

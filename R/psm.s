@@ -4,7 +4,6 @@ psm <- function(formula=formula(data),
                 init=NULL,  scale=0,
                 control=survreg.control(),
                 parms=NULL, model=FALSE, x=FALSE, y=TRUE, time.inc, ...) {
-  require(survival)
   
   call <- match.call()
   m <- match.call(expand.dots=FALSE)
@@ -196,9 +195,8 @@ psm <- function(formula=formula(data),
                 dist= dlist, scale=scale, nstrat=nstrata, 
                 strata, parms=parms)
   
-  ## Next line: FEH added fitFunction='psm'
   if (is.character(fit))
-    fit <- list(fail=fit, fitFunction='psm')  #error message
+    fit <- list(fail=fit)  #error message
   else {
     if (scale==0) {
       nvar <- length(fit$coef) - nstrata
@@ -233,8 +231,8 @@ psm <- function(formula=formula(data),
   fit$assign <- DesignAssign(atr, 1, Terms)
   fit$formula <- formula
   if(y) {
-    oldClass(Y) <- 'Surv'
-    attr(Y,'type') <- atY$type
+    class(Y) <- 'Surv'
+    attr(Y, 'type') <- atY$type
     fit$y <- Y
   }
   scale.pred <-
@@ -242,23 +240,26 @@ psm <- function(formula=formula(data),
       c('log(T)','Survival Time Ratio')
     else 'T'
   
-  logtest <- 2*diff(fit$loglik)
+  logtest <- 2 * diff(fit$loglik)
   Nn <- if(length(weights)) sum(weights) else nnn[1]
-  R2.max <- 1 - exp(2*fit$loglik[1]/Nn)
-  R2 <- (1 - exp(-logtest/Nn))/R2.max
-  df <- length(fit$coef)-1
-  P  <- if(df==0) NA else 1-pchisq(logtest,df)
+  R2.max <- 1 - exp(2. * fit$loglik[1] / Nn)
+  R2 <- (1 - exp(-logtest/Nn)) / R2.max
+  df <- length(fit$coef) - 1
+  P  <- if(df == 0) NA else 1. - pchisq(logtest, df)
   gindex <- GiniMd(fit$linear.predictors)
-  Dxy <- dxy.cens(fit$linear.predictors, Y)
+  Dxy <- if(type == 'right') dxy.cens(fit$linear.predictors, Y)
+  else {
+    warning('Dxy not computed since right censoring not in effect')
+    NA
+  }
   stats <- c(nnn, logtest, df, P, R2, Dxy, gindex, exp(gindex))
   names(stats) <- c("Obs", "Events", "Model L.R.", "d.f.", "P",
-                    "R2","Dxy","g","gr")
+                    "R2", "Dxy", "g", "gr")
   if(length(weights)) stats <- c(stats, 'Sum of Weights'=sum(weights))
   fit <- c(fit, list(stats=stats, maxtime=maxtime, units=time.units,
                      time.inc=time.inc, scale.pred=scale.pred,
-                     non.slopes=1, Design=atr, fail=FALSE,
-                     fitFunction=c("psm", "survreg", "glm", "lm")))
-  oldClass(fit) <-
+                     non.slopes=1, Design=atr, fail=FALSE))
+  class(fit) <-
     if (any(pterms)) c('psm','rms','survreg.penal','survreg')
     else
       c('psm','rms','survreg')
@@ -325,7 +326,7 @@ residuals.psm <-
     if(type == 'score')
       stop('score residuals not implemented')
     ## TODO
-    return(survival:::residuals.survreg(object, type=type))
+    return(getS3method('residuals', 'survreg')(object, type=type))
   }
   
   y <- object$y
@@ -344,7 +345,7 @@ residuals.psm <-
   attr(r,'units') <- ' '
   attr(r,'time.label') <- 'Normalized Residual'
   attr(r,'event.label') <- aty$event.label
-  oldClass(r) <- c('residuals.psm.censored.normalized','Surv')
+  class(r) <- c('residuals.psm.censored.normalized','Surv')
   g <- survreg.auxinfo[[dist]]$survival
   formals(g) <- list(times=NULL, lp=0, parms=0)
   attr(r,'theoretical') <- g

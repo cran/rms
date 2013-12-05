@@ -1,3 +1,7 @@
+## This is a modification of the gls function in the nlme package.
+## gls is authored by Jose Pinheiro, Douglas Bates, Saikat DebRoy,
+## Deepayan Sarkar, and R-core
+
 Gls <-
   function (model, data = sys.frame(sys.parent()), correlation = NULL, 
     weights = NULL, subset, method = c("REML", "ML"), na.action = na.omit, 
@@ -6,7 +10,8 @@ Gls <-
             
 {
     require(nlme)
-    glsEstimate <- nlme:::glsEstimate
+    if(!existsFunction('glsEstimate'))
+		stop('nlme package must be version 3.1-113 or later')
     
     Call <- match.call()
     controlvals <- glsControl()
@@ -238,10 +243,10 @@ Gls <-
     
     if (controlvals$apVar && FALSE)
       apVar <-
-        nlme:::glsApVar(glsSt, glsFit$sigma,
-                        .relStep  = controlvals[[".relStep"]],  
-                        minAbsPar = controlvals[["minAbsParApVar"]],
-                        natural   = controlvals[["natural"]])
+        glsApVar(glsSt, glsFit$sigma,
+                 .relStep  = controlvals[[".relStep"]],  
+                 minAbsPar = controlvals[["minAbsParApVar"]],
+                 natural   = controlvals[["natural"]])
     else
       apVar <- "Approximate variance-covariance matrix not available"
     dims <- attr(glsSt, "conLin")[["dims"]]
@@ -271,7 +276,6 @@ Gls <-
         attr(estOut, "labels") <- attr(data, "labels")
       }
     attr(estOut, "namBetaFull") <- colnames(X)
-    estOut$fitFunction <- 'Gls'
     class(estOut) <- c('Gls','rms','gls')
     estOut
   }
@@ -281,7 +285,7 @@ print.Gls <- function(x, digits=4, coefs=TRUE, latex=FALSE, title, ...)
 {
   ## Following taken from print.gls with changes marked FEH
 
-  summary.gls <- nlme:::summary.gls
+  summary.gls <- getS3method('summary', 'gls')
 
   k <- 0
   z <- list()

@@ -1,11 +1,10 @@
 Package: rms
-Version: 4.0-0
-Date: 2013-07-10
+Version: 4.1-0
+Date: 2013-12-05
 Title: Regression Modeling Strategies
 Author: Frank E Harrell Jr <f.harrell@vanderbilt.edu>
 Maintainer: Frank E Harrell Jr <f.harrell@vanderbilt.edu>
 Depends: Hmisc (>= 3.12-2), survival (>= 2.37-4), SparseM
-Imports: survival
 Suggests: lattice, quantreg, nlme, rpart, polspline, multcomp, boot,
         tcltk
 Description: Regression modeling, testing, estimation, validation,
@@ -25,7 +24,7 @@ Description: Regression modeling, testing, estimation, validation,
 License: GPL (>= 2)
 URL: http://biostat.mc.vanderbilt.edu/rms
 LazyLoad: yes
-Packaged: 2013-07-10 21:46:33 UTC; harrelfe
+Packaged: 2013-12-05 16:37:43 UTC; harrelfe
 NeedsCompilation: yes
 Repository: CRAN
-Date/Publication: 2013-07-11 13:47:44
+Date/Publication: 2013-12-05 18:03:11
