@@ -40,10 +40,11 @@ to \code{latex.default} for conversion to LaTeX.
 
 \method{plot}{anova.rms}(x, 
      what=c("chisqminusdf","chisq","aic","P","partial R2","remaining R2",
-            "proportion R2"), 
+            "proportion R2", "proportion chisq"), 
      xlab=NULL, pch=16, 
      rm.totals=TRUE, rm.ia=FALSE, rm.other=NULL, newnames,
-     sort=c("descending","ascending","none"), pl=TRUE, trans=NULL, \dots)
+     sort=c("descending","ascending","none"), margin=NULL, pl=TRUE,
+     trans=NULL, ntrans=40, \dots)
 
 \method{latex}{anova.rms}(object, title, psmall=TRUE, dec.chisq=2,
       dec.F=2, dec.ss=NA, dec.ms=NA, dec.P=4, table.env=TRUE,
@@ -106,7 +107,7 @@ what type of statistic to plot.  The default is the Wald
 \eqn{\chi^2}{chi-square} 
 statistic for each factor (adding in the effect of higher-ordered
 factors containing that factor) minus its degrees of freedom.  The
-last three choice for \code{what} only apply to \code{ols} models.
+R2 choices for \code{what} only apply to \code{ols} models.
 }
 \item{xlab}{
 x-axis label, default is constructed according to \code{what}.
@@ -128,9 +129,14 @@ a list of other predictor names to omit from the chart
 \item{newnames}{
 a list of substitute predictor names to use, after omitting any.
 }
-\item{sort}{
-default is to sort bars in descending order of the summary statistic
+\item{sort}{default is to sort bars in descending order of the summary statistic
 }
+\item{margin}{set to a vector of character strings to write text for
+	selected statistics in the right margin of the dot chart.  The
+	character strings can be any combination of \code{"chisq"},
+	\code{"d.f."}, \code{"P"}, \code{"partial R2"},
+	\code{"proportion R2"}, and \code{"proportion chisq"}.
+	Default is to not draw any statistics in the margin.} 
 \item{pl}{
 set to \code{FALSE} to suppress plotting.  This is useful when you only wish to
 analyze the vector of statistics returned.
@@ -139,7 +145,13 @@ analyze the vector of statistics returned.
   set to a function to apply that transformation to the statistics
   being plotted, and to truncate negative values at zero.  A good choice
   is \code{trans=sqrt}.
-  }
+}
+\item{ntrans}{\code{n} argument to \code{\link{pretty}}, specifying the
+	number of values for which to place tick marks.  This should be larger
+	than usual because of nonlinear scaling, to provide a sufficient
+	number of tick marks on the left (stretched) part of the chi-square
+	scale.
+}
 \item{title}{
 title to pass to \code{latex}, default is name of fit object passed to
 \code{anova} prefixed with \code{"anova."}.  For Windows, the default is
@@ -196,7 +208,7 @@ file with a name of the form \code{"title.tex"} (see the \code{title} argument a
 }
 \seealso{
 \code{\link{rms}}, \code{\link{rmsMisc}}, \code{\link{lrtest}},
-\code{\link{rms.trans}}, \code{\link{summary.rms}},
+\code{\link{rms.trans}}, \code{\link{summary.rms}}, \code{\link{plot.Predict}},
 \code{\link[Hmisc]{solvet}}, \code{\link{locator}},
 \code{\link[Hmisc]{dotchart2}}, \code{\link[Hmisc]{latex}},  
 \code{\link[Hmisc]{xYplot}}, \code{\link{anova.lm}},
@@ -229,9 +241,16 @@ y <- ifelse(runif(n) < plogis(L), 1, 0)
 
 fit <- lrm(y ~ treat + scored(num.diseases) + rcs(age) +
                log(cholesterol+10) + treat:log(cholesterol+10))
-anova(fit)                       # Test all factors
-anova(fit, treat, cholesterol)   # Test these 2 by themselves
-                                 # to get their pooled effects
+a <- anova(fit)                       # Test all factors
+b <- anova(fit, treat, cholesterol)   # Test these 2 by themselves
+                                      # to get their pooled effects
+a
+b
+# Add a new line to the plot with combined effects
+s <- rbind(a, 'treat+cholesterol'=b['TOTAL',])
+class(s) <- 'anova.rms'
+plot(s)
+
 g <- lrm(y ~ treat*rcs(age))
 dd <- datadist(treat, num.diseases, age, cholesterol)
 options(datadist='dd')
@@ -241,7 +260,8 @@ s <- anova(g)
 # It's specified here to make R pass its package-building checks
 plot(p, addpanel=pantext(s, 28, 1.9,  fontfamily='Helvetica'))
 
-plot(s)                          # new plot - dot chart of chisq-d.f.
+plot(s, margin=c('chisq', 'proportion chisq'))
+# new plot - dot chart of chisq-d.f. with 2 other stats in right margin
 # latex(s)                       # nice printout - creates anova.g.tex
 options(datadist=NULL)
 

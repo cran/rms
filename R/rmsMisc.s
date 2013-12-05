@@ -394,26 +394,25 @@ rms.levels <- function(df, at)
 Penalty.matrix <- function(at, X)
 {
   d1 <- dimnames(X)[[2]][1]
-  if(d1=='Intercept' || d1=='(Intercept)') X <- X[,-1,drop=FALSE]
+  if(d1 %in% c('Intercept', '(Intercept)')) X <- X[, -1, drop=FALSE]
   
   d <- dim(X)
   n <- d[1]; p <- d[2]
-  center <- as.vector(rep(1/n,n) %*% X)   # see scale() function
-  v <- as.vector(rep(1/(n-1),n) %*%
-                 (X - rep(center,rep(n,p)))^2)
+  center <- as.vector(rep(1 / n, n) %*% X)   # see scale() function
+  v <- as.vector(rep(1 / (n - 1), n) %*%
+                 (X - rep(center, rep(n, p)))^2)
   
-  pen <- if(p==1) as.matrix(v) else as.matrix(diag(v))    
+  pen <- if(p == 1) as.matrix(v) else as.matrix(diag(v))    
   ## works even if X one column
 
   is <- 1
   ac <- at$assume
-  for(i in (1:length(at$name))[ac!="strata"])
-    {
-      len <- length(at$nonlinear[[i]])
-      ie <- is + len - 1
-      if(ac[i] == "category") pen[is:ie,is:ie] <- diag(len) - 1/(len+1)
-      is <- ie+1
-    }
+  for(i in (1 : length(at$name))[ac != "strata"]) {
+    len <- length(at$nonlinear[[i]])
+    ie <- is + len - 1
+    if(ac[i] == "category") pen[is : ie, is : ie] <- diag(len) - 1 / (len + 1)
+    is <- ie + 1
+  }
   pen
 }
 
@@ -585,129 +584,6 @@ Newlevels.rms <- function(fit, levels, ...)
   fit$Design <- at
   fit
 }
-
-rmsFit <- function(fit)
-{
-  cl <- oldClass(fit)
-  if(cl[1]=='rms') return(fit)
-  fit$fitFunction <- cl
-  oldClass(fit) <- 'rms'
-  fit
-}
-
-print.rms <- function(x, ...)
-{
-  fitter <- x$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  oldClass(x) <- fitter[1]
-  print(x, ...)
-}
-
-residuals.rms <- function(object, ...)
-{
-  fitter <- object$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  oldClass(object) <- fitter[1]
-  residuals(object, ...)
-}
-
-validate.rms <- function(fit, ...)
-{
-  fitter <- fit$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  oldClass(fit) <- fitter[1]
-  validate(fit, ...)
-}
-
-calibrate.rms <- function(fit, ...)
-{
-  fitter <- fit$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  oldClass(fit) <- fitter[1]
-  calibrate(fit, ...)
-}
-
-Survival.rms <- function(object, ...)
-{
-  fitter <- object$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  oldClass(object) <- fitter[1]
-  Survival(object, ...)
-}
-
-Quantile.rms <- function(object, ...)
-{
-  fitter <- object$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  oldClass(object) <- fitter[1]
-  Quantile(object, ...)
-}
-
-Mean.rms <- function(object, ...)
-{
-  fitter <- object$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  oldClass(object) <- fitter[1]
-  Mean(object, ...)
-}
-
-Hazard.rms <- function(object, ...)
-{
-  fitter <- object$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  oldClass(object) <- fitter[1]
-  Hazard(object, ...)
-}
-
-latex.rms <-
-  function(object, title,
-           file=paste(first.word(deparse(substitute(object))),
-             'tex',sep='.'), ...)
-{
-  fitter <- object$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  oldClass(object) <- fitter[1]
-  ## Need to brute-force dispatch because of SV4 problem in latex in Hmisc
-  if(existsFunction(p <- paste('latex',fitter[1],sep='.')))
-    do.call(p, list(object, file=file, ...))
-  else
-    latexrms(object, file=file, ...)
-}
-
-survest.rms <- function(fit, ...)
-{
-  fitter <- fit$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  f <- paste('survest',fitter[1],sep='.')
-  do.call(f, list(fit,...))
-}
-
-
-oos.loglik.rms <- function(fit, ...)
-{
-  fitter <- fit$fitFunction
-  if(!length(fitter))
-    stop("fit's main class is 'rms' but no fitFunction element is present")
-  f <- paste('oos.loglik',fitter[1],sep='.')
-  do.call(f, list(fit,...))
-}
-
-#getOldDesign <- function(fit) {
-#  at <- attr(fit$terms,'Design')
-#  if(is.null(at))
-#    stop('fit was not created by a Design library fitting function')
-#  at
-#}
 
 univarLR <- function(fit)
 {
@@ -936,7 +812,7 @@ latex.naprint.delete <- function(object, ...) {
   
   if(length(g <- object$na.detail.response)) {
     cat("\nStatistics on Response by Missing/Non-Missing Status of Predictors\n\n")
-    print(oldUnclass(g))
+    print(unclass(g))
     cat("\n")           
   }
   
@@ -1088,7 +964,7 @@ formatNP <- function(x, digits=NULL, pvalue=FALSE, latex=FALSE)
   }
 
 logLik.ols <- function(object, ...) {
-  ll <- stats:::logLik.lm(object)
+  ll <- getS3method('logLik', 'lm')(object)
   attr(ll, 'df') <- object$stats['d.f.'] + 2
   ll
 }

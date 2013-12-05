@@ -1,3 +1,5 @@
+## This is a modification of the R survival package's coxph function
+## written by Terry Therneau and ported to R by Thomas Lumley
 cph <- function(formula=formula(data),
                 data=parent.frame(),
                 weights,
@@ -21,7 +23,6 @@ cph <- function(formula=formula(data),
                 vartype=NULL,
                 ...)
 {
-  require(survival)
   method <- match.arg(method)
   call   <- match.call()
   m      <- match.call(expand.dots=FALSE)
@@ -221,7 +222,7 @@ cph <- function(formula=formula(data),
     fit2 <- c(f, list(x=X, y=Y, method=method))
     if(length(stra)) fit2$strata <- Strata
     
-    r <- survival:::residuals.coxph(fit2, type='dfbeta', collapse=cluster)
+    r <- getS3method('residuals', 'coxph')(fit2, type='dfbeta', collapse=cluster)
     f$var <- t(r) %*% r
   }
   
@@ -260,7 +261,7 @@ cph <- function(formula=formula(data),
                  na.action=nact,
                  fail = FALSE, non.slopes = 0, stats = stats, method=method,
                  maxtime = maxtime, time.inc = time.inc,
-                 units = time.units, fitFunction=c('cph','coxph')))
+                 units = time.units))
 
   if(xpres) {
     f$center <- sum(f$means * f$coefficients)

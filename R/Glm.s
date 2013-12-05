@@ -74,7 +74,7 @@ Glm <-
                      data = data, offset = offset, control = control,
                      method = method,
                      contrasts = attr(X, "contrasts"), xlevels = xlev,
-                     Design=desatr, na.action=nact, fitFunction='Glm',
+                     Design=desatr, na.action=nact,
                      assign=DesignAssign(desatr,1,mt),
                      g=GiniMd(fit$linear.predictors)))
   class(fit) <- c('Glm', 'rms', 'glm', 'lm')
@@ -123,7 +123,7 @@ summary.Glm <- function(...) summary.rms(...)
 
 vcov.Glm <- function(object, regcoef.only=TRUE, intercepts='all', ...) {
   v <- object$var
-  if(!length(v)) v <- stats:::vcov.glm(object, ...)
+  if(!length(v)) v <- getS3method('vcov', 'glm')(object, ...)
   ns <- num.intercepts(object, 'var')
   if(ns > 0 && length(intercepts)==1 && intercepts=='none')
     v <- v[-(1 : ns), -(1 : ns), drop=FALSE]
@@ -139,7 +139,7 @@ vcov.Glm <- function(object, regcoef.only=TRUE, intercepts='all', ...) {
 #  s$cov.unscaled * s$dispersion
 #}
 
-residuals.Glm <- function(object, ...) residuals.glm(object, ...)
+# residuals.Glm <- function(object, ...) residuals.glm(object, ...)
 
 predict.Glm <- 
   function(object, newdata,

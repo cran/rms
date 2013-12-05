@@ -1,3 +1,7 @@
+## Modification of the rq function in the quantreg package written by
+## Roger Koenker, Stephen Portnoy, Pin Tian Ng, Achim Zeileis,
+## Philip Grosjean, Brian Ripley
+q
 Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete, 
                 method = "br", model = FALSE, contrasts = NULL,
                 se='nid', hs=TRUE, x=FALSE, y=FALSE, ...) 
@@ -55,7 +59,6 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
                 model     = mf,
                 Design    = desatr,
                 assign    = DesignAssign(desatr, 1, mt),
-                fitFunction=c("Rq", "rq"),
                 stats     = stats))
   attr(fit, "na.message") <- attr(m, "na.message")
   
@@ -73,7 +76,7 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
   
   ## Remove the following since summary.rq has done its job
   if(!model) fit$model <- NULL
-  if(!x) fit$x <- NULL
+  if(!x) fit$x <- NULL else fit$x <- X[, -1, drop=FALSE]
   if(!y) fit$y <- NULL
   class(fit) <- c('rms',
                   if (method == "lasso") "lassorq"
@@ -90,9 +93,11 @@ RqFit <- function(fit, wallow=TRUE, passdots=FALSE)
       {
         if(!wallow) stop('weights not implemented')
         g <- if(passdots) function(x, y, weights, tau, method, ...)
-          rq.wfit(x, y, tau = tau, weights=weights, method=method, ...)
+          rq.wfit(cbind(Intercept=1., x), y, tau = tau, weights=weights,
+                  method=method, ...)
         else function(x, y, weights, tau, method, ...)
-          rq.wfit(x, y, tau = tau, weights=weights, method=method)
+          rq.wfit(cbind(Intercept=1., x), y, tau = tau, weights=weights,
+                  method=method)
         formals(g) <- eval(substitute(
                        alist(x=,y=, weights=,tau=deftau,method=defmethod,...=),
                        list(deftau=fit$tau, defmethod=fit$method)))
@@ -100,10 +105,10 @@ RqFit <- function(fit, wallow=TRUE, passdots=FALSE)
     else
       {
         g <- if(passdots) function(x, y, tau, method, ...)
-          rq.fit(x, y, tau = tau, method=method, ...)
+          rq.fit(cbind(Intercept=1., x), y, tau = tau, method=method, ...)
         else
           function(x, y, tau, method, ...)
-            rq.fit(x, y, tau = tau, method=method)
+            rq.fit(cbind(Intercept=1., x), y, tau = tau, method=method)
         formals(g) <-
           eval(substitute(alist(x=,y=, tau=deftau, method=defmethod,...=),
                           list(deftau=fit$tau, defmethod=fit$method)))

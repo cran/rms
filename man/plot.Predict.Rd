@@ -35,10 +35,11 @@
 \method{plot}{Predict}(x, formula, groups=NULL,
      cond=NULL, varypred=FALSE, subset,
      xlim, ylim, xlab, ylab, 
-     data=NULL, subdata, col.fill=gray(seq(.825, .55, length=5)),
+     data=NULL, subdata, anova=NULL, pval=FALSE, cex.anova=.85,
+     col.fill=gray(seq(.825, .55, length=5)),
      adj.subtitle, cex.adj, cex.axis, perim=NULL, digits=4, nlevels=3,
      nlines=FALSE, addpanel, scat1d.opts=list(frac=0.025, lwd=0.3),
-     type=NULL, ...)
+     type=NULL, yscale=NULL, ...)
 
 pantext(object, x, y, cex=.5, adj=0, fontfamily="Courier", lattice=TRUE)
 
@@ -109,6 +110,14 @@ variable for \code{ols}, \code{TRUE} or \code{log(TRUE)} for \code{psm}, or \cod
   vertical bar (this assumes \code{b} is a \code{factor} in
   \code{data}.  Another example:
   \code{subdata=sex==c('male','female')[current.row()]}.}
+\item{anova}{an object returned by \code{\link{anova.rms}}.  If
+	\code{anova} is specified, the overall test of association for
+	predictor plotted is added as text to each panel, located at the spot
+	at which the panel is most empty unless there is significant empty
+	space at the top or bottom of the panel; these areas are given preference.}
+\item{pval}{specify \code{pval=TRUE} for \code{anova} to include not
+	only the test statistic but also the P-value}
+\item{cex.anova}{character size for the test statistic printed on the panel}
 \item{col.fill}{
   a vector of colors used to fill confidence bands for successive
   superposed groups.  Default is inceasingly dark gray scale.
@@ -159,6 +168,11 @@ default is 4 significant digits.
 \item{type}{a value (\code{"l","p","b"}) to override default choices
   related to showing or connecting points.  Especially  useful for
   discrete x coordinate variables.}
+\item{yscale}{a \code{lattice} scale \code{list} for the \code{y}-axis
+	to be added to what is automatically generated for the \code{x}-axis.
+	Example:
+	\code{yscale=list(at=c(.005,.01,.05),labels=format(c(.005,.01,.05)))}.
+  See \link[lattice]{xyplot}}
 \item{\dots}{
   extra arguments to pass to \code{xYplot} or \code{Dotplot}.  Some
   useful ones are \code{label.curves} and \code{abline}.
@@ -246,7 +260,9 @@ options(datadist='ddist')
 
 fit <- lrm(y ~ blood.pressure + sex * (age + rcs(cholesterol,4)),
                x=TRUE, y=TRUE)
-plot(Predict(fit))       # Plot effects of all 4 predictors
+an <- anova(fit)
+# Plot effects of all 4 predictors with test statistics from anova, and P
+plot(Predict(fit), anova=an, pval=TRUE)
 plot(Predict(fit), data=llist(blood.pressure,age))
                          # rug plot for two of the predictors
 
@@ -279,8 +295,8 @@ plot(p, perim=per)       # suppress output for age < 30 but leave scale alone
 p <- Predict(fit, age, blood.pressure=c(120,140,160),
              cholesterol=c(180,200,215), sex)
 plot(p, ~ age | blood.pressure*cholesterol, subset=sex=='male')
-plot(p, ~ age | cholesterol*blood.pressure, subset=sex=='female')
-plot(p, ~ blood.pressure|cholesterol*round(age,-1), subset=sex=='male')
+# plot(p, ~ age | cholesterol*blood.pressure, subset=sex=='female')
+# plot(p, ~ blood.pressure|cholesterol*round(age,-1), subset=sex=='male')
 plot(p)
 
 # Plot the age effect as an odds ratio
