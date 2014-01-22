@@ -22,7 +22,11 @@ For the case of a two stratum analysis by \code{survfit},
 along with approximate confidence bands for the differences, with a
 reference line at zero.  The number of subjects at risk is optionally
 plotted.  This number is taken as the minimum of the number of subjects
-at risk over the two strata.
+at risk over the two strata.  When \code{conf='diffbands'},
+\code{survdiffplot} instead does not make a new plot but adds a shaded
+polygon to an existing plot, showing the midpoint of two survival
+estimates plus or minus 1/2 the width of the confidence interval for the
+difference of two Kaplan-Meier estimates.
 }
 \usage{
 survplot(fit, \dots)
@@ -44,7 +48,7 @@ survplot(fit, \dots)
          y.n.risk, cex.n.risk=.6, pr=FALSE)
 \method{survplot}{survfit}(fit, xlim, 
          ylim, xlab, ylab, time.inc,
-         conf=c("bands","bars","none"), add=FALSE, 
+         conf=c("bands","bars","diffbands","none"), add=FALSE, 
          label.curves=TRUE, abbrev.label=FALSE,
          levels.only=FALSE, lty,lwd=par('lwd'),
          col=1, col.fill=gray(seq(.95, .75, length=5)),
@@ -52,9 +56,9 @@ survplot(fit, \dots)
          dots=FALSE,dotsize=.003, grid=NULL,
          srt.n.risk=0,sep.n.risk=.056,adj.n.risk=1,
          y.n.risk,cex.n.risk=.6, pr=FALSE, \dots)
-survdiffplot(fit, order=1:2,
+survdiffplot(fit, order=1:2, fun=function(y) y,
            xlim, ylim, xlab, ylab="Difference in Survival Probability",
-           time.inc, conf.int, conf=c("shaded", "bands","none"),
+           time.inc, conf.int, conf=c("shaded", "bands","diffbands","none"),
            add=FALSE, lty=1, lwd=par('lwd'), col=1,
            n.risk=FALSE, grid=NULL,
            srt.n.risk=0, adj.n.risk=1,
@@ -96,14 +100,15 @@ in any stratum, stored in \code{fit$maxtime}.  If \code{logt=TRUE},
 default is \code{(1, log(maxtime))}.
 }
 \item{ylim}{
-y-axis limits.  Default is \code{c(0,1)} for survival, and \code{c(-5,1.5)} if \code{loglog=TRUE}.
-If \code{fun} or \code{loglog=TRUE} are given and \code{ylim} is not, 
-the limits will be computed from the data.  For \code{what="hazard"}, default
+y-axis limits.  Default is \code{c(0,1)} for survival, and
+\code{c(-5,1.5)} if \code{loglog=TRUE}. If \code{fun} or
+\code{loglog=TRUE} are given and \code{ylim} is not, the limits will be
+computed from the data.  For \code{what="hazard"}, default 
 limits are computed from the first hazard function plotted.
 }
 \item{xlab}{
 x-axis label.  Default is \code{units} attribute of failure time
-variable given to \code{Srv} or \code{Surv}.
+variable given to \code{Surv}.
 }
 \item{ylab}{
 y-axis label.  Default is \code{"Survival Probability"} or 
@@ -144,16 +149,24 @@ confidence interval specifications.  For \code{survdiffplot} if
 }
 \item{conf}{
 \code{"bars"} for confidence bars at each \code{time.inc} time point. If the fit
-was from \code{cph(\dots, surv=TRUE)}, the \code{time.inc} used will be that stored
-with the fit. Use \code{conf="bands"} (the default) for bands using
-standard errors at each failure time. For \code{survfit} objects only,
-\code{conf} may also be \code{"none"}, indicating that confidence interval
-information stored with the \code{survfit} result should be ignored.
+was from \code{cph(\dots, surv=TRUE)}, the \code{time.inc} used will be
+that stored with the fit. Use \code{conf="bands"} (the default) for
+bands using standard errors at each failure time. For \code{survfit}
+objects only, \code{conf} may also be \code{"none"}, indicating that
+confidence interval information stored with the \code{survfit} result
+should be ignored.  For \code{survfit} and \code{survdiffplot},
+\code{conf} may be \code{"diffbands"} whereby a shaded region is drawn
+for comparing two curves.  The polygon is centered at the midpoint of
+the two survival estimates and the height of the polygon is 1/2 the
+width of the approximate \code{conf.int} pointwise confidence region.
+Survival curves not overlapping the shaded area are approximately
+significantly different at the \code{1 - conf.int} level.
 }
 \item{what}{
-defaults to \code{"survival"} to plot survival estimates.  Set to \code{"hazard"} or
-an abbreviation to plot the hazard function (for \code{psm} fits only).
-Confidence intervals are not available for \code{what="hazard"}.
+defaults to \code{"survival"} to plot survival estimates.  Set to
+\code{"hazard"} or an abbreviation to plot the hazard function (for
+\code{psm} fits only). Confidence intervals are not available for
+\code{what="hazard"}. 
 }
 \item{add}{
 set to \code{TRUE} to add curves to an existing plot.
@@ -204,7 +217,7 @@ set to \code{TRUE} to plot \code{log(-log Survival)} instead of \code{Survival}
 }
 \item{fun}{
 specifies any function to translate estimates and confidence limits
-before plotting
+before plotting.
 }
 \item{logt}{
 set to \code{TRUE} to plot \code{log(t)} instead of \code{t} on the x-axis
@@ -259,7 +272,7 @@ set to \code{TRUE} to print survival curve coordinates used in the plots
   that the second group is subtracted from the first.  Specify
   \code{order=2:1} to instead subtract the first from the second.  A
   subtitle indicates what was done.
-  }
+}
 }
 \value{
 list with components adjust (text string specifying adjustment levels)
@@ -310,7 +323,7 @@ dt <- pmin(dt, cens)
 units(dt) <- "Year"
 dd <- datadist(age, sex)
 options(datadist='dd')
-S <- Srv(dt,e)
+S <- Surv(dt,e)
 
 # When age is in the model by itself and we predict at the mean age,
 # approximate confidence intervals are ok
@@ -363,6 +376,10 @@ survplot(f, fun=function(y)log(y/(1-y)), ylab="Logit S(t)")
 
 #Plot the difference between sexes
 survdiffplot(f)
+
+#Similar but show half-width of confidence intervals centered
+#at average of two survival estimates
+survplot(f, conf='diffbands')
 
 options(datadist=NULL)
 }
