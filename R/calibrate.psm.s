@@ -54,7 +54,7 @@ calibrate.psm <- function(fit, cmethod=c('hare', 'KM'),
     {
       ##Assumes y is matrix with 1st col=time, 2nd=event indicator
       if(sum(y[,2]) < 5) return(NA)
-      oldClass(fit) <- 'psm'   # for survest.psm which uses Survival.psm
+      class(fit) <- 'psm'   # for survest.psm which uses Survival.psm
       fit$dist <- fit.orig$dist
       psurv <- survest.psm(fit, linear.predictors=x,
                            times=u, conf.int=FALSE)$surv
@@ -62,13 +62,13 @@ calibrate.psm <- function(fit, cmethod=c('hare', 'KM'),
       if(length(orig.cuts))
         {
           pred.obs <- 
-            groupkm(psurv, Srv(inverse(y[,1]), y[,2]), u=u, cuts=orig.cuts)
+            groupkm(psurv, Surv(inverse(y[,1]), y[,2]), u=u, cuts=orig.cuts)
           dist <- if(what=="observed") pred.obs[,"KM"]
           else                         pred.obs[,"KM"] - pred.obs[,"x"]
         }
       else
         {
-          pred.obs <- val.surv(fit, S=Srv(inverse(y[,1]), y[,2]), u=u,
+          pred.obs <- val.surv(fit, S=Surv(inverse(y[,1]), y[,2]), u=u,
                                est.surv=psurv,
                                pred=pred, maxdim=maxdim)
           dist <- if(what=='observed') pred.obs$actualseq
