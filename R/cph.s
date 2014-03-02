@@ -112,10 +112,10 @@ cph <- function(formula=formula(data),
       
     xpres <- length(asm) && any(asm != 8)
     Y <- model.extract(X, 'response')
-    if(! inherits(Y,"Surv"))
+    if(! inherits(Y, "Surv"))
       stop("response variable should be a Surv object")
     n <- nrow(Y)
-    
+
     weights <- model.extract(X, 'weights')
     offset <- model.offset(X)
 ##  Cox ph fitter routines expect null if no offset
@@ -145,29 +145,29 @@ cph <- function(formula=formula(data),
     assign  <- NULL
     xpres   <- FALSE
     nullmod <- TRUE
-    nact <- NULL
+    nact    <- NULL
   }
 
   ny <- ncol(Y)
-  time.units <- attr(Y, "units")
   maxtime <- max(Y[,ny-1])
 
   rnam <- dimnames(Y)[[1]]
   if(xpres) dimnames(X) <- list(rnam, atr$colnames)
 
   if(method=="model.matrix") return(X)
-  
-  if(!length(time.units)) time.units <- "Day"
+
+  time.units <- units(Y)
+  if(! length(time.units) || time.units == '') time.units <- "Day"
   
   if(missing(time.inc)) {
     time.inc <- switch(time.units,
-                       Day=30,
-                       Month=1,
-                       Year=1,
-                       maxtime/10)
+                       Day   = 30,
+                       Month = 1,
+                       Year  = 1,
+                       maxtime / 10)
     
-    if(time.inc >= maxtime | maxtime / time.inc>25)
-      time.inc <- max(pretty(c(0, maxtime)))/10
+    if(time.inc >= maxtime | maxtime / time.inc > 25)
+      time.inc <- max(pretty(c(0, maxtime))) / 10
   }
 
   if(nullmod) f <- NULL
@@ -401,16 +401,16 @@ Survival.cph <- function(object, ...) {
   f <- function(times, lp=0, stratum=1, type=c("step","polygon"),
                 time, surv) {
     type <- match.arg(type)
-    if(length(stratum)>1) stop("does not handle vector stratum")
-    if(length(times)==0) {
-      if(length(lp)>1) stop("lp must be of length 1 if times=NULL")
-      return(surv[[stratum]]^exp(lp))
+    if(length(stratum) > 1) stop("does not handle vector stratum")
+    if(length(times) == 0) {
+      if(length(lp) > 1) stop("lp must be of length 1 if times=NULL")
+      return(surv[[stratum]] ^ exp(lp))
     }
     s <- matrix(NA, nrow=length(lp), ncol=length(times),
                 dimnames=list(names(lp), format(times)))
     if(is.list(time)) {time <- time[[stratum]]; surv <- surv[[stratum]]}
       if(type=="polygon") {
-        if(length(lp)>1 && length(times)>1)
+        if(length(lp) > 1 && length(times) > 1)
           stop('may not have length(lp)>1 & length(times>1) when type="polygon"')
         su <- approx(time, surv, times, ties=mean)$y
         return(su ^ exp(lp))
@@ -418,8 +418,8 @@ Survival.cph <- function(object, ...) {
     for(i in 1:length(times)) {
       tm <- max((1:length(time))[time <= times[i] + 1e-6])
       su <- surv[tm]
-      if(times[i] > max(time)+1e-6) su <- NA
-      s[,i] <- su^exp(lp)
+      if(times[i] > max(time) + 1e-6) su <- NA
+      s[,i] <- su ^ exp(lp)
     }
     drop(s)
   }
