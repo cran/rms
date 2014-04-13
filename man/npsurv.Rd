@@ -1,19 +1,16 @@
-\name{survfit.formula}
-\alias{survfit.formula}
-\title{Compute a Survival Curve for Censored Data}
+\name{npsurv}
+\alias{npsurv}
+\title{Nonparametric Survival Estimates for Censored Data}
 \description{
 Computes an estimate of a survival curve for censored data
 using either the Kaplan-Meier or the Fleming-Harrington method
 or computes the predicted survivor function.
 For competing risks data it computes the cumulative incidence curve.
-This calls the \code{survival} package's \code{survfit.formula} function
-with a different default value for \code{conf.type} (log-log basis).  In
-addition, attributes of the event time variable are saved (label and
+This calls the \code{survival} package's \code{survfit.formula}
+function.  Attributes of the event time variable are saved (label and
 units of measurement).
 }
-\usage{
-\method{survfit}{formula}(formula, data, \dots)
-}
+\usage{npsurv(formula, data, subset, na.action, \dots)}
 \arguments{
   \item{formula}{
     a formula object, which must have a \code{Surv} object as the
@@ -22,18 +19,14 @@ units of measurement).
     One of the terms may be a \code{strata} object.
     For a single survival curve the right hand side should be \code{~ 1}.
   }
-  \item{data}{
-    a data frame in which to interpret the variables named in the formula,
-    \code{subset} and \code{weights} arguments.
-  }
+	\item{data,subset,na.action}{see \code{\link[survival]{survfit.formula}}}
   \item{\dots}{see \code{\link[survival]{survfit.formula}}}
 }
 \value{
-an object of class \code{"survfit"}.
-See \code{survfit.object} for
-details. Methods defined for survfit objects are
-\code{print}, \code{plot},
-\code{lines}, and \code{points}.
+an object of class \code{"npsurv"} and \code{"survfit"}.
+See \code{survfit.object} for details. Methods defined for \code{survfit}
+objects are \code{print}, \code{summary}, \code{plot},\code{lines}, and
+\code{points}. 
 }
 \details{
   see \code{\link[survival]{survfit.formula}} for details
@@ -44,14 +37,15 @@ details. Methods defined for survfit objects are
 \code{\link{plot}},
 \code{\link{lines}},
 \code{\link{coxph}},
-\code{\link{strata}}.
+\code{\link{strata}},
+\code{\link{survplot}}
 }
 \author{Thomas Lumley \email{tlumley@u.washington.edu} and Terry Therneau}
 
 \examples{
 require(survival)
 #fit a Kaplan-Meier and plot it
-fit <- survfit(Surv(time, status) ~ x, data = aml)
+fit <- npsurv(Surv(time, status) ~ x, data = aml)
 plot(fit, lty = 2:3)
 legend(100, .8, c("Maintained", "Nonmaintained"), lty = 2:3)
 
@@ -75,16 +69,16 @@ plot(survfit(fit, newdata=data.frame(age=60)),
 tdata <- data.frame(time  =c(1,1,1,2,2,2,3,3,3,4,4,4),
                     status=rep(c(1,0,2),4),
                     n     =c(12,3,2,6,2,4,2,0,2,3,3,5))
-fit  <- survfit(Surv(time, time, status, type='interval') ~1,
-                data=tdata, weights=n)
+fit  <- npsurv(Surv(time, time, status, type='interval') ~ 1,
+               data=tdata, weights=n)
 
 #
 # Time to progression/death for patients with monoclonal gammopathy
 #  Competing risk curves (cumulative incidence)
-fit1 <- survfit(Surv(stop, event=='progression') ~1, data=mgus1,
-                    subset=(start==0))
-fit2 <- survfit(Surv(stop, status) ~1, data=mgus1,
-                    subset=(start==0), etype=event) #competing risks
+fit1 <- npsurv(Surv(stop, event=='progression') ~ 1, data=mgus1,
+               subset=(start==0))
+fit2 <- npsurv(Surv(stop, status) ~1, data=mgus1,
+               subset=(start==0), etype=event) #competing risks
 # CI curves are always plotted from 0 upwards, rather than 1 down
 plot(fit2, fun='event', xscale=365.25, xmax=7300, mark.time=FALSE,
             col=2:3, xlab="Years post diagnosis of MGUS")

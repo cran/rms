@@ -1,4 +1,4 @@
-survplot.survfit <-
+survplot.npsurv <-
   function(fit, xlim, 
            ylim, xlab, ylab, time.inc,
            conf=c("bands","bars","diffbands","none"), add=FALSE, 
@@ -24,8 +24,8 @@ survplot.survfit <-
   if(!length(units)) units <- "Day"
   maxtime <- fit$maxtime
   if(!length(maxtime)) maxtime <- max(fit$time)
-  mintime <- min(fit$time,0)
-  pret <- pretty(c(mintime,maxtime))
+  mintime <- min(fit$time, 0)
+  pret <- pretty(c(mintime, maxtime))
   maxtime <- max(pret)
   mintime <- min(pret)
   if(missing(time.inc)) {
