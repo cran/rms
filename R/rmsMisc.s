@@ -55,17 +55,43 @@ vcov.orm <- function(object, regcoef.only=TRUE,
   if(!length(intercepts)) return(object$var)
   iat <- attr(object$var, 'intercepts')  # handle fit.mult.impute
   iref <- object$interceptRef
+  info <- object$info.matrix
+  ns <- num.intercepts(object)
+  p  <- ncol(info)
+  ns <- num.intercepts(object)
+  nx <- p - ns
+  scale <- attr(info, 'scale')
+  name <- names(coef(object))
+  if(length(scale) && (! is.character(intercepts) || intercepts == 'all')) {
+    xbar  <- scale$mean
+    xsd   <- scale$sd
+    trans <- 
+      rbind(cbind(diag(ns), matrix(0, nrow=ns, ncol=nx)),
+            cbind(-matrix(rep(xbar / xsd, ns), ncol=ns), diag(1 / xsd)))
+  }
+                       
   if(is.character(intercepts)) {
       switch(intercepts,
              mid = return(object$var),
-             all = return(as.matrix(solve(object$info.matrix))),
+             all = {
+               if(! length(scale)) {
+                 v <- as.matrix(solve(info))
+                 dimnames(v) <- list(name, name)
+                 return(v)
+               }
+               kint <- num.intercepts(object)
+               v <- t(trans) %*% as.matrix(solve(info)) %*% trans
+               dimnames(v) <- list(name, name)
+               return(v)
+             },
              none= return(object$var[-1, -1, drop=FALSE]) )
   }
-  p  <- ncol(object$info.matrix)
-  ns <- num.intercepts(object)
-  nx <- p - ns
   i <- if(nx == 0) intercepts else c(intercepts, (ns+1):p)
-  as.matrix(solve(object$info.matrix)[i,i])
+  v <- if(length(scale))
+    (t(trans) %*% as.matrix(solve(info)) %*% trans)[i,i]
+  else as.matrix(solve(info)[i,i])
+  dimnames(v) <- list(name[i], name[i])
+  v
 }
 
 vcov.rms <- function(object, regcoef.only=TRUE, intercepts='all', ...)
@@ -960,6 +986,8 @@ logLik.rms <- function(object, ...)
     structure(-0.5*w[length(w)], nobs=nobs, df=dof, class='logLik')
   }
 
+logLik.Gls <- function(object, ...) getS3method('logLik', 'gls')(object, ...)
+    
 AIC.rms <- function(object, ..., k=2, type=c('loglik','chisq'))
   {
     type <- match.arg(type)
@@ -993,10 +1021,10 @@ setPb <- function(n, type=c('Monte Carlo Simulation','Bootstrap',
   }
   if(pbo == 'none') return(function(i, ...){invisible()})
   if(pbo == 'tk' && usetk && require(tcltk)) {
-    pb <- tkProgressBar(type, 'Iteration: ', 0, n)
+    pb <- tcltk::tkProgressBar(type, 'Iteration: ', 0, n)
     upb <- function(i, n, every, pb) {
       if(i %% every == 0)
-        setTkProgressBar(pb, i, label=sprintf('Iteration: %d', i))
+        tcltk::setTkProgressBar(pb, i, label=sprintf('Iteration: %d', i))
       if(i == n) close(pb)
     }
     formals(upb) <- list(i=0, n=n, every=every, pb=pb)
