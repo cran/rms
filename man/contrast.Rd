@@ -25,6 +25,11 @@ the latter case, you can specify \code{type="average"} and an optional
 The design contrast matrix computed by \code{contrast.rms} can be used
 by other functions.
 
+\code{contrast.rms} also allows one to specify four settings to
+contrast, yielding contrasts that are double differences - the
+difference between the first two settings (\code{a} - \code{b}) and the
+last two (\code{a2} - \code{b2}).  This allows assessment of interactions.
+
 If \code{usebootcoef=TRUE}, the fit was run through \code{bootcov}, and
 \code{conf.type="individual"}, the confidence intervals are bootstrap
 nonparametric percentile confidence intervals, basic bootstrap, or BCa
@@ -51,13 +56,13 @@ with \code{xYplot} or \code{Dotplot} (see the last example before the
 }
 \usage{
 contrast(fit, \dots)
-\method{contrast}{rms}(fit, a, b, cnames=NULL, 
+\method{contrast}{rms}(fit, a, b, a2, b2, cnames=NULL, 
          type=c("individual", "average", "joint"),
          conf.type=c("individual","simultaneous"), usebootcoef=TRUE,
          boot.type=c("percentile","bca","basic"),
          weights="equal", conf.int=0.95, tol=1e-7, expand=TRUE, \dots)
 
-\method{print}{contrast.rms}(x, X=FALSE, fun=function(u)u, jointonly=FALSE, ...)
+\method{print}{contrast.rms}(x, X=FALSE, fun=function(u)u, jointonly=FALSE, \dots)
 }
 \arguments{
 \item{fit}{
@@ -81,6 +86,9 @@ against the one set of predictor values.  This is useful for comparing
 multiple treatments with control, for example.  If \code{b} is missing, the
 design matrix generated from \code{a} is analyzed alone.
 }
+\item{a2}{an optional third list of settings of predictors}
+\item{b2}{an optional fourth list of settings of predictors.  Mandatory
+	if \code{a2} is given.}
 \item{cnames}{
 vector of character strings naming the contrasts when
 \code{type!="average"}.  Usually \code{cnames} is not necessary as
@@ -125,7 +133,8 @@ confidence level for confidence intervals for the contrasts
 \item{expand}{set to \code{FALSE} to have \code{gendata} not generate
   all possible combinations of predictor settings.  This is useful when
   getting contrasts over irregular predictor settings.}
-\item{\dots}{unused}
+\item{\dots}{passed to \code{print} for main output.  A useful thing to
+	pass is \code{digits=4}.}
 \item{x}{result of \code{contrast}}
 \item{X}{
 set \code{X=TRUE} to  print design matrix used in computing the contrasts (or
@@ -170,17 +179,25 @@ sex <- factor(sample(c('female','male'),200,TRUE))
 logit <- (sex=='male') + (age-40)/5
 y <- ifelse(runif(200) <= plogis(logit), 1, 0)
 f <- lrm(y ~ pol(age,2)*sex)
+anova(f)
 # Compare a 30 year old female to a 40 year old male
 # (with or without age x sex interaction in the model)
 contrast(f, list(sex='female', age=30), list(sex='male', age=40))
-
+# Test for interaction between age and sex, duplicating anova
+contrast(f, list(sex='female', age=30),
+            list(sex='male',   age=30),
+            list(sex='female', age=c(40,50)),
+            list(sex='male',   age=c(40,50)), type='joint')
+# Duplicate overall sex effect in anova with 3 d.f.
+contrast(f, list(sex='female', age=c(30,40,50)),
+            list(sex='male',   age=c(30,40,50)), type='joint')
 
 # For a model containing two treatments, centers, and treatment
 # x center interaction, get 0.95 confidence intervals separately
-# by cente
-center <- factor(sample(letters[1:8],500,TRUE))
-treat  <- factor(sample(c('a','b'),  500,TRUE))
-y      <- 8*(treat=='b') + rnorm(500,100,20)
+# by center
+center <- factor(sample(letters[1 : 8], 500, TRUE))
+treat  <- factor(sample(c('a','b'), 500, TRUE))
+y      <- 8*(treat == 'b') + rnorm(500, 100, 20)
 f <- ols(y ~ treat*center)
 
 
@@ -209,19 +226,19 @@ print(k, X=TRUE)
 
 
 # For a 4-treatment study, get all comparisons with treatment 'a'
-treat  <- factor(sample(c('a','b','c','d'),  500,TRUE))
-y      <- 8*(treat=='b') + rnorm(500,100,20)
-dd     <- datadist(treat,center); options(datadist='dd')
+treat  <- factor(sample(c('a','b','c','d'),  500, TRUE))
+y      <- 8*(treat == 'b') + rnorm(500, 100, 20)
+dd     <- datadist(treat, center); options(datadist='dd')
 f <- ols(y ~ treat*center)
 lt <- levels(treat)
 contrast(f, list(treat=lt[-1]),
             list(treat=lt[ 1]),
-         cnames=paste(lt[-1],lt[1],sep=':'), conf.int=1-.05/3)
+         cnames=paste(lt[-1], lt[1], sep=':'), conf.int=1 - .05 / 3)
 
 
 # Compare each treatment with average of all others
-for(i in 1:length(lt)) {
-  cat('Comparing with',lt[i],'\n\n')
+for(i in 1 : length(lt)) {
+  cat('Comparing with', lt[i], '\n\n')
   print(contrast(f, list(treat=lt[-i]),
                     list(treat=lt[ i]), type='average'))
 }
@@ -278,14 +295,17 @@ d     <- datadist(age, treat, sex); options(datadist='d')
 
 # show separate estimates by treatment and sex
 
-plot(Predict(f, age, treat, sex='female'))
-plot(Predict(f, age, treat, sex='male'))
+ggplot(Predict(f, age, treat, sex='female'))
+ggplot(Predict(f, age, treat, sex='male'))
 ages  <- seq(35,65,by=5); sexes <- c('female','male')
 w     <- contrast(f, list(treat='drug',    age=ages, sex=sexes),
                      list(treat='placebo', age=ages, sex=sexes))
 # add conf.type="simultaneous" to adjust for having done 14 contrasts
 xYplot(Cbind(Contrast, Lower, Upper) ~ age | sex, data=w,
        ylab='Drug - Placebo')
+w <- as.data.frame(w[c('age','sex','Contrast','Lower','Upper')])
+ggplot(w, aes(x=age, y=Contrast)) + geom_point() + facet_grid(sex ~ .) +
+   geom_errorbar(aes(ymin=Lower, ymax=Upper), width=0)
 xYplot(Cbind(Contrast, Lower, Upper) ~ age, groups=sex, data=w,
        ylab='Drug - Placebo', method='alt bars')
 options(datadist=NULL)

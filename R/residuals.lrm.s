@@ -9,6 +9,7 @@ residuals.lrm <-
   gotsupsmu <- FALSE
   type <- match.arg(type)
   dopl <- (is.logical(pl) && pl) || is.character(pl)
+  ylabpr <- NULL   # y-axis label for partial residuals
 
   k <- object$non.slopes
   L <- object$linear.predictors
@@ -25,6 +26,8 @@ residuals.lrm <-
   ## residuals explicitly handled for ordinal model
   if(ordone && !missing(kint)) 
     stop('may not specify kint for li.shepherd, partial, score, score.binary, or gof')
+
+  if(isorm) L <- L - cof[attr(L, 'intercepts')] + cof[1]
 
   if(k > 1 && kint !=1 && !ordone) L <- L - cof[1] + cof[kint]
   P <- cumprob(L)
@@ -180,7 +183,7 @@ residuals.lrm <-
                            as.vector(X %*% cof[- (1:k)]), "+"))
     low.x = rbind(0, px)[cbind(Y + 1L, 1:N)]
     hi.x  = 1 - rbind(px, 1)[cbind(Y + 1L, 1:N)]
-    return(hi.x - low.x)
+    return(low.x - hi.x)
   }
   
   if(type=="pearson") return(naresid(naa, (Y - P) / sqrt(P * (1 - P))))
@@ -198,10 +201,10 @@ residuals.lrm <-
   if(type=="partial") {
     if(!length(X <- unclass(object$x)))
       stop("you did not specify x=TRUE in the fit")
-    cof.int <- cof[1:k]
-    cof     <- cof[-(1:k)]
+    cof.int <- cof[1 : k]
+    cof     <- cof[- (1 : k)]
     if(!missing(which)) {
-      X <- X[,which,drop=FALSE]
+      X <- X[, which, drop=FALSE]
       cof <- cof[which]
     }
     atx <- attributes(X)
@@ -214,7 +217,7 @@ residuals.lrm <-
       for(j in 1:k) {
         y <- Y >= j
         p <- cumprob(L - cof.int[1] + cof.int[j])
-        R[,,j] <- r + (y-p)/p/(1-p)
+        R[,,j] <- r + (y - p) / p / (1 - p)
       }
     }
     if(dopl) {
@@ -229,7 +232,7 @@ residuals.lrm <-
           
           plot(xi, ri, xlim=if(missing(xlim)) range(xi) else xlim,
                ylim=if(missing(ylim)) range(ri) else ylim,
-               xlab=xname[i], ylab='Partial Residual')
+               xlab=xname[i], ylab=ylabpr)
           lines(lowess(xi,ri))
         }
         else if(k==1) {
@@ -255,7 +258,7 @@ residuals.lrm <-
             ymax <- max(ymax,w$y)
             smoothed[[j]] <- w
           }
-          plot(0, 0, xlab=xname[i], ylab='Partial Residual',
+          plot(0, 0, xlab=xname[i], ylab=ylabpr,
                xlim=if(missing(xlim))range(xi) else xlim,
                ylim=if(missing(ylim))range(pretty(c(ymin,ymax)))
                else ylim, type='n')
@@ -306,8 +309,10 @@ residuals.lrm <-
     dimnames(dfb) <- list(rnam, c(cnam[kint], cnam[-(1:k)]))
     if(type=="dfbeta") return(naresid(naa, dfb))
     if(type=="dfbetas") {
-      i <- c(kint, (k+1):length(cof))
-      return(naresid(naa, sweep(dfb, 2, diag(object$var[i,i])^.5,"/")))
+      ## i <- c(kint, (k+1):length(cof))
+      vv <- vcov(object, intercepts=1)
+      return(naresid(naa, sweep(dfb, 2, diag(vv)^.5,"/")))
+      ## was diag(object$var[i, i])
     }
     if(type=="hat") return(naresid(naa, infl$hat))
     if(type=="dffit") return(naresid(naa,
@@ -324,12 +329,13 @@ residuals.orm <-
            type=c("li.shepherd", "ordinary","score","score.binary","pearson",
              "deviance","pseudo.dep","partial",
              "dfbeta","dfbetas","dffit","dffits","hat","gof","lp1"),
-           pl=FALSE, xlim, ylim, kint=1, label.curves=TRUE, 
+           pl=FALSE, xlim, ylim, kint, label.curves=TRUE, 
            which, ...)
 {
   type <- match.arg(type)
-  args <- list(object=object, type=type, pl=pl, kint=kint,
+  args <- list(object=object, type=type, pl=pl,
                label.curves=label.curves, ...)
+  if(!missing(kint))  args$kint  <- kint
   if(!missing(xlim))  args$xlim  <- xlim
   if(!missing(ylim))  args$ylim  <- ylim
   if(!missing(which)) args$which <- which
@@ -361,7 +367,7 @@ plot.lrm.partial <- function(..., labels, center=FALSE, ylim)
       ymax <- max(ymax, curves[[j]]$y)
     }
     for(j in 1:nfit) {
-      if(j==1) plot(curves[[1]], xlab=vname[i], ylab='Partial Residual',
+      if(j==1) plot(curves[[1]], xlab=vname[i], ylab=NULL,
            ylim=if(missing(ylim)) c(ymin, ymax) else ylim, type='l')
       else lines(curves[[j]], lty=j)
     }

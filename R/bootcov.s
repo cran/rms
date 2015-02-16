@@ -207,6 +207,8 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
   if(!exists('.Random.seed')) runif(1)
   seed <- .Random.seed
   if(missing(cluster)) {
+    clusterInfo <- NULL
+    nc <- n
     b <- 0
     pb <- setPb(B, type='Boot', onlytk=!pr, every=20)
     for(i in 1:B) {
@@ -253,6 +255,7 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
     }
   }
   else {
+    clusterInfo <- list(name=deparse(substitute(cluster)))
     if(length(cluster) > n) {
       ## Missing obs were deleted during fit
       if(length(nac)) {
@@ -261,7 +264,7 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
       }
     }
     
-    if(length(cluster)!=n)
+    if(length(cluster) != n)
       stop("length of cluster does not match # rows used in fit")
     
     if(any(is.na(cluster))) stop("cluster contains NAs")
@@ -344,6 +347,7 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
   bar <- as.matrix(bar)
   cov <- (cov - b * bar %*% t(bar)) / (b - 1L)
   fit$orig.var <- fit$var
+  if(nfit == 'orm') attr(cov, 'intercepts') <- iref
   fit$var <- cov
   fit$boot.loglik <- Loglik
   if(length(stat)) fit$boot.stats <- stats
@@ -353,6 +357,8 @@ bootcov <- function(fit, cluster, B=200, fitter, coef.reps=TRUE,
     newp <- 2. * (1. - pt(abs(newt), fit$stats['n'] - fit$stats['p']))
     fit$summary[, 2L : 4L] <- cbind(newse, newt, newp)
   }
+  if(length(clusterInfo)) clusterInfo$n <- nc
+  fit$clusterInfo <- clusterInfo
   fit
 }
   
@@ -498,7 +504,8 @@ confplot <- function(obj, X, against,
 bootBCa <- function(estimate, estimates, type=c('percentile','bca','basic'),
                     n, seed, conf.int=0.95) {
   type <- match.arg(type)
-  if(type != 'percentile' && !require(boot)) stop('boot package not installed')
+  if(type != 'percentile' && ! requireNamespace('boot', quietly = TRUE))
+    stop('boot package not installed')
   estimate <- as.vector(estimate)
   ne <- length(estimate)
   if(!is.matrix(estimates)) estimates <- as.matrix(estimates)

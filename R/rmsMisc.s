@@ -2,9 +2,8 @@
 
 
 DesignAssign <- function(atr, non.slopes, Terms) {
-  ## Given Design attributes and number of intercepts creates S-Plus
-  ## format assign list (needed for R, intercept correction needed for
-  ## S-Plus anyway).  If formula is given, names assign using
+  ## Given Design attributes and number of intercepts creates R
+  ## format assign list.  If formula is given, names assign using
   ## terms(formul) term.labels, otherwise uses Design predictor names
   ## 23feb03: No, term.labels not useful if "." in formula
   ## formula argument no longer used
@@ -26,9 +25,13 @@ DesignAssign <- function(atr, non.slopes, Terms) {
   
 #Function to return variance-covariance matrix, optionally deleting
 #rows and columns corresponding to parameters such as scale parameters
-#in parametric survival models
+#in parametric survival models (if regcoef.only=TRUE)
 
 vcov.lrm <- function(object, regcoef.only=TRUE, intercepts='all', ...) {
+  if(length(intercepts) == 1 && is.character(intercepts) &&
+     intercepts %nin% c('all', 'none'))
+    stop('if character, intercepts must be "all" or "none"')
+
   if(!length(intercepts) ||
      (length(intercepts) == 1) && intercepts == 'all')
     return(vcov.rms(object, regcoef.only=regcoef.only, ...))
@@ -52,10 +55,30 @@ vcov.psm <- function(object, regcoef.only=TRUE, ...)
 
 vcov.orm <- function(object, regcoef.only=TRUE,
                      intercepts='mid', ...) {
-  if(!length(intercepts)) return(object$var)
-  iat <- attr(object$var, 'intercepts')  # handle fit.mult.impute
+  v <- object$var
+  if(! length(intercepts)) return(v)
+  iat <- attr(v, 'intercepts')  # handle fit.mult.impute (?), robcov
+  # robcov re-writes var object and uses all intercepts
+  iref <- object$interceptRef
+  if(is.numeric(intercepts) && length(intercepts) == 1 &&
+     intercepts == iref) intercepts <- 'mid'
+  if(! length(iat)) {
+    if(length(intercepts) == 1 && intercepts == 'mid') {
+      i <- c(iref, (num.intercepts(object, 'var') + 1) : nrow(v))
+      return(object$var[i, i, drop=FALSE])
+    }
+    return(vcov.lrm(object, regcoef.only=regcoef.only,
+                    intercepts=intercepts, ...))
+  }
+  
+  if(intercepts == 'none')
+    return(object$var[-(1 : length(iat)),
+                      -(1 : length(iat)), drop=FALSE])
+    if(intercepts == 'mid' && length(iat) == 1) return(object$var)
+  
   iref <- object$interceptRef
   info <- object$info.matrix
+  isbootcov <- length(object$boot.coef)
   ns <- num.intercepts(object)
   p  <- ncol(info)
   ns <- num.intercepts(object)
@@ -71,6 +94,8 @@ vcov.orm <- function(object, regcoef.only=TRUE,
   }
                        
   if(is.character(intercepts)) {
+    if(intercepts != 'mid' && isbootcov)
+      stop('intercepts must be "mid" if object produced by bootcov')
       switch(intercepts,
              mid = return(object$var),
              all = {
@@ -86,6 +111,9 @@ vcov.orm <- function(object, regcoef.only=TRUE,
              },
              none= return(object$var[-1, -1, drop=FALSE]) )
   }
+  if(isbootcov)
+    stop('intercepts must be "mid" if object produced by bootcov')
+  
   i <- if(nx == 0) intercepts else c(intercepts, (ns+1):p)
   v <- if(length(scale))
     (t(trans) %*% as.matrix(solve(info)) %*% trans)[i,i]
@@ -863,8 +891,11 @@ prStats <- function(labels, w, latex=FALSE)
       fu <- character(lu)
       for(j in 1:length(u)) {
         dg <- dig[j]
-        fu[j] <- if(is.na(dg)) format(u[j]) else
-        if(dg < 0) formatNP(u[j], -dg, pvalue=TRUE, latex=latex) else
+        fu[j] <- if(names(u)[j] == 'Cluster on')
+                   paste('\\texttt{\\small ', latexTranslate(u[j]),
+                         '}', sep='') else
+         if(is.na(dg)) format(u[j]) else
+         if(dg < 0) formatNP(u[j], -dg, pvalue=TRUE, latex=latex) else
         formatNP(u[j], dg, latex=latex)
       }
       names(fu) <- names(u)
@@ -951,6 +982,9 @@ reVector <- function(..., na.rm=TRUE)
 
 formatNP <- function(x, digits=NULL, pvalue=FALSE, latex=FALSE)
   {
+    if(! all.is.numeric(x)) return(x)
+    digits <- as.numeric(digits)  # Needed but can't figure out why
+    x <- as.numeric(x)
     f <- if(length(digits))
       format(round(x, digits), nsmall=digits, scientific=1) else
       format(x, scientific=1)
@@ -1020,7 +1054,7 @@ setPb <- function(n, type=c('Monte Carlo Simulation','Bootstrap',
     if(length(evo)) every <- evo
   }
   if(pbo == 'none') return(function(i, ...){invisible()})
-  if(pbo == 'tk' && usetk && require(tcltk)) {
+  if(pbo == 'tk' && usetk && requireNamespace('tcltk', quietly=TRUE)) {
     pb <- tcltk::tkProgressBar(type, 'Iteration: ', 0, n)
     upb <- function(i, n, every, pb) {
       if(i %% every == 0)

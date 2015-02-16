@@ -24,16 +24,16 @@ plot.Predict <-
     do.call('scat1d', c(list(x=x, y=y), so, grid=TRUE))
   }
   
-  info   <- attr(x, 'info')
-  at     <- info$Design
-  label  <- at$label
-  units  <- at$units
-  values <- info$values
-  adjust <- info$adjust
-  yunits <- info$yunits
-  varying<- info$varying
+  info     <- attr(x, 'info')
+  at       <- info$Design
+  label    <- at$label
+  units    <- at$units
+  values   <- info$values
+  adjust   <- info$adjust
+  yunits   <- info$yunits
+  varying  <- info$varying
   conf.int <- info$conf.int
-  dotlist <- list(...)
+  dotlist  <- list(...)
 
   gname <- groups
   if(length(gname)) {
@@ -69,48 +69,11 @@ plot.Predict <-
   on.exit(options(oldopt))
 
   if(length(anova)) {
-    vi <- attr(anova, 'vinfo')
-    aname  <- sapply(vi, function(x) paste(x$name, collapse=','))
-    atype  <- sapply(vi, function(x) x$type)
-    wanova <- atype %in% c('main effect', 'combined effect')
-    test   <- if('F' %in% colnames(anova)) 'F' else 'Chi-Square'
-    stat   <- round(anova[wanova, test], 1)
-    pstat  <- anova[wanova, 'P']
-    dof    <- anova[wanova, 'd.f.']
-    stat <- if(test == 'Chi-Square')
-      paste('chi[', dof, ']^2 == ',  stat, sep='')
-    else
-      paste('F[paste(', dof, ',",",', anova['ERROR', 'd.f.'], ')] == ',
-            stat, sep='')
-    if(pval) {
-      pval <- formatNP(pstat, digits=3, pvalue=TRUE)
-      pval <- ifelse(grepl('<', pval), paste('P', pval, sep=''),
-                     paste('P==', pval, sep=''))
-      stat <- paste(stat, pval, sep='~~')
-    }
-    names(stat) <- aname[wanova]
-    tanova <- function(name, x, y) {
-      ## See if an area is available near the top or bottom of the
-      ## current panel
-      cpl <- current.panel.limits()
-      xlim <- cpl$xlim
-      ylim <- cpl$ylim
-      dy   <- diff(ylim)
-      if(!any(y > ylim[2] - dy / 7)) {
-        z <- list(x = mean(xlim), y = ylim[2] - .025 * dy)
-        adj <- c(.5, 1)
-      }
-      else if(!any(y < ylim[1] + dy / 7)) {
-        z <- list(x = mean(xlim), y = ylim[1] + .025 * dy)
-        adj <- c(.5, 0)
-      }
-      else {
-        z <- largest.empty(x, y, grid=TRUE, method='maxdim')
-        adj <- if(z$y > mean(ylim)) c(.5, 1) else c(.5, 0)
-      }
-      ltext(z$x, z$y, parse(text=stat[name]), cex=cex.anova, adj=adj)
-    }
-  } else tanova <- function(...) {}
+    stat   <- plotmathAnova(anova, pval)
+    tanova <- function(name, x, y)
+      annotateAnova(name, stat, x, y, cex=cex.anova)
+  }
+  else tanova <- function(...) {}
     
   if(predpres) {
     if(! missing(formula))
@@ -397,4 +360,85 @@ pantext <- function(object, x, y, cex=.5, adj=0,
                            fam=fam)))
   }
   z
+}
+
+plotmathAnova <- function(anova, pval) {
+  vi <- attr(anova, 'vinfo')
+  aname  <- sapply(vi, function(x) paste(x$name, collapse=','))
+  atype  <- sapply(vi, function(x) x$type)
+  wanova <- atype %in% c('main effect', 'combined effect')
+  test   <- if('F' %in% colnames(anova)) 'F' else 'Chi-Square'
+  stat   <- round(anova[wanova, test], 1)
+  pstat  <- anova[wanova, 'P']
+  dof    <- anova[wanova, 'd.f.']
+  stat <- if(test == 'Chi-Square')
+    paste('chi[', dof, ']^2 == ',  stat, sep='')
+  else
+    paste('F[paste(', dof, ',",",', anova['ERROR', 'd.f.'], ')] == ',
+          stat, sep='')
+  if(pval) {
+    pval <- formatNP(pstat, digits=3, pvalue=TRUE)
+    pval <- ifelse(grepl('<', pval), paste('P', pval, sep=''),
+                   paste('P==', pval, sep=''))
+    stat <- paste(stat, pval, sep='~~')
+  }
+  names(stat) <- aname[wanova]
+  stat
+}
+
+## stat is result of plotmathAnova
+## xlim and ylim must be specified if ggplot=TRUE
+annotateAnova <- function(name, stat, x, y, ggplot=FALSE,
+                          xlim=NULL, ylim=NULL, cex, size=4, flip=FALSE,
+                          empty=FALSE, dataOnly=FALSE) {
+  x <- as.numeric(x)
+  y <- as.numeric(y)
+  if(flip) {
+    yorig <- y
+    y     <- x
+    x     <- yorig
+    ylimorig <- ylim
+    ylim     <- xlim
+    xlim     <- ylimorig
+  }
+    
+  ## size is for ggplot2 only; is in mm
+  ## See if an area is available near the top or bottom of the
+  ## current panel
+  if(! ggplot) {
+    cpl <- current.panel.limits()
+    xlim <- cpl$xlim
+    ylim <- cpl$ylim
+  }
+  else if(! length(xlim) || ! length(ylim))
+    stop('xlim and ylim must be given if ggplot=TRUE')
+  dy   <- diff(ylim)
+  if(!empty && !any(y > ylim[2] - dy / 7)) {
+    z <- list(x = mean(xlim), y = ylim[2] - .025 * dy)
+    adj <- c(.5, 1)
+  }
+  else if(! empty && !any(y < ylim[1] + dy / 7)) {
+    z <- list(x = mean(xlim), y = ylim[1] + .025 * dy)
+    adj <- c(.5, 0)
+  }
+  else {
+    z <- if(! length(xlim) || ! length(ylim)) 
+      largest.empty(x, y, grid=TRUE, method='exhaustive')
+    else
+      largest.empty(x, y, grid=TRUE, method='exhaustive', xlim=xlim, ylim=ylim)
+    adj <- c(if(z$x > mean(xlim)) 1 else .5,
+             if(z$y > mean(ylim)) 1 else 0)
+  }
+  if(flip) {
+    zyorig <- z$y
+    z$y <- z$x
+    z$x <- zyorig
+    adj <- rev(adj)
+  }
+  ## parse=TRUE: treat stat[name] as an expression
+  if(dataOnly) return(list(x=z$x, y=z$y, label=stat[name],
+                           hjust=adj[1], vjust=adj[2]))
+  if(ggplot) annotate('text', x=z$x, y=z$y, label=stat[name], parse=TRUE,
+                       size=size, hjust=adj[1], vjust=adj[2])
+  else ltext(z$x, z$y, parse(text=stat[name]), cex=cex, adj=adj)
 }
