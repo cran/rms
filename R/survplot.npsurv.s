@@ -6,8 +6,8 @@ survplot.npsurv <-
            abbrev.label=FALSE, levels.only=FALSE,
            lty, lwd=par('lwd'),
            col=1, col.fill=gray(seq(.95, .75, length=5)),
-           loglog=FALSE, fun, n.risk=FALSE, logt=FALSE,
-           dots=FALSE, dotsize=.003, grid=NULL,
+           loglog=FALSE, fun, n.risk=FALSE, aehaz=FALSE, times=NULL,
+           logt=FALSE, dots=FALSE, dotsize=.003, grid=NULL,
            srt.n.risk=0, sep.n.risk=.056, adj.n.risk=1,
            y.n.risk, cex.n.risk=.6, pr=FALSE, ...) {
 
@@ -54,6 +54,7 @@ survplot.npsurv <-
   if(missing(xlim)) 
 	xlim <- if(logt) logb(c(maxtime / 100, maxtime)) else c(mintime, maxtime)
   
+  origsurv <- fit$surv
   if(trans) {
     fit$surv <- fun(fit$surv)
     fit$surv[is.infinite(fit$surv)] <- NA
@@ -108,16 +109,35 @@ survplot.npsurv <-
   lty <- if(missing(lty)) seq(ns+1)[-2] else rep(lty, length=ns)
   lwd <- rep(lwd, length=ns)
   col <- rep(col, length=ns)
-  
-  if(labelc || conf=='bands') curves <- vector('list',ns)
+
+  if(conf == 'diffbands' && ns < 2) conf <- 'bands'
+  if(labelc || conf %in% c('bands', 'diffbands')) curves <- vector('list', ns)
   Tim <- Srv <- list()
   
   par(xpd=NA)
 
+  nevents <- totaltime <- numeric(ns)
+  cuminc  <- character(ns)
   for(i in 1:ns) {
     st <- stemp == i
     time <- fit$time[st]
     surv <- fit$surv[st]
+    osurv <- origsurv[st]
+    nevents[i]   <- sum(fit$n.event[st])
+    nrsk         <- fit$n.risk[st]
+    neachtime    <- c(-diff(nrsk), min(nrsk))
+    totaltime[i] <- sum(neachtime * time)
+    if(length(times)) {
+      cumi <- 1. - approx(time, osurv, xout=times, method='constant')$y
+      noun <- units %in% c('', ' ')
+      cuminc[i]   <- paste('Cum. inc.@ ',
+                            if(noun) 't=',
+                            paste(times, collapse=','),
+                            if(! noun) paste(' ', units, sep=''),
+                            ':', paste(round(cumi, 3), collapse=','),
+                            sep='')
+    }
+      
     if(logt) time <- logb(time)
     s <- !is.na(time) & (time >= xlim[1])
     if(i==1 & !add) {
@@ -242,6 +262,24 @@ survplot.npsurv <-
       lines(curves[[i]][[1]], curves[[i]][[2]],
             lty=lty[i], lwd=lwd[i], col=col[i], type='s')
 
+  if(aehaz || length(times)) {
+    un <- if(units == ' ' | units == '') '' else
+      paste('/', tolower(units), sep='')
+    haz <- round(nevents / totaltime, 4)
+    txt <- paste(nevents, 'events')
+    if(aehaz) txt <- paste(txt, ', hazard=', haz, un, sep='')
+    if(length(times)) txt <- paste(txt, ', ', sep='')
+    if(length(times)) txt <- paste(txt, cuminc)
+    if(! labelc)
+      text(xlim[2], ylim[2], txt, adj=1)
+    else {
+      maxlen <- max(nchar(sleva))
+      sleva <- substring(paste(sleva, '                               '),
+                         1, maxlen)
+      for(j in 1 : ns)
+        sleva[j] <- eval(parse(text=sprintf("expression(paste('%s   ',scriptstyle('(%s)')))", sleva[j], txt[j])))
+    }
+  }
   if(labelc) labcurve(curves, sleva, type='s', lty=lty, lwd=lwd,
                       opts=label.curves, col.=col)
   
