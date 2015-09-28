@@ -1,3 +1,25 @@
+Changes in version 4.4-0 (2015-09-28)
+   * contrast.rms: made SE a vector not a matrix, added 4 list logic for nvary, added new test from JoAnn Alvarez
+	 * plot.summary.rms: correct bug where pch was ignored.  Thanks: Tamas Ferenci
+	 * prModFit: fix print(fit, latex=FALSE) when fit is result of robcov, bootcov
+	 * NAMESPACE: added imports for base functions used to avoid warnings with R CMD CHECK; new test rcs.r
+	 * prModFit: added rmarkdown argument.  All print.* methods can pass this argument.
+	 * All print methods for fit objects: left result as prModFit instead of invisible() so that rmarkdown will work
+	 * demo/all.R: updated for plot and ggplot methods, npsurv
+	 * cph, predictrms, rms, rms.trans, rmsMisc: changed Design function to return new objects sformula (formula without cluster()) and mmcolnames which provides a new way to get rid of strat() main effects and interactions involving non-reference cells; handle offsets in cph and predict() (not yet in Predict); new internal function removeFormulaTerms that does character manipulation to remove terms like cluster() or offset() or the dependent variable(s).  This gets around the problem with [.terms messing up offset terms when you subset on non-offset terms
+	 * Glm, ols: fixed offset
+	 * bj, Gls, lrm, orm, psm, Rq: change to new offset method and sformula
+	 * Predict: added offset=list(offsetvariable=value)
+	 * several: made temporary function names unique to avoid warnings with R CMD CHECK
+	 * ggplot.Predict: changed facet_wrap_labeller to not mess with class of returned object from ggplotGrob
+	 * Design: fixed column names for matrix predictors
+	 * Design, cph: handled special case where model is fit on a fit$x matrix
+	 * dxy.cens: exported
+	 * cph: added debug argument
+	 * tests/cph4.r: new tests for various predictor types
+	 * rms: changed warning to error if an ordered factor appears in the model and options(contrasts) is not set properly
+	 * rms transformation functions: made more robust by checking ! length instead of is.null
+
 Changes in version 4.3-1 (2015-04-20)
    * NAMESPACE: removed reference to gridExtra, in DESCRIPTION moved gridExtra from Depends to Suggests
    * ggplot.Predict: re-worked generation of ggplot function call construction to use character strings with evaluation at the very end; added colfill argument

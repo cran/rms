@@ -63,6 +63,7 @@ Gls <-
       }
     X <- Design(X)
     atrx <- attributes(X)
+    sformula <- atrx$sformula
     desatr <- atrx$Design
     mt <- atrx$terms
     attr(X,'Design') <- NULL
@@ -262,7 +263,7 @@ Gls <-
                    fitted = Fitted,  
                    residuals = Resid, parAssign = parAssign,
                    Design=desatr, assign=DesignAssign(desatr, 1, mt),
-                   formula=model, terms=fTerms,
+                   formula=model, sformula=sformula, terms=fTerms,
                    B=B, boot.Coef=if(B > 0) bootcoef,
                    boot.Corr=if(B > 0) bootcorr,
                    Nboot=if(B > 0) Nboot,
@@ -379,7 +380,6 @@ print.Gls <- function(x, digits=4, coefs=TRUE, latex=FALSE, title, ...)
     }
   
   prModFit(x, title=title, z, digits=digits, coefs=coefs, latex=latex, ...)
-  invisible()
 }
 
 vcov.Gls <- function(object, intercepts='all', ...)

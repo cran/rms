@@ -59,29 +59,27 @@ predictrms <-
   on.exit({options(contrasts=oldopts$contrasts)
            options(Design.attr=NULL)})
 
-  Terms <- delete.response(terms(formula(fit), specials='strat'))
-  
-  ## Get Terms ignoring offset(s)
-  off <- attr(Terms, 'offset')
-  offset <- if(! length(off)) 0
-  else
-    model.offset(model.frame(Terms, newdata, na.action=na.action, ...))
+  offset <- 0
+  if(! missing(newdata) && length(newdata)) {
+    offset <- model.offset(model.frame(removeFormulaTerms(fit$sformula,
+                   delete.response=TRUE), newdata,
+                   na.action=na.action, ...))
+    offpres <- length(offset) > 0
+    if(! offpres) offset <- 0
+  }
+  ## formula after removing offset terms and dependent var.
+  formulano <- removeFormulaTerms(fit$sformula, which='offset',
+                                  delete.response=TRUE)
+  #Terms  <- delete.response(terms(formula(fit), specials='strat'))
+  Terms  <- terms(formulano, specials='strat')
 
-  ## Terms.nooff <- if(length(off)) drop.terms(Terms, off) else Terms
-  ## Only works correctly if offset is at the end of the formula
-  ## bug in drop.terms
-  Terms.nooff <- if(length(off)) Terms[1 : length(attr(Terms, 'term.labels'))]
-  else Terms
-  
   attr(Terms, "response")  <- 0L
   attr(Terms, "intercept") <- 1L
   ## Need intercept whenever design matrix is generated to get
   ## current list of dummy variables for factor variables
   stra      <- attr(Terms, "specials")$strat
-  stra.noff <- attr(Terms.nooff, 'specials')$strat
 
   Terms.ns       <- if(length(stra))      Terms[-stra] else Terms
-  Terms.ns.nooff <- if(length(stra.noff)) Terms.nooff[-stra.noff] else Terms.nooff
 
   if(conf.int) {
     vconstant <- 0.
@@ -115,8 +113,8 @@ predictrms <-
     attr(adjto, "row.names") <- "1"
     class(adjto) <- "data.frame"
     if(type == "adjto.data.frame") return(adjto)
-    adjto <- model.frame(Terms.nooff, adjto)
-    adjto <- model.matrix(Terms.ns.nooff, adjto)[, -1, drop=FALSE]
+    adjto <- model.frame(Terms, adjto)
+    adjto <- model.matrix(Terms.ns, adjto)[, -1, drop=FALSE]
     if(type == 'adjto') {
       k <- (nrpcoef + 1L) : length(coeff)
       nck <- names(coeff)[k]
@@ -246,7 +244,7 @@ predictrms <-
           }
         }
       }  # is.data.frame(newdata)
-      X <- model.frame(Terms.nooff, newdata, na.action=na.action, ...)
+      X <- model.frame(Terms, newdata, na.action=na.action, ...)
       if(type == "model.frame") return(X)
       naa  <- attr(X, "na.action")
       rnam <- row.names(X)
@@ -272,7 +270,7 @@ predictrms <-
         }
       }
       X <- if(! somex) NULL
-      else model.matrix(Terms.ns.nooff, X)[, -1L, drop=FALSE]
+      else model.matrix(Terms.ns, X)[, -1L, drop=FALSE]
       
       if(nstrata > 0L) {
         names(strata) <- paste("S", 1L : nstrata, sep="")
@@ -303,7 +301,7 @@ predictrms <-
       names(xb) <- rnam
     }
     else {
-      xb <- if(length(off)) offset else numeric(0)
+      xb <- if(offpres) offset else numeric(0)
       if(nstrata > 0) attr(xb, 'strata') <- naresid(naa, strata)
       return(structure(if(se.fit)
                        list(linear.predictors=xb,

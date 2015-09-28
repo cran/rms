@@ -1,7 +1,7 @@
 ## Modification of the rq function in the quantreg package written by
 ## Roger Koenker, Stephen Portnoy, Pin Tian Ng, Achim Zeileis,
 ## Philip Grosjean, Brian Ripley
-q
+
 Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete, 
                 method = "br", model = FALSE, contrasts = NULL,
                 se='nid', hs=TRUE, x=FALSE, y=FALSE, ...) 
@@ -17,6 +17,7 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
   mf <- Design(eval.parent(mf))
 
   at <- attributes(mf)
+  sformula <- at$sformula
   desatr <- at$Design
   attr(mf,'Design') <- NULL
   if (method == "model.frame") return(mf)
@@ -47,6 +48,7 @@ Rq <- function (formula, tau = 0.5, data, subset, weights, na.action=na.delete,
            list(
                 na.action = at$na.action,
                 formula   = formula,
+                sformula  = sformula,
                 terms     = mt,
                 xlevels   = .getXlevels(mt, mf),
                 call      = call,

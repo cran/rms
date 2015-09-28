@@ -43,6 +43,7 @@
 \alias{reVector}
 \alias{formatNP}
 \alias{latex.naprint.delete}
+\alias{removeFormulaTerms}
 \title{Miscellaneous Design Attributes and Utility Functions}
 \description{
 These functions are used internally to \code{anova.rms},
@@ -145,6 +146,12 @@ formatted values with "< 0.0001" (if \code{digits=4}).
 
 \code{latex.naprint.delete} will, if appropriate, use LaTeX to draw a
 dot chart of frequency of variable \code{NA}s related to model fits.
+
+\code{removeFormulaTerms} removes one or more terms from a model
+formula, using strictly character manipulation.  This handles problems
+such as \code{[.terms} removing \code{offset()} if you subset on
+anything.  The function can also be used to remove the dependent
+variable(s) from the formula.
 }
 \usage{
 \method{vcov}{rms}(object, regcoef.only=TRUE, intercepts='all', \dots)
@@ -191,16 +198,18 @@ Newlevels(fit, \dots)
 \method{Newlabels}{rms}(fit, labels, \dots)
 \method{Newlevels}{rms}(fit, levels, \dots)
 
-prModFit(x, title, w, digits=4, coefs=TRUE, latex=FALSE, lines.page=40,
-long=TRUE, needspace, \dots)
+prModFit(x, title, w, digits=4, coefs=TRUE, latex=FALSE, rmarkdown=FALSE,
+         lines.page=40, long=TRUE, needspace, \dots)
 
-prStats(labels, w, latex=FALSE)
+prStats(labels, w, latex=FALSE, file="", append=TRUE)
 
 reVector(\dots, na.rm=TRUE)
 
 formatNP(x, digits=NULL, pvalue=FALSE, latex=FALSE)
 
-\method{latex}{naprint.delete}(object, \dots)
+\method{latex}{naprint.delete}(object, file="", append=TRUE, \dots)
+
+removeFormulaTerms(form, which=NULL, delete.response=FALSE)
 }
 \arguments{
 \item{fit}{result of a fitting function}
@@ -316,6 +325,13 @@ predictors.  This will override \code{parms} as well as \code{datadist} informat
   model.}
 \item{latex}{a logical value indicating whether information should be
   formatted as plain text or as LaTeX markup}
+\item{file}{name of file to which to write model output from
+	\code{print()} using \code{prStats}.  Default is the console.}
+\item{append}{specify \code{append=FALSE} when using \code{file} and you
+	want to start over instead of adding to an existing file.}
+\item{rmarkdown}{set to \code{TRUE} to force \code{latex=TRUE} and to
+	convert LaTeX code to html using Hmisc \code{html.latex} for use with
+	RMarkdown, knitr, and RStudio}
 \item{lines.page}{see \code{\link[Hmisc]{latex}}}
 \item{long}{set to \code{FALSE} to suppress printing of formula and
   certain other model output}
@@ -328,6 +344,12 @@ predictors.  This will override \code{parms} as well as \code{datadist} informat
   created by \code{reVector}}
 \item{pvalue}{set to \code{TRUE} if you want values below 10 to the
   minus \code{digits} to be formatted to be less than that value}
+\item{form}{a formula object}
+\item{which}{a vector of one or more character strings specifying the
+	names of functions that are called from a formula, e.g.,
+	\code{"cluster"}.  By default no right-hand-side terms are removed.}
+\item{delete.response}{set to \code{TRUE} to remove the dependent
+	variable(s) from the formula}
 \item{\dots}{other arguments.  For \code{reVector} this contains the
   elements being extracted.  For \code{prModFit} this information is
   passed to the \code{Hmisc latexTabular} function when a block of
@@ -356,6 +378,8 @@ cell in which the parameter is by definition zero.
 
 \code{reVector} returns a vector of named (by its arguments) elements.
 \code{formatNP} returns a character vector.
+
+\code{removeFormulaTerms} returns a formula object.
 }
 \seealso{
 \code{\link{rms}}, \code{\link{fastbw}}, \code{\link{anova.rms}},
