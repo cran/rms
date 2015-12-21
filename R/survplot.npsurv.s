@@ -1,6 +1,6 @@
 survplot.npsurv <-
   function(fit, xlim, 
-           ylim, xlab, ylab, time.inc,
+           ylim, xlab, ylab, time.inc, state=NULL,
            conf=c("bands","bars","diffbands","none"), add=FALSE, 
            label.curves=TRUE,
            abbrev.label=FALSE, levels.only=FALSE,
@@ -10,49 +10,76 @@ survplot.npsurv <-
            logt=FALSE, dots=FALSE, dotsize=.003, grid=NULL,
            srt.n.risk=0, sep.n.risk=.056, adj.n.risk=1,
            y.n.risk, cex.n.risk=.6, pr=FALSE, ...) {
-
-  conf <- match.arg(conf)
-  polyg <- ordGridFun(grid=FALSE)$polygon
-  conf.int <- fit$conf.int
-  if(!length(conf.int) | conf=="none") conf.int <- 0
-
-  opar <- par(c('mar', 'xpd'))
-  on.exit(par(opar))
-
-  fit.orig <- fit
-  units <- fit$units
-  if(!length(units)) units <- "Day"
-  maxtime <- fit$maxtime
-  if(!length(maxtime)) maxtime <- max(fit$time)
-  mintime <- min(fit$time, 0)
-  pret <- pretty(c(mintime, maxtime))
-  maxtime <- max(pret)
-  mintime <- min(pret)
-  if(missing(time.inc)) {
-    time.inc <- switch(units, Day=30, Month=1, Year=1,
-                       (maxtime-mintime)/10)
-    if(time.inc > maxtime) time.inc <- (maxtime-mintime)/10
-  }
-  if(n.risk && !length(fit$n.risk)) {
-    n.risk <- FALSE
-    warning("fit does not have number at risk\nIs probably from a parametric model\nn.risk set to F")
-  }
-  trans <- loglog | !missing(fun)
-  if(missing(ylab)) {
-    if(loglog) ylab <- "log(-log Survival Probability)"
-    else if(trans) ylab <- ""
-    else ylab <- "Survival Probability"
-  }
-  if(loglog) fun <- function(w) logb(-logb(ifelse(w==0 | w==1, NA, w)))
-  else if(!trans) fun <- function(w) w
-
-  if(missing(xlab)) {
-    if(logt) xlab <- paste("log Survival Time in ", units, "s", sep="")
-    else xlab <- if(units==' ') '' else paste(units, "s", sep="")
+    
+    conf     <- match.arg(conf)
+    polyg    <- ordGridFun(grid=FALSE)$polygon
+    conf.int <- fit$conf.int
+    if(!length(conf.int) | conf == "none") conf.int <- 0
+    opar <- par(c('mar', 'xpd'))
+    on.exit(par(opar))
+    
+    fit.orig <- fit
+    units <- fit$units
+    if(!length(units)) units <- "Day"
+    maxtime <- fit$maxtime
+    if(! length(maxtime)) maxtime <- max(fit$time)
+    mintime <- min(fit$time, 0)
+    pret    <- pretty(c(mintime, maxtime))
+    maxtime <- max(pret)
+    mintime <- min(pret)
+    if(missing(time.inc)) {
+      time.inc <- switch(units, Day=30, Month=1, Year=1,
+                                (maxtime - mintime) / 10)
+      if(time.inc > maxtime) time.inc <- (maxtime - mintime) / 10
     }
+    if(n.risk && ! length(fit$n.risk)) {
+      n.risk <- FALSE
+      warning("fit does not have number at risk\nIs probably from a parametric model\nn.risk set to FALSE")
+    }
+
+    mstate <- inherits(fit, 'survfitms')
+    if(mstate) {
+      ## Multi-state model for competing risks
+      if(missing(fun)) fun <- function(y) 1 - y
+      if(missing(state)) stop('state must be given when response is a multi-state/competing risk object from Surv()')
+      if(length(state) != 1) stop('at present state can only be a single state')
+      states <- fit$states
+      if(state %nin% states) stop(paste('state is not in',
+                                        paste(states, collapse=', ')))
+    }
+    
+    trans <- loglog || mstate || ! missing(fun)
+    if(missing(ylab))
+      ylab <- 
+       if(loglog) "log(-log Survival Probability)"
+       else if(mstate) paste('Cumulative Incidence of', upFirst(state))
+       else if(trans) ""
+       else "Survival Probability"
+
+    if(loglog) fun <- function(y) logb(-logb(ifelse(y == 0 | y == 1, NA, y)))
+     else if(! trans) fun <- function(y) y
+    
+    if(missing(xlab))
+      xlab <- if(logt) paste("log Follow-up Time in ", units, "s", sep="")
+      else labelPlotmath('Follow-up Time', paste(fit$units, 's', sep=''))
+      ## else labelPlotmath(fit$time.label, fit$units)
   
-  if(missing(xlim)) 
-	xlim <- if(logt) logb(c(maxtime / 100, maxtime)) else c(mintime, maxtime)
+    if(missing(xlim)) 
+      xlim <- if(logt) logb(c(maxtime / 100, maxtime)) else c(mintime, maxtime)
+
+    convert <- if(mstate) {
+      istate    <- match(state, states)
+      conv <- function(f, istate) {
+        f$surv    <- 1 - f$prev   [, istate]
+        f$lower   <- 1 - f$lower  [, istate]
+        f$upper   <- 1 - f$upper  [, istate]
+        f$std.err <-     f$std.err[, istate]
+        f
+      }
+      formals(conv) <- list(f=NULL, istate=istate)
+      conv } else function(f) f
+
+  fit <- convert(fit)
   
   origsurv <- fit$surv
   if(trans) {
@@ -91,9 +118,9 @@ survplot.npsurv <-
   stemp <- if(ns == 1) rep(1, length(fit$time))
   else rep(1:ns, fit$strata)
 
-  if(n.risk | (conf.int > 0 & conf=="bars")) {
+  if(n.risk | (conf.int > 0 & conf == "bars")) {
     stime <- seq(mintime, maxtime, time.inc)
-    v <- summary(fit, times=stime, print.it=FALSE)
+    v <- convert(summary(fit.orig, times=stime, print.it=FALSE))
     vs <- if(ns > 1) as.character(v$strata)
     ## survival:::summary.survfit was not preserving order of strata levels
   }
@@ -106,7 +133,7 @@ survplot.npsurv <-
   }
   
   ## One curve for each value of y, excl style used for C.L.
-  lty <- if(missing(lty)) seq(ns+1)[-2] else rep(lty, length=ns)
+  lty <- if(missing(lty)) seq(ns + 1)[-2] else rep(lty, length=ns)
   lwd <- rep(lwd, length=ns)
   col <- rep(col, length=ns)
 
@@ -118,15 +145,22 @@ survplot.npsurv <-
 
   nevents <- totaltime <- numeric(ns)
   cuminc  <- character(ns)
-  for(i in 1:ns) {
+  for(i in 1 : ns) {
     st <- stemp == i
-    time <- fit$time[st]
-    surv <- fit$surv[st]
-    osurv <- origsurv[st]
-    nevents[i]   <- sum(fit$n.event[st])
-    nrsk         <- fit$n.risk[st]
-    neachtime    <- c(-diff(nrsk), min(nrsk))
-    totaltime[i] <- sum(neachtime * time)
+    time         <- fit$time[st]
+    surv         <- fit$surv[st]
+    osurv        <- origsurv[st]
+    ## nevents[i]   <- sum(fit$n.event[st])
+    ## nrsk         <- fit$n.risk[st]
+    ## neachtime    <- c(- diff(nrsk), min(nrsk))
+    ## totaltime[i] <- sum(neachtime * time)
+    nevents[i] <- if(mstate) {
+                    if(ns == 1) fit$numevents[, state]
+                    else fit$numevents[olev[i], state]
+    } else {
+      if(ns == 1) fit$numevents else fit$numevents[olev[i]]
+    }
+    totaltime[i] <- if(ns == 1) fit$exposure else fit$exposure[olev[i]]
     if(length(times)) {
       cumi <- 1. - approx(time, osurv, xout=times, method='constant')$y
       noun <- units %in% c('', ' ')
@@ -169,7 +203,7 @@ survplot.npsurv <-
       }
     }
     tim <- time[s]; srv <- surv[s]
-    if(conf.int > 0 && conf=="bands") {
+    if(conf.int > 0 && conf == "bands") {
       blower <- fit$lower[st][s]
       bupper <- fit$upper[st][s]
     }
@@ -182,24 +216,24 @@ survplot.npsurv <-
       k <- tim < xlim[2]
       tim <- c(tim[k], xlim[2])
       srv <- c(srv[k], s.last)
-      if(conf.int > 0 && conf=="bands") {
+      if(conf.int > 0 && conf == "bands") {
         low.last <- blower[time <= xlim[2] + 1e-6]
         low.last <- low.last[length(low.last)]
         up.last  <- bupper[time <= xlim[2] + 1e-6]
         up.last  <- up.last[length(up.last)]
-        blower   <- c(blower[k],low.last)
-        bupper   <- c(bupper[k],up.last)
+        blower   <- c(blower[k], low.last)
+        bupper   <- c(bupper[k], up.last)
       }
     }
     if(logt) {
       if(conf %nin% c('bands', 'diffbands'))
         lines(tim, srv, type="s", lty=lty[i], col=col[i], lwd=lwd[i])
       if(labelc || conf %in% c('bands', 'diffbands'))
-        curves[[i]] <- list(tim,srv)
+        curves[[i]] <- list(tim, srv)
     }
 	  else {
-      xxx <- c(mintime,tim)
-      yyy <- c(fun(1),srv)
+      xxx <- c(mintime, tim)
+      yyy <- c(fun(1), srv)
       if(conf %nin% c('bands', 'diffbands'))
         lines(xxx, yyy, type="s", lty=lty[i], col=col[i], lwd=lwd[i])
       if(labelc || conf %in% c('bands', 'diffbands'))
@@ -213,7 +247,7 @@ survplot.npsurv <-
       print(zest, digits=3)
     }
     if(conf.int > 0) {
-      if(conf=='bands') {
+      if(conf == 'bands') {
         if(logt)
           polyg(x = c(tim, max(tim), rev(tim)),
                 y = c(blower, rev(bupper), max(bupper)),
@@ -224,15 +258,15 @@ survplot.npsurv <-
                 col = col.fill[i], type = "s")
       }
       else if(conf == 'diffbands')
-        survdiffplot(fit.orig, conf=conf, fun=fun)
+        survdiffplot(fit.orig, conf=conf, fun=fun, convert=convert)
 
       else {
-        j <- if(ns ==1) TRUE else vs == olev[i]
+        j <- if(ns == 1) TRUE else vs == olev[i]
         tt <- v$time[j]  #may not get predictions at all t
         ss <- v$surv[j]
         lower <- v$lower[j]
         upper <- v$upper[j]
-        if(logt) tt <- logb(ifelse(tt==0, NA, tt))
+        if(logt) tt <- logb(ifelse(tt == 0, NA, tt))
         tt <- tt + xd * (i - 1) * .01
         errbar(tt, ss, upper, lower, add=TRUE, lty=lty[i],
                col=col[i])
@@ -245,7 +279,7 @@ survplot.npsurv <-
       nrisk <- v$n.risk[j]
       tt[1] <- xlim[1]  #was xd*.015, .030, .035
       if(missing(y.n.risk)) y.n.risk <- ylim[1]
-      yy <- y.n.risk + yd * (ns-i) * sep.n.risk
+      yy <- y.n.risk + yd * (ns - i) * sep.n.risk
       nri <- nrisk
       nri[tt > xlim[2]] <- NA
       text(tt[1], yy, nri[1], cex=cex.n.risk,
@@ -294,7 +328,7 @@ survdiffplot <-
            add=FALSE, lty=1, lwd=par('lwd'), col=1,
            n.risk=FALSE,  grid=NULL,
            srt.n.risk=0, adj.n.risk=1,
-           y.n.risk, cex.n.risk=.6) {
+           y.n.risk, cex.n.risk=.6, convert=function(f) f) {
 
   conf <- match.arg(conf)
   if(missing(conf.int)) conf.int <- fit$conf.int
@@ -312,8 +346,8 @@ survdiffplot <-
   maxtime <- max(pret)
   mintime <- min(pret)
   if(missing(time.inc)) {
-    time.inc <- switch(units,Day=30,Month=1,Year=1,(maxtime-mintime)/10)
-    if(time.inc > maxtime) time.inc <- (maxtime-mintime)/10
+    time.inc <- switch(units, Day=30, Month=1, Year=1, (maxtime - mintime) / 10)
+    if(time.inc > maxtime) time.inc <- (maxtime - mintime) / 10
   }
   if(n.risk && !length(fit$n.risk)) {
     n.risk <- FALSE
@@ -324,23 +358,23 @@ survdiffplot <-
   
   if(missing(xlim)) xlim <- c(mintime, maxtime)
   
-  if(length(grid) && is.logical(grid))
-    grid <- if(grid) gray(.8) else NULL
+  if(length(grid) && is.logical(grid)) grid <- if(grid) gray(.8) else NULL
   
   polyg <- ordGridFun(grid=FALSE)$polygon
 
   times <- sort(unique(c(fit$time, seq(mintime, maxtime, by=time.inc))))
 
-  ## Note: summary.survfit computes standard errors on S(t) scale
-  f <- summary(fit, times=times)
+    ## Note: summary.survfit computes standard errors on S(t) scale
+
+  f <- convert(summary(fit, times=times))
   
   slev <- levels(f$strata)
   ns <- length(slev)
   if(ns !=2 ) stop('must have exactly two strata')
-  a <- f$strata==slev[1]
+  a <- f$strata == slev[1]
   h <- function(level, times, f) {
     strata <- f$strata
-    i     <- strata==level
+    i     <- strata == level
     tim   <- f$time[i]
     surv  <- f$surv[i]
     se    <- f$std.err[i]
@@ -356,7 +390,7 @@ survdiffplot <-
    else fun(a$surv) - fun(b$surv)
   se    <- sqrt(a$se^2 + b$se^2)
 
-  z  <- qnorm((1 + conf.int) / 2)
+    z  <- qnorm((1 + conf.int) / 2)
   if(conf == 'diffbands') {
     lo <- surv - 0.5 * z * se
     hi <- surv + 0.5 * z * se
@@ -404,7 +438,7 @@ survdiffplot <-
 
   if(n.risk) {
     nrisktimes <- seq(0, maxtime, by=time.inc)
-    nriskinfo  <- summary(fit, times=nrisktimes)
+    nriskinfo  <- convert(summary(fit, times=nrisktimes))
     anr        <- h(slev[order[1]], nrisktimes, nriskinfo)
     bnr        <- h(slev[order[2]], nrisktimes, nriskinfo)
     nrisk      <- pmin(anr$nrisk, bnr$nrisk)
@@ -430,4 +464,3 @@ survdiffplot <-
   }
   invisible(slev)
 }
-
