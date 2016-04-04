@@ -42,6 +42,8 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
     ## prn(assume.code); prn(rmstrans.names); prn(term.label); prn(iaspecial); prn(class)
     ## Don't let >=i be translated to >i:
     rmst <- gsub('>=', '>>', rmstrans.names)
+    ## Don't let == be translated to blank
+    rmst <- gsub('==', '@EQ@', rmst)
     w <- if(assume.code == 1)
            ifelse(class == 'logical', paste(term.label, 'TRUE', sep=''),
                   term.label)
@@ -49,10 +51,15 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
     else if(assume.code == 5) gsub('=', '', rmst)
     else if(assume.code == 8)
       paste(term.label, gsub('.*=', '', rmst), sep='')
-    else if(assume.code == 10) gsub('\\[', '', gsub('\\]', '', rmst))
+    else if(assume.code == 10)
+      if(length(rmst) > 1) gsub('\\[', '', gsub('\\]', '', rmst)) else
+             term.label
     else paste(term.label, rmst, sep='')
-    w <- gsub('>>', '>=', w)
-    alt <- if(assume.code == 10) paste(term.label, rmstrans.names, sep='')
+    w <- gsub('>>',   '>=', w)
+    w <- gsub('@EQ@', '==', w)
+    alt <- if(assume.code == 10)
+             if(length(rmst) > 1)
+               paste(term.label, rmstrans.names, sep='') else term.label
     else w
     ## Alternate names to try - handles case where model is fitted on a
     ## previous fit$x matrix
@@ -63,7 +70,8 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
   offs <- model.offset(mf)
 
   iscluster <- if(length(Term.labels))
-    substring(Term.labels, 1, 8) == 'cluster('  else FALSE
+                 substring(Term.labels, 1, 8) == 'cluster('  else FALSE
+
   ## Handle cluster() for cph
   ## Save right hand side of formula less cluster() terms
   sformula <- formula(Terms)
@@ -87,12 +95,9 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
     if(! any(ioffset)) stop('program logic error 1')
   }
 
-  coluse <- setdiff(1 : ncol(mf), c(ioffset, 1 * response.pres))
-
   ## For some reason, model frame sometimes has a blank name if using %ia%
 
   namx <- names(mf)
-
   if(any(namx == "")) {
     namx <- names(mf) <- c(namx[1], Term.labels)
     dimnames(mf)[[2]] <- namx
@@ -100,7 +105,9 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
   }
 
   wts <- if(any(namx == '(weights)'))(1 : length(namx))[namx == '(weights)']
-  else 0
+         else 0
+
+  coluse <- setdiff(1 : ncol(mf), c(ioffset, 1 * response.pres, wts))
 
   inner.name <- if(length(Terms) > 0) unique(var.inner(Terms))
   ## Handles case where a function has two arguments that are names,
@@ -143,6 +150,8 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
 
   anyfactors <- length(coluse) > 0
   i1.noia <- 0
+  if(length(Term.labels) < length(coluse)) stop('program logic error tl')
+  it <- 0
   if(anyfactors) for(i in coluse) {
     if(i  != wts) {
       i1 <- i - response.pres
@@ -183,12 +192,13 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
         flabel <- c(flabel, z$label)
         asm <- c(asm, za)
         colnam[[i1]] <- z$colnames
-        mmn <- mmnames(za, colnam[[i1]], Term.labels[i1], z$iaspecial, cls)
+        it <- it + 1
+        mmn <- mmnames(za, colnam[[i1]], Term.labels[it], z$iaspecial, cls)
         mmcolnam[[i1]] <- mmn
         alt <- attr(mmn, 'alt')
         mmcolnamalt[[i1]] <- alt
         if(za != 8 && length(colnam)) {
-          name   <- c(name, colnam[[i1]])
+          name   <- c(name,   colnam  [[i1]])
           mmname <- c(mmname, mmcolnam[[i1]])
           Altcolnam <- c(Altcolnam, alt)
         }
@@ -205,7 +215,7 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
             if(j > 0) {
               values[[zname]] <- datadist$values[[j]]
               l1 <- levels(xi); l2 <- datadist$values[[j]]
-              if(length(l1) && ((length(l1) != length(l2)) ||
+              if(length(l1) && ((length(l1)  != length(l2)) ||
                                 any(sort(l1) != sort(l2))))
                 warning(paste('Variable', zname, 'has levels', paste(l1, collapse=' '),
                               'which do not match levels given to datadist (',

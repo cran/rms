@@ -44,7 +44,7 @@ survplot(fit, \dots)
          what=c("survival","hazard"),
          type=c("tsiatis","kaplan-meier"),
          conf.type=c("log","log-log","plain","none"),
-         conf.int=FALSE, conf=c("bands","bars"),
+         conf.int=FALSE, conf=c("bands","bars"), mylim=NULL,
          add=FALSE, label.curves=TRUE,
          abbrev.label=FALSE, levels.only=FALSE,
          lty, lwd=par("lwd"),
@@ -52,24 +52,27 @@ survplot(fit, \dots)
          adj.subtitle=TRUE, loglog=FALSE, fun,
          n.risk=FALSE, logt=FALSE, dots=FALSE, dotsize=.003,
          grid=NULL, srt.n.risk=0, sep.n.risk=0.056, adj.n.risk=1, 
-         y.n.risk, cex.n.risk=.6, pr=FALSE)
+         y.n.risk, cex.n.risk=.6, cex.xlab=par('cex.lab'),
+         cex.ylab=cex.xlab, pr=FALSE)
 \method{survplot}{npsurv}(fit, xlim, 
          ylim, xlab, ylab, time.inc, state=NULL,
-         conf=c("bands","bars","diffbands","none"), add=FALSE, 
-         label.curves=TRUE, abbrev.label=FALSE,
+         conf=c("bands","bars","diffbands","none"), mylim=NULL,
+         add=FALSE, label.curves=TRUE, abbrev.label=FALSE,
          levels.only=FALSE, lty,lwd=par('lwd'),
          col=1, col.fill=gray(seq(.95, .75, length=5)),
          loglog=FALSE, fun, n.risk=FALSE, aehaz=FALSE, times=NULL,
          logt=FALSE, dots=FALSE, dotsize=.003, grid=NULL,
          srt.n.risk=0, sep.n.risk=.056, adj.n.risk=1,
-         y.n.risk, cex.n.risk=.6, pr=FALSE, \dots)
+         y.n.risk, cex.n.risk=.6, cex.xlab=par('cex.lab'), cex.ylab=cex.xlab,
+         pr=FALSE, \dots)
 survdiffplot(fit, order=1:2, fun=function(y) y,
            xlim, ylim, xlab, ylab="Difference in Survival Probability",
            time.inc, conf.int, conf=c("shaded", "bands","diffbands","none"),
            add=FALSE, lty=1, lwd=par('lwd'), col=1,
            n.risk=FALSE, grid=NULL,
            srt.n.risk=0, adj.n.risk=1,
-           y.n.risk, cex.n.risk=.6, convert=function(f) f)
+           y.n.risk, cex.n.risk=.6, cex.xlab=par('cex.lab'),
+           cex.ylab=cex.xlab, convert=function(f) f)
 }
 \arguments{
 \item{fit}{
@@ -173,6 +176,9 @@ width of the approximate \code{conf.int} pointwise confidence region.
 Survival curves not overlapping the shaded area are approximately
 significantly different at the \code{1 - conf.int} level.
 }
+\item{mylim}{used to curtail computed \code{ylim}.  When \code{ylim} is
+	not given by the user, the computed limits are expanded to force
+	inclusion of the values specified in \code{mylim}.}
 \item{what}{
 defaults to \code{"survival"} to plot survival estimates.  Set to
 \code{"hazard"} or an abbreviation to plot the hazard function (for
@@ -257,13 +263,18 @@ multiple of upper y limit - lower y limit for separating lines of text
 containing number of subjects at risk.  Default is \code{.056*(ylim[2]-ylim[1])}.
 }
 \item{y.n.risk}{
-When \code{n.risk=TRUE}, the default is to place numbers of patients at risk above
-the x-axis.  You can specify a y-coordinate for the bottom line of the
-numbers using \code{y.n.risk}.
+When \code{n.risk=TRUE}, the default is to place numbers of patients at
+risk above the x-axis.  You can specify a y-coordinate for the bottom
+line of the numbers using \code{y.n.risk}.  Specify
+\code{y.n.risk='auto'} to place the numbers below the x-axis at a
+distance of 1/3 of the range of \code{ylim}.
 }
-\item{cex.n.risk}{
-character size for number of subjects at risk (when \code{n.risk} is \code{TRUE})
+\item{cex.n.risk}{ 
+character size for number of subjects at risk (when \code{n.risk} is
+\code{TRUE}) 
 }
+\item{cex.xlab}{\code{cex} for x-axis label}
+\item{cex.ylab}{\code{cex} for y-axis label}
 \item{dots}{
  set to \code{TRUE} to plot a grid of dots.  Will be plotted at every
  \code{time.inc} (see \code{cph}) and at survival increments of .1 (if
