@@ -1,3 +1,43 @@
+Changes in version 5.0-0 (2016-10-31)
+   * plot.summary.rms: implemented plotly interactive plots if options(grType='plotly') in effect
+	 * plot.anova.rms: implemented plotly interactive plots if options(grType='plotly') in effect; remove psmall argument; changed margin default to chisq and P
+	 * ggplot.Predict: implemented plotly interactive plots if options(grType='plotly') in effect
+	 * print(fit, md=TRUE), prModFit, prStats: added latex/html methods using htmlTable package and MathJax for latex math
+	 * html.anova.rms, html.validate, html.summary.rms: new functions for use with html and MathJax/knitr/RStudio
+	 * latex methods for model fits: added md=TRUE argument to produce MathJax-compatible latex and html code for fitted models when using R Markdown
+	 * html: new methods for model fit objects for use with R Markdown
+	 * formatNP: fixed error when digits=NA
+	 * latex.anova.rms: fixed error in not rounding enough columns doe to using all.is.numeric intead of is.numeric
+	 * catg: corrected bug that disallowed explicit catg() in formulas
+	 * ggplot.Predict: added height and width for plotly
+	 * survplot: respected xlim with diffbands.  Thanks: Toni G
+	 * reVector: changed to reListclean and stored model stats components as lists so can handle mixture of numeric and character, e.g., name of clustering variable
+	 * survplotp.npsurv: new function for interactive survival curve graphs using plotly
+	 * anova, summary, latex, print for model fits: use options(grType='html') or 'latex' to set output type, output htmltools::HTML marked html so that chunk header doesn't need results='asis'
+	 * latex methods - set file default to ''
+	 * GiniMd: moved to Hmisc package
+	 * plot.nomogram: fixed bug where abbreviations were being ignored.  Thanks: Zongheng Zhang
+	 * nomogram: improved examples in help file
+	 * survplot.npsurv: fixed n.risk when competing risks
+	 * survest.cph, survfit.cph, others: fixed large problems due to incompatibility with survival 2.39-5 for survival predictions; changed object Strata to strata in cph to be compatible with survival package
+	 * new test survest.r to more comprehensively check survfit.cph and survest.cph
+	 * ggplot.Predict: quit ignoring xlim; suppress confidence bands if two group bariables because ggplot2 geom_ribbon doesn't support multiple aesthetics
+	 * predictrms: set contrasts for ordered factors to contr.treatment instead of contr.poly
+	 * val.prob: changed line of identity to use wide grayscale line instead of dashed line
+	 
+Changes in version 4.5-1 (2016-06-01)
+   * ggplot.Predict: fixed bug related to .predictor. vs. .Predictor. which resulted in double plotting of some anova annotations
+   * tests/ggplot3: new tests related to above
+   * tests/survplot2.r: new test
+   * ggplot.Predict: fixed bug when legend.label=FALSE and didn't enclose empty string in quotes for later parsing
+   * validate.rpart: extended to handle survival models (exponential distribution)
+   * print.validate.rpart: finally added method in NAMESPACE
+   * val.prob: make riskdist="predicted" the default; added E90 and Eavg to plotted output; for E measures changed to loess calibration instead of linear logistic calibration
+   * fastbw: corrected error in help file regarding aics argument
+   * NAMESPACE: added graphics::grconvertX grconvertY
+	 * latex.naprint.delete: fixed width algorithm for dot chart
+	 * survplot.npsurv, survplotp.npsurv: changed $prev to $pstate for competing risk estimation due to change in survival package 2.40-0
+
 Changes in version 4.5-0 (2016-04-02)
    * val.prob: fixed longstanding error: U was always -2/n because used wrong deviance.  Thanks: Kai Chen
 	 * survplot*: implemented y.n.risk='auto' to place numbers at risk below the x-axis by 1/3 the range of ylim

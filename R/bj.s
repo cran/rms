@@ -310,6 +310,7 @@ bjplot <- function(fit, which=1:dim(X)[[2]])
 }
 
 print.bj <- function(x, digits=4, long=FALSE, coefs=TRUE, latex=FALSE,
+                     md=FALSE,
                      title="Buckley-James Censored Data Regression", ...)
 {
   k <- 0
@@ -322,17 +323,17 @@ print.bj <- function(x, digits=4, long=FALSE, coefs=TRUE, latex=FALSE,
   
   stats <- x$stats
   ci    <- x$clusterInfo
-  misc   <- reVector(Obs          = stats['Obs'],
+  misc   <- reListclean(Obs          = stats['Obs'],
                      Events       = stats['Events'],
                      'Cluster on' = ci$name,
                      'Clusters'   = ci$n)
-  dfstat <- reVector('Regression d.f.' = stats['d.f.'],
+  dfstat <- reListclean('Regression d.f.' = stats['d.f.'],
                      sigma=stats['sigma'],
                      'd.f.'=stats['error d.f.'])
-  disc <- reVector(g = stats['g'], gr = stats['gr'])
+  disc <- reListclean(g = stats['g'], gr = stats['gr'])
   k <- k + 1
   z[[k]] <- list(type='stats',
-                 list(headings=list('', '', c('Discrimination','Indexes')),
+                 list(headings=c('', '', 'Discrimination\nIndexes'),
                       data=list(misc, c(dfstat,c(NA,digits,NA)), c(disc, 3))))
   
   cof <- x$coefficients
@@ -355,7 +356,9 @@ print.bj <- function(x, digits=4, long=FALSE, coefs=TRUE, latex=FALSE,
                    title='Correlation Matrix for Parameter Estimates')
 	}
   
-  prModFit(x, title=title, z, digits=digits, coefs=coefs, latex=latex, ...)
+  prModFit(x, title=title, z, digits=digits, coefs=coefs,
+           lang=if(latex) 'latex' else if(md) 'html' else 'plain',
+           ...)
 }
 
 predict.bj <- 

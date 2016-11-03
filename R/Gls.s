@@ -270,7 +270,8 @@ Gls <-
   }
 
 
-print.Gls <- function(x, digits=4, coefs=TRUE, latex=FALSE, title, ...)
+print.Gls <- function(x, digits=4, coefs=TRUE, latex=FALSE, md=FALSE,
+                      title, ...)
 {
   ## Following taken from print.gls with changes marked FEH
 
@@ -292,12 +293,12 @@ print.Gls <- function(x, digits=4, coefs=TRUE, latex=FALSE, title, ...)
          'likelihood',  sep='')
   if(latex) ltype <- paste(ltype, ' ', sep='')
   
-  misc <- reVector(Obs=dd$N,
+  misc <- reListclean(Obs=dd$N,
                    Clusters=if(length(x$groups)) length(unique(x$groups)) else
                     dd$N,
                    g=x$g)
   
-  llike <- reVector(ll=x$logLik,
+  llike <- reListclean(ll=x$logLik,
                     'Model d.f.' = dd$p - 1L,
                     sigma  = x$sigma,
                     'd.f.' = errordf)
@@ -305,7 +306,7 @@ print.Gls <- function(x, digits=4, coefs=TRUE, latex=FALSE, title, ...)
   k <- k + 1L
   z[[k]] <- list(type='stats',
                  list(
-                      headings = list('', ''),
+                      headings = c('', ''),
                       data     = list(c(misc, c(NA,NA,3L)),
                                       c(llike, c(2L,NA,digits,NA)))))
 
@@ -367,7 +368,9 @@ print.Gls <- function(x, digits=4, coefs=TRUE, latex=FALSE, title, ...)
                      title = 'Bootstrap Nonparametric 0.95 Confidence Limits for Correlation Parameters')
     }
   
-  prModFit(x, title=title, z, digits=digits, coefs=coefs, latex=latex, ...)
+  prModFit(x, title=title, z, digits=digits, coefs=coefs,
+           lang=if(latex) 'latex' else if(md) 'html' else 'plain',
+           ...)
 }
 
 vcov.Gls <- function(object, intercepts='all', ...)

@@ -40,9 +40,10 @@
 \alias{survest.rms}
 \alias{prModFit}
 \alias{prStats}
-\alias{reVector}
+\alias{reListclean}
 \alias{formatNP}
 \alias{latex.naprint.delete}
+\alias{html.naprint.delete}
 \alias{removeFormulaTerms}
 \title{Miscellaneous Design Attributes and Utility Functions}
 \description{
@@ -123,29 +124,35 @@ with levels of categorical predictors changed.  These two functions are
 vary may be specified without values (after an equals sign).
 
 \code{prModFit} is the workhorse for the \code{print} methods for
-highest-level \code{rms} model fitting functions, handling both regular
-and LaTeX printing, the latter resulting in LaTeX code written to the
-terminal, automatically ready for \code{Sweave}.  The work of printing
+highest-level \code{rms} model fitting functions, handling both regular,
+html, and LaTeX printing, the latter two resulting in html or LaTeX code
+written to the console, automatically ready for \code{knitr}.  The work
+of printing 
 summary statistics is done by \code{prStats}, which uses the Hmisc
 \code{print.char.matrix} function to print overall model statistics if
-\code{latex=FALSE}, otherwise it generates customized LaTeX code.  The
-LaTeX longtable and epic packages must be in effect to use these
-LaTeX functions.
+\code{options(prType=)} was not set to \code{"latex"} or \code{"html"}.
+Otherwise it generates customized LaTeX or html
+code.  The LaTeX longtable and epic packages must be in effect to use LaTeX.
 
-\code{reVector} allows one to rename a subset of a named vector,
+\code{reListclean} allows one to rename a subset of a named list,
 ignoring the previous names and not concatenating them as \R does.  It
-also removes (by default) elements that are \code{NA}, as when an
+also removes \code{NULL} elements and (by default) elements that are
+\code{NA}, as when an 
 optional named element is fetched that doesn't exist.
 
 \code{formatNP} is a function to format a vector of numerics.  If
 \code{digits} is specified, \code{formatNP} will make sure that the
 formatted representation has \code{digits} positions to the right of the
-decimal place.  If \code{latex=TRUE} it will translate any scientific
-notation to LaTeX math form.  If \code{pvalue=TRUE}, it will replace
+decimal place.  If \code{lang="latex"} it will translate any scientific
+notation to LaTeX math form.  If \code{lang="html"} will convert to html.
+If \code{pvalue=TRUE}, it will replace
 formatted values with "< 0.0001" (if \code{digits=4}).
 
 \code{latex.naprint.delete} will, if appropriate, use LaTeX to draw a
 dot chart of frequency of variable \code{NA}s related to model fits.
+\code{html.naprint.delete} does the same thing in the RStudio R markdown
+context, using \code{Hmisc::dotchartp} (which uses \code{plotly}) for
+drawing any needed dot chart.
 
 \code{removeFormulaTerms} removes one or more terms from a model
 formula, using strictly character manipulation.  This handles problems
@@ -198,16 +205,19 @@ Newlevels(fit, \dots)
 \method{Newlabels}{rms}(fit, labels, \dots)
 \method{Newlevels}{rms}(fit, levels, \dots)
 
-prModFit(x, title, w, digits=4, coefs=TRUE, latex=FALSE, rmarkdown=FALSE,
+prModFit(x, title, w, digits=4, coefs=TRUE,
          lines.page=40, long=TRUE, needspace, \dots)
 
-prStats(labels, w, latex=FALSE, file="", append=TRUE)
+prStats(labels, w, lang=c("plain", "latex", "html"))
 
-reVector(\dots, na.rm=TRUE)
+reListclean(\dots, na.rm=TRUE)
 
-formatNP(x, digits=NULL, pvalue=FALSE, latex=FALSE)
+formatNP(x, digits=NULL, pvalue=FALSE,
+         lang=c("plain", "latex", "html"))
 
 \method{latex}{naprint.delete}(object, file="", append=TRUE, \dots)
+
+\method{html}{naprint.delete}(object, \dots)
 
 removeFormulaTerms(form, which=NULL, delete.response=FALSE)
 }
@@ -322,16 +332,11 @@ predictors.  This will override \code{parms} as well as \code{datadist} informat
 \item{coefs}{specify \code{coefs=FALSE} to suppress printing the table
   of model coefficients, standard errors, etc.  Specify \code{coefs=n}
   to print only the first \code{n} regression coefficients in the
-  model.}
-\item{latex}{a logical value indicating whether information should be
-  formatted as plain text or as LaTeX markup}
-\item{file}{name of file to which to write model output from
-	\code{print()} using \code{prStats}.  Default is the console.}
+  model.}\
+\item{file}{name of file to which to write model output}
 \item{append}{specify \code{append=FALSE} when using \code{file} and you
 	want to start over instead of adding to an existing file.}
-\item{rmarkdown}{set to \code{TRUE} to force \code{latex=TRUE} and to
-	convert LaTeX code to html using Hmisc \code{html.latex} for use with
-	RMarkdown, knitr, and RStudio}
+\item{lang}{specifies the typesetting language: plain text, LaTeX, or html}
 \item{lines.page}{see \code{\link[Hmisc]{latex}}}
 \item{long}{set to \code{FALSE} to suppress printing of formula and
   certain other model output}
@@ -341,7 +346,7 @@ predictors.  This will override \code{parms} as well as \code{datadist} informat
   needspace style is available.  Example:
   \code{needspace='6\\baselineskip'} or \code{needspace='1.5in'}.}
 \item{na.rm}{set to \code{FALSE} to keep \code{NA}s in the vector
-  created by \code{reVector}}
+  created by \code{reListclean}}
 \item{pvalue}{set to \code{TRUE} if you want values below 10 to the
   minus \code{digits} to be formatted to be less than that value}
 \item{form}{a formula object}
@@ -350,7 +355,7 @@ predictors.  This will override \code{parms} as well as \code{datadist} informat
 	\code{"cluster"}.  By default no right-hand-side terms are removed.}
 \item{delete.response}{set to \code{TRUE} to remove the dependent
 	variable(s) from the formula}
-\item{\dots}{other arguments.  For \code{reVector} this contains the
+\item{\dots}{other arguments.  For \code{reListclean} this contains the
   elements being extracted.  For \code{prModFit} this information is
   passed to the \code{Hmisc latexTabular} function when a block of
   output is a vector to be formatted in LaTeX.}
@@ -376,7 +381,7 @@ in parameter values about the mean, including a portion for the reference
 cell in which the parameter is by definition zero.
 \code{Newlabels} returns a new fit object with the labels adjusted.
 
-\code{reVector} returns a vector of named (by its arguments) elements.
+\code{reListclean} returns a vector of named (by its arguments) elements.
 \code{formatNP} returns a character vector.
 
 \code{removeFormulaTerms} returns a formula object.
@@ -403,9 +408,3 @@ nomogram(g)
 }
 \keyword{models}
 \keyword{methods}
-
-
-
-
-
-

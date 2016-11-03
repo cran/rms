@@ -8,6 +8,10 @@ plot.Predict <-
            scat1d.opts=list(frac=0.025, lwd=0.3), type=NULL,
            yscale=NULL, scaletrans=function(z) z, ...)
 {
+  isbase <- TRUE   ## plotly does not apply for lattice graphics
+  if(! isbase && length(anova))
+    stop('anova not yet implemented for grType plotly')
+  
   if(varypred) {
     x$.predictor. <- x$.set.
     x$.set. <- NULL
@@ -46,7 +50,8 @@ plot.Predict <-
        cond %nin% names(x))
       stop('cond must be a single predictor name')
   }
-  if(missing(ylab))    ylab     <- info$ylabPlotmath
+  if(missing(ylab))
+    ylab     <- if(isbase) info$ylabPlotmath else info$ylabhtml
   if(!length(x$lower)) conf.int <- FALSE
   
   if(missing(ylim))
@@ -174,7 +179,8 @@ plot.Predict <-
       f <- if(!missing(formula)) gsub(' .*','',as.character(formula)[2])
       else varying[1]
       iv <- var.inner(as.formula(paste('~', f)))
-      if(missing(xlab)) xlab <- labelPlotmath(label[iv], units[iv])
+      if(missing(xlab))
+        xlab <- labelPlotmath(label[iv], units[iv], html=! isbase)
       if(missing(formula)) {
         xvar <- varying[1]
         ## change formula like ~x|foo to x
@@ -412,12 +418,12 @@ annotateAnova <- function(name, stat, x, y, ggplot=FALSE,
   else if(! length(xlim) || ! length(ylim))
     stop('xlim and ylim must be given if ggplot=TRUE')
   dy   <- diff(ylim)
-  if(!empty && !any(y > ylim[2] - dy / 7)) {
-    z <- list(x = mean(xlim), y = ylim[2] - .025 * dy)
+  if(! empty && !any(y > ylim[2] - dy / 7)) {
+    z <- list(x = mean(xlim), y = ylim[2] - .075 * dy)  # was -.025
     adj <- c(.5, 1)
   }
   else if(! empty && !any(y < ylim[1] + dy / 7)) {
-    z <- list(x = mean(xlim), y = ylim[1] + .025 * dy)
+    z <- list(x = mean(xlim), y = ylim[1] + .075 * dy)   # was .025
     adj <- c(.5, 0)
   }
   else {

@@ -1,11 +1,13 @@
 latex.lrm <-
   function(object, title, 
-           file=paste(first.word(deparse(substitute(object))),".tex",sep=""),
+           file='',
            append=FALSE, which, varnames, columns=65, inline=FALSE, 
            before=if(inline)"" else "& &", after="",
-           pretrans=TRUE, caption=NULL, digits=.Options$digits, size='', ...)
+           pretrans=TRUE, caption=NULL, digits=.Options$digits, size='',
+           ...)
 {
   f <- object
+  md <- prType() %in% c('html', 'md', 'markdown')
   
   if(missing(which) & !inline)
     {
@@ -26,41 +28,54 @@ latex.lrm <-
 
       w <- paste(w, ", {\\rm \\ \\ where} \\\\ \\]", sep="")
 
-      if(length(caption)) w <- c(paste('\\begin{center} \\bf',caption,
-                                       '\\end{center}'), w)
-      
-      if(nrp>1)
-        {
-          w <- c(w,"\\begin{eqnarray*}")
-          cof <- format(f$coef[1:nrp])
-          for(i in 1:nrp)
-            w <- c(w, paste("\\hat{\\alpha}_{\\rm ",
-                            lev[i+1],"} &=&",cof[i],"\\\\",sep=""))
-          w <- c(w,"\\end{eqnarray*}",sep="")
+      if(length(caption)) {
+        if(md) w <- c(paste('<div align=center><strong>', caption,
+                             '</strong></div>'), w)
+        else
+          w <- c(paste('\\begin{center} \\bf',caption,
+                       '\\end{center}'), w)
         }
-							}
-  else w <- NULL
+      
+      if(nrp > 1) {
+        w <- c(w,"\\begin{eqnarray*}")
+        cof <- format(f$coef[1:nrp])
+        for(i in 1:nrp)
+          w <- c(w, paste("\\hat{\\alpha}_{\\rm ",
+                          lev[i+1],"} &=&",cof[i],"\\\\",sep=""))
+        w <- c(w,"\\end{eqnarray*}",sep="")
+      }
+    }
+  else
+    w <- NULL
+  
   if(missing(which) | missing(varnames)) at <- f$Design
 
-  if(missing(which)) which <- 1:length(at$name)
+  if(missing(which))    which    <- 1:length(at$name)
   if(missing(varnames)) varnames <- at$name[at$assume.code!=9]
-  cat(w, file=file, append=append, sep=if(length(w))"\n" else "")
-  latexrms(f, file=file, append=TRUE, which=which, varnames=varnames, 
-           columns=columns, 
-           before=before, after=after, prefix="X\\hat{\\beta}",
-           inline=inline, pretrans=pretrans, digits=digits, size=size)
+  if(! md) 
+    cat(w, file=file, append=append, sep=if(length(w))"\n" else "")
+  z <- latexrms(f, file=file, append=TRUE, which=which, varnames=varnames, 
+                columns=columns, 
+                before=before, after=after, prefix="X\\hat{\\beta}",
+                inline=inline, pretrans=pretrans, digits=digits,
+                size=size, md=md)
+  if(md) htmltools::HTML(c(paste0(w, '\n'), as.character(z)))
+  else z
 }
 
 
 latex.orm <-
   function(object, title, 
-           file=paste(first.word(deparse(substitute(object))),".tex",sep=""),
+           file='',
            append=FALSE, which, varnames, columns=65, inline=FALSE, 
            before=if(inline)"" else "& &", after="",
            pretrans=TRUE, caption=NULL, digits=.Options$digits, size='',
            intercepts=nrp < 10, ...)
 {
   f <- object
+
+  md <- prType() %in% c('html', 'md', 'markdown')
+
   
   if(missing(which) & !inline)
     {
@@ -86,8 +101,13 @@ latex.orm <-
 
       w <- paste(w, ", {\\rm \\ \\ where} \\\\ \\]", sep="")
 
-      if(length(caption)) w <- c(paste('\\begin{center} \\bf',caption,
-                                       '\\end{center}'), w)
+      if(length(caption)) {
+        if(md) w <- c(paste('<div align=center><strong>', caption,
+                             '</strong></div>'), w)
+        else
+          w <- c(paste('\\begin{center} \\bf',caption,
+                       '\\end{center}'), w)
+        }
       
       if(intercepts) {
         nl <- as.numeric(lev)
@@ -105,9 +125,12 @@ latex.orm <-
 
   if(missing(which)) which <- 1:length(at$name)
   if(missing(varnames)) varnames <- at$name[at$assume.code!=9]
-  cat(w, file=file, append=append, sep=if(length(w))"\n" else "")
-  latexrms(f, file=file, append=TRUE, which=which, varnames=varnames, 
-           columns=columns, 
-           before=before, after=after, prefix="X\\hat{\\beta}",
-           inline=inline, pretrans=pretrans, digits=digits, size=size)
+  if(! md) cat(w, file=file, append=append, sep=if(length(w))"\n" else "")
+  z <- latexrms(f, file=file, append=TRUE, which=which, varnames=varnames, 
+                columns=columns, 
+                before=before, after=after, prefix="X\\hat{\\beta}",
+                inline=inline, pretrans=pretrans, digits=digits,
+                size=size, md=md)
+  if(md) htmltools::HTML(c(paste0(w, '\n'), as.character(z)))
+  else z
 }

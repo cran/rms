@@ -12,23 +12,23 @@ arguments that are specific to \code{cph} models.  These routines work
 with the \code{display} package from statlib to display and print the
 formatted model fits.  \code{latexrms} is the core function which is
 called internally by \code{latexrms} (which is called by
-\code{latex.cph}, \code{latex.ols}, etc.).
+\code{latex.cph}, \code{latex.ols}, etc.).  R Markdown-compatible markup
+(using MathJax) is written if \code{md=TRUE}. 
 }
 \usage{
 latexrms(object,
- file=paste(first.word(deparse(substitute(object))),".tex",sep=""),
+ file='',
  append=FALSE, which=1:p, varnames, columns=65, prefix=NULL, inline=FALSE,
  before=if(inline)"" else "& &", after="", intercept, pretrans=TRUE,
- digits=.Options$digits, size="")
+ digits=.Options$digits, size="", md=FALSE)
 }
 \arguments{
 \item{object}{
 a fit object created by a fitting function in the \code{rms} series
 }
 \item{file}{
-  name of \code{.tex} file to create, default is first word of argument
-  \code{object} with \code{".tex"} added.  Set to \code{""} to send LaTeX
-  output to standard output.
+  name of \code{.tex} file to create, default is to write to console.
+	\code{file} is ignored when \code{md=TRUE}. 
 }
 \item{append}{whether or not to append to an existing file}
 \item{which}{
@@ -89,9 +89,12 @@ a fit object created by a fitting function in the \code{rms} series
 \item{digits}{number of digits of precision to use in formatting
   coefficients and other numbers}
 \item{size}{a LaTeX font size to use for the output, without the slash.
- Default is current size.}
+	Default is current size.}
+\item{md}{set to \code{TRUE} to produce code that is consistent with
+	the use of MathJax with R markdown}
 }
-\value{a file name of class \code{"latex"}}
+\value{a file name of class \code{"latex"}, or if \code{md=TRUE},
+	nothing (output direct to console)}
 \author{
 Frank Harrell\cr
 Department of Biostatistics, Vanderbilt University\cr
@@ -104,9 +107,11 @@ f.harrell@vanderbilt.edu
 \examples{
 \dontrun{
 f <- lrm(death ~ rcs(age)+sex)
-w <- latex(f)
+w <- latex(f, file='f.tex')
 w     # displays, using e.g. xdvi
-latex(f, file="")    # send LaTeX code to screen
+latex(f)    # send LaTeX code to console
+options(prType='html')
+latex(f)    # emit html and latex for knitr html and html notebooks
 }
 }
 \keyword{models}

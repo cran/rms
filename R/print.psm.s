@@ -1,5 +1,5 @@
 print.psm <- function(x, correlation = FALSE, digits=4,
-                      coefs=TRUE, latex=FALSE, title, ...)
+                      coefs=TRUE, latex=FALSE, md=FALSE, title, ...)
 {
   k <- 0
   z <- list()
@@ -11,21 +11,21 @@ print.psm <- function(x, correlation = FALSE, digits=4,
 
   stats <- x$stats
   ci <- x$clusterInfo
-  counts <- reVector(Obs   = stats['Obs'],
+  counts <- reListclean(Obs   = stats['Obs'],
                      Events= stats['Events'],
                      'Cluster on' = ci$name,
                      Clusters = ci$n,
                      'Sum of Weights'=stats['Sum of Weights'],
                      sigma = if(length(x$scale) == 1) x$scale)
-  lr <- reVector('LR chi2'     = stats['Model L.R.'],
+  lr <- reListclean('LR chi2'     = stats['Model L.R.'],
                  'd.f.'        = stats['d.f.'],
                  'Pr(> chi2)'  = stats['P'])
-  disc <- reVector(R2=stats['R2'], Dxy=stats['Dxy'],
+  disc <- reListclean(R2=stats['R2'], Dxy=stats['Dxy'],
                    g=stats['g'],   gr=stats['gr'])
 
-  headings <- list('',
-                   c('Model Likelihood','Ratio Test'),
-                   c('Discrimination','Indexes'))
+  headings <- c('',
+                'Model Likelihood\nRatio Test',
+                'Discrimination\nIndexes')
   digcounts <- c(NA, NA, NA,
                  if(length(ci$name)) NA,
                  if(length(ci$n))    NA,
@@ -57,7 +57,9 @@ print.psm <- function(x, correlation = FALSE, digits=4,
     }
   }
   
-  prModFit(x, title=title, z, digits=digits, coefs=coefs, latex=latex, ...)
+  prModFit(x, title=title, z, digits=digits, coefs=coefs,
+           lang=if(latex) 'latex' else if(md) 'html' else 'plain',
+           ...)
 }
 
 #  wt <- x$weights

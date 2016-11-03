@@ -7,16 +7,15 @@
 \alias{latex.psm}
 \title{LaTeX Representation of a Fitted Cox Model}
 
-\description{
-  Creates a file containing a LaTeX representation of the fitted model. 
-}
+\description{Creates a file containing a LaTeX representation of the fitted model.}
 
 \usage{
 \method{latex}{cph}(object, title,
-      file=paste(first.word(deparse(substitute(object))),".tex",sep=""),
+      file='', 
       append=FALSE, surv=TRUE, maxt=FALSE, which=NULL, varnames, columns=65, 
       inline=FALSE, before=if(inline)"" else "& &", after="", dec=3,
-      pretrans=TRUE, caption, digits=.Options$digits, size="", \dots) # for cph fit
+      pretrans=TRUE, caption, digits=.Options$digits, size="",
+      \dots) # for cph fit
 
 \method{latex}{lrm}(object, title, file, append, which, varnames,
 columns, inline, before, after, pretrans, caption,
@@ -28,7 +27,7 @@ digits=.Options$digits, size="", \dots) # ols fit
 
 \method{latex}{orm}(object, title, file, append, which, varnames,
 columns, inline, before, after, pretrans, caption,
-digits=.Options$digits, size="", intercepts=nrp < 10, \dots) # for lrm fit
+digits=.Options$digits, size="", intercepts=nrp < 10, \dots) # for orm fit
 
 \method{latex}{pphsm}(object, title, file, append, which=NULL, varnames,
 columns, inline, before, after, pretrans, caption,
@@ -43,7 +42,8 @@ digits=.Options$digits, size="", \dots) # psm fit
 a fit object created by a \code{rms} fitting function.
 }
 \item{title}{ignored}
-\item{file,append}{see \code{\link[Hmisc]{latex.default}}}
+\item{file,append}{see \code{\link[Hmisc]{latex.default}}.  Defaults to
+	the console.  When usinghtml/markdown, \code{file} is ignored.}
 \item{surv}{
 if \code{surv=TRUE} was specified to \code{cph}, the underlying survival
 probabilities from \code{object$surv.summary} will be placed in a table
@@ -86,10 +86,12 @@ f.harrell@vanderbilt.edu
 \dontrun{
 units(ftime) <- "Day"
 f <- cph(Surv(ftime, death) ~ rcs(age)+sex, surv=TRUE, time.inc=60)
-w <- latex(f)  #Interprets fitted model and makes table of S0(t)
-               #for t=0,60,120,180,\dots   Creates file f.tex
-w              #displays image, if viewer installed
-latex(f,file="")   # send LaTeX code to the screen
+w <- latex(f, file='f.tex')  #Interprets fitted model and makes table of S0(t)
+               #for t=0,60,120,180,\dots 
+w              #displays image, if viewer installed and file given above
+latex(f)   # send LaTeX code to the console for knitr
+options(prType='html')
+latex(f)       # for use with knitr and R Markdown using MathJax
 }
 }
 \keyword{regression}

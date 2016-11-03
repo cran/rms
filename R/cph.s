@@ -178,7 +178,7 @@ cph <- function(formula     = formula(data),
   rnam <- if(! nonames) dimnames(Y)[[1]]
   if(xpres) dimnames(X) <- list(rnam, atr$colnames)
 
-  if(method=="model.matrix") return(X)
+  if(method == "model.matrix") return(X)
 
   time.units <- units(Y)
   if(! length(time.units) || time.units == '') time.units <- "Day"
@@ -198,14 +198,15 @@ cph <- function(formula     = formula(data),
   if(nullmod) f <- NULL
   else {
     fitter <-
-      if( method=="breslow" || method =="efron") {
-        if (ytype== 'right') coxph.fit
-        else if (ytype=='counting') agreg.fit
-        else
-          stop(paste("Cox model doesn't support \"", ytype,
-                     "\" survival data", sep=''))
+      if( method == "breslow" || method  == "efron") {
+        if (ytype ==  'right') coxph.fit
+        else agreg.fit
       }
-      else if (method=='exact') agexact.fit
+      else if (method == 'exact') {
+        if(type == 'right') getFromNamespace('coxexact.fit', 'survival')
+        else
+          agexact.fit
+        }
       else
         stop(paste ("Unknown method", method))
     
@@ -305,7 +306,8 @@ cph <- function(formula     = formula(data),
   }
   if(model) f$model <- m
   
-  if(nstrata > 0) f$strata <- levels(Strata)
+ ####  if(nstrata > 0) f$strata <- levels(Strata)
+####  f$strata <- if(nstrata > 0) table(Strata)
   
   if(is.character(surv) || surv) {
     if(length(Strata)) {
@@ -325,7 +327,7 @@ cph <- function(formula     = formula(data),
               coefficients=f$coefficients,
               linear.predictors=f$linear.predictors,
               method=f$method, type=type, means=f$means, var=f$var,
-              x=X, y=Y, Strata=Strata, offset=offset, weights=weights,
+              x=X, y=Y, strata=Strata, offset=offset, weights=weights,
               terms=Terms, call=call)
     g <- survfit.cph(g, se.fit=is.character(surv) || surv,
                      type=type, vartype=vartype, conf.type='log')
@@ -334,7 +336,7 @@ cph <- function(formula     = formula(data),
 
     for(k in 1 : nstr) {
       j    <- if(nstr == 1) TRUE else strt == slev[k]
-      yy   <- Y[if(nstr==1) TRUE else iStrata==slev[k], ny - 1]
+      yy   <- Y[if(nstr == 1) TRUE else iStrata == slev[k], ny - 1]
       maxt <- max(yy)
       ##n.risk from surv.fit does not have usual meaning if not Kaplan-Meier
       
@@ -366,7 +368,7 @@ cph <- function(formula     = formula(data),
       }
       
       if(! is.character(surv)) {
-        if(nstr==1) {
+        if(nstr == 1) {
           tim  <- tt
           srv  <- su
           s.e. <- se
@@ -381,8 +383,8 @@ cph <- function(formula     = formula(data),
     
     if(is.character(surv)) f$surv.summary <- s.sum
     else {
-      if(nstr>1) {
-        names(srv) <- names(tim) <- names(s.e.) <- f$strata
+      if(nstr > 1) {
+        names(srv) <- names(tim) <- names(s.e.) <- levels(Strata) ###
       }
       
       f <- c(f, list(time=tim, surv=srv,
@@ -390,7 +392,7 @@ cph <- function(formula     = formula(data),
     }
   }
   
-  f$Strata <- Strata
+  f$strata <- Strata    ### was $Strata
   if(x) f$x <- X
   if(y) f$y <- Y
   f$weights <- weights
@@ -405,16 +407,21 @@ cph <- function(formula     = formula(data),
 coxphFit <- function(..., method, strata=NULL, rownames=NULL, offset=NULL,
                      init=NULL, toler.chol=1e-9, eps=.0001, iter.max=10,
                      type) {
-  if( method == "breslow" || method == "efron")
-    fitter <- if (type == 'right') coxph.fit else agreg.fit
-  else if (method == 'exact')
-    fitter <- agexact.fit
+
+  fitter <- if( method == "breslow" || method == "efron") {
+              if (type == 'right') coxph.fit else agreg.fit
+            }
+            else if (method == 'exact') {
+              if(type == 'right') getFromNamespace('coxexact.fit', 'survival')
+              else
+                agexact.fit
+              }
   else stop("Unkown method ", method)
 
   res <- fitter(..., strata=strata, rownames=rownames,
                 offset=offset, init=init, method=method,
                 control=coxph.control(toler.chol=toler.chol, toler.inf=1,
-                  eps=eps, iter.max=iter.max))
+                                      eps=eps, iter.max=iter.max))
   
   if(is.character(res)) return(list(fail=TRUE))
   
@@ -438,7 +445,7 @@ Survival.cph <- function(object, ...) {
     s <- matrix(NA, nrow=length(lp), ncol=length(times),
                 dimnames=list(names(lp), format(times)))
     if(is.list(time)) {time <- time[[stratum]]; surv <- surv[[stratum]]}
-      if(type=="polygon") {
+      if(type == "polygon") {
         if(length(lp) > 1 && length(times) > 1)
           stop('may not have length(lp)>1 & length(times>1) when type="polygon"')
         su <- approx(time, surv, times, ties=mean)$y
@@ -469,7 +476,7 @@ Quantile.cph <- function(object, ...) {
                 dimnames=list(names(lp), format(q)))
     for(j in 1 : length(lp)) {
       s <- surv^exp(lp[j])
-      if(type=="polygon") Q[j,] <- approx(s, time, q, ties=mean)$y
+      if(type == "polygon") Q[j,] <- approx(s, time, q, ties=mean)$y
       else for(i in 1 : length(q))
         if(any(s <= q[i])) Q[j,i] <- min(time[s <= q[i]])  #is NA if none
     }
@@ -511,7 +518,7 @@ Mean.cph <- function(object, method=c("exact","approximate"),
       }
       for(j in 1 : length(lp)) {
         s <- surv ^ exp(lp[j])
-        Q[j] <- if(type=="step") sum(c(diff(time[k]), 0) * s[k]) else 
+        Q[j] <- if(type == "step") sum(c(diff(time[k]), 0) * s[k]) else 
           trap.rule(time[k], s[k])
       }
       Q
@@ -532,8 +539,8 @@ Mean.cph <- function(object, method=c("exact","approximate"),
     areas  <- list()
     
     for(is in 1 : nstrat) {
-      tim <- if(nstrat==1) time else time[[is]]
-      srv <- if(nstrat==1) surv else surv[[is]]
+      tim <- if(nstrat == 1) time else time[[is]]
+      srv <- if(nstrat == 1) surv else surv[[is]]
       if(! length(tmax)) {
         if(min(srv) > 1e-3)
           warning(paste("Computing mean when survival curve only defined down to",
@@ -550,7 +557,7 @@ Mean.cph <- function(object, method=c("exact","approximate"),
       ymean <- lp.seq
       for(j in 1 : length(lp.seq)) {
         s <- srv ^ exp(lp.seq[j])
-        ymean[j] <- if(type=="step") sum(c(diff(tim[k]),0) * s[k]) else 
+        ymean[j] <- if(type == "step") sum(c(diff(tim[k]),0) * s[k]) else 
         trap.rule(tim[k], s[k])
       }
       areas[[is]] <- ymean
@@ -589,7 +596,7 @@ predict.cph <- function(object, newdata=NULL,
 }
 
 print.cph <- function(x, digits=4, table=TRUE, conf.int=FALSE,
-                      coefs=TRUE, latex=FALSE,
+                      coefs=TRUE, latex=FALSE, md=FALSE,
                       title='Cox Proportional Hazards Model', ...)
 { 
   k <- 0
@@ -608,22 +615,22 @@ print.cph <- function(x, digits=4, table=TRUE, conf.int=FALSE,
   if(length(x$coef)) {
     stats <- x$stats
     ci <- x$clusterInfo
-    misc <- reVector(Obs   =stats['Obs'],
+    misc <- reListclean(Obs   =stats['Obs'],
                      Events=stats['Events'],
                      'Cluster on' = ci$name,
                      Clusters = ci$n,
                      Center   = round(x$center, digits))
-    lr   <- reVector('LR chi2'     = stats['Model L.R.'],
+    lr   <- reListclean('LR chi2'     = stats['Model L.R.'],
                      'd.f.'        = stats['d.f.'],
                      'Pr(> chi2)'  = stats['P'],
                      'Score chi2'  = stats['Score'],
                      'Pr(> chi2)'  = stats['Score P'])
-    disc <- reVector(R2 = stats['R2'],
+    disc <- reListclean(R2 = stats['R2'],
                      Dxy = stats['Dxy'],
                      g  = stats['g'],
                      gr = stats['gr'])
     k <- k + 1
-    headings <- list('', 'Model Tests', c('Discrimination', 'Indexes'))
+    headings <- c('', 'Model Tests', 'Discrimination\nIndexes')
     data     <- list(misc,
                      c(lr,   c(2,NA,4,2,4)),
                      c(disc, 3))
@@ -652,5 +659,6 @@ print.cph <- function(x, digits=4, table=TRUE, conf.int=FALSE,
   }
   
   prModFit(x, title=title,
-           z, digits=digits, coefs=coefs, latex=latex, ...)
+           z, digits=digits, coefs=coefs,
+           lang=if(latex) 'latex' else if(md) 'html' else 'plain', ...)
 }

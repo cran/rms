@@ -679,163 +679,219 @@ rmsArgs <- function(.object, envir=parent.frame(2))
 ## print (the default)
 
 prModFit <- function(x, title, w, digits=4, coefs=TRUE,
-                     latex=FALSE, rmarkdown=FALSE,
                      lines.page=40, long=TRUE, needspace, ...) {
 
-  file <- if(rmarkdown) {
-    latex     <- TRUE
-    tfilebase <- paste('fit', round(100000 * runif(1)), sep='')
-    paste(tfilebase, 'tex', sep='.')
-  } else ''
-
-  ct <- function(...) cat(..., file=file, append=TRUE)
-
-  bverb <- function() if(latex) ct('\\begin{verbatim}\n')
-  everb <- function() if(latex) ct('\\end{verbatim}\n')
-  skipt  <- function(n=1, latex=FALSE) {
-    if(n==0) return()
-    if(latex) paste('\n\\vspace{', n, 'ex}\n\n', sep='')
-    else paste(rep('\n', n), collapse='')
-  }
-  catl  <- function(x, skip=1, bold=FALSE, verb=FALSE, pre=0,
-                    center=TRUE, indent=FALSE)
-    if(latex) {
-      if(verb)
-        ct(paste('\\begin{verbatim}\n', skipt(pre), sep=''),
-           x,
-           skipt(skip),
-           '\\end{verbatim}\n',
-           sep='')
-      else
-        ct(skipt(pre, latex=TRUE),
-           if(center) '\\centerline{'
-           else if(!indent) '\\noindent ',
-           if(bold) '\\textbf{',
-           x,
-           if(bold) '}',
-           if(center) '}',
-           skipt(skip, latex=TRUE),
-           sep='')
-    }
-    else
-      ct(skipt(pre), x, '\n', skipt(skip), sep='')
+  lang <- prType()
+  specs <- markupSpecs[[lang]]
   
+  R <- character(0)
+
+  bverb <- function() {
+    switch(lang,
+           html  = '<pre>',
+           latex = '\\begin{verbatim}',
+           plain = NULL)
+    }
+  
+  everb <- function()
+    switch(lang,
+           html  = '</pre>',
+           latex = '\\end{verbatim}',
+           plain = NULL)
+  
+  skipt  <- function(n=1) {
+    if(n==0) return(character(0))
+    if(n == 1) return('')
+    specs$lineskip(n)
+  }
+
+  catl  <- function(x, skip=1, bold=FALSE, verb=FALSE, pre=0,
+                    center=TRUE, indent=FALSE) {
+    if(lang == 'latex') {
+      if(verb)
+        c('\\begin{verbatim}', skipt(pre),
+          x,
+          skipt(skip),
+          '\\end{verbatim}')
+      else
+        c(skipt(pre),
+          paste0(
+            if(center) '\\centerline{'
+            else if(!indent) '\\noindent ',
+            if(bold) '\\textbf{',
+            x,
+            if(bold) '}',
+            if(center) '}'),
+          skipt(skip))
+    } else if(lang == 'html') {
+      if(verb)
+        c('<pre>', skipt(pre),
+          x,
+          skipt(skip),
+          '</pre>')
+      else
+        c(skipt(pre),
+          paste0(if(center) '<div align=center>',
+                 if(bold) '<strong>',
+                 x,
+                 if(bold) '</strong>',
+                 if(center) '</div>'),
+          skipt(skip))
+    }
+    else c(paste0(skipt(pre), x), skipt(skip))
+  }
   
   latexVector <- function(x, ...)
-    ct(latexTabular(t(x), helvetica=FALSE, ...),'\n', sep='')
+    latexTabular(t(x), helvetica=FALSE, ...)
   
   if(length(x$fail) && x$fail) {
-    catl('Model Did Not Converge.  No summary provided.', bold=TRUE, pre=1)
-    return()
+    return(catl('Model Did Not Converge.  No summary provided.',
+                bold=TRUE, pre=1, verb=TRUE))
   }
 
-  if(!missing(needspace) && latex)
-    ct('\\Needspace{', needspace, '}\n', sep='')
-  if(title != '') catl(title, pre=1, bold=TRUE)
+  R <- character(0)
+  
+  if(! missing(needspace) && latex)
+    R <- paste0('\\Needspace{', needspace, '}')
+
+  if(title != '') R <- c(R, catl(title, pre=1, bold=TRUE))
   
   if(long) {
-    bverb()
-    ct(paste(deparse(x$call), collapse='\n'))
+    R <- c(R, bverb(), deparse(x$call), everb(), '')
     ## dput(x$call) didn't work with rmarkdown because dput has no append=
-    ct('\n')
-    everb()
   }
-  
+
   for(z in w) {
     type <- z$type
     obj  <- z[[2]]
     titl <- z$title
     tex  <- z$tex
-    if(!length(tex)) tex <- FALSE
-    if(type == 'naprint.delete' && latex) {
-      type <- 'latex.naprint.delete'
-      tex <- TRUE
+    if(! length(tex)) tex <- FALSE
+    if(type == 'naprint.delete') {
+      if(lang == 'latex') {
+        type <- 'latex.naprint.delete'
+        tex <- TRUE
+      }
+      if(lang == 'html') type <- 'html.naprint.delete'
     }
     
     preskip <- z$preskip
-    if(!length(preskip)) preskip <- 0
-    if(!tex && length(titl)) catl(titl, pre=preskip, skip=1)
+    if(! length(preskip)) preskip <- 0
+    if(! tex && length(titl)) R <- c(R, catl(titl, pre=preskip, skip=1))
     if(type == 'stats') {
-      prStats(obj[[1]], obj[[2]], latex=latex, file=file)
-      if(!latex) ct('\n')
+      R <- c(R, prStats(obj[[1]], obj[[2]], lang=lang))
     } else if(type == 'coefmatrix') {
       if(coefs) {
         errordf <- obj$errordf
         beta <- obj$coef
         se   <- obj$se
         Z    <- beta/se
-        P    <- if(length(errordf)) 2*(1 - pt(abs(Z), errordf)) else
-        1 - pchisq(Z^2, 1)
+        P    <- if(length(errordf)) 2 * (1 - pt(abs(Z), errordf))
+                else
+                  1 - pchisq(Z ^ 2, 1)
         pad <- function(x)
-          if(latex) paste('~', x, '~', sep='') else x
-        U    <- cbind('\\textrm{~Coef~}' =
-                        pad(formatNP(beta, digits, latex=latex)),
-                      '\\textrm{~S.E.~}' =
-                        pad(formatNP(se,   digits, latex=latex)),
-                      '\\textrm{Wald~} Z'  =
-                        formatNP(Z,    2, latex=latex),
-                      '\\textrm{Pr}(>|Z|)' =
-                        formatNP(P, 4, latex=latex, pvalue=TRUE))
-        if(! latex)
-          colnames(U) <- c('Coef', 'S.E.', 'Wald Z', 'Pr(>|Z|)')
+          switch(lang, 
+                 latex = paste0('~', x, '~'),
+                 html  = paste0('&nbsp;', x),
+                 plain  = x)
+
+        U    <- cbind('Coef' =
+                        pad(formatNP(beta, digits, lang=lang)),
+                      'S.E.' =
+                        pad(formatNP(se,   digits, lang=lang)),
+                      'Wald Z'  =
+                        formatNP(Z,    2, lang=lang),
+                      'Pr(>|Z|)' =
+                        formatNP(P, 4, lang=lang, pvalue=TRUE))
+        if(lang == 'latex')
+          colnames(U) <- c('$\\hat{\\beta}$', 'S.E.', 'Wald $Z$',
+                           'Pr$(>|Z|)$')
+        else
+          if(lang == 'html')
+            colnames(U) <- c('&beta;&#770;', 'S.E.', 'Wald <i>Z</i>',
+                             'Pr(&#62;&#124;<i>Z</i>&#124;)')
         if(length(errordf))
-          colnames(U)[3:4] <- if(latex) c('t', '\\textrm{Pr}(>|t|)') else
-        c('t',   'Pr(>|t|)')
+          colnames(U)[3:4] <-
+            switch(lang,
+                   latex = c('$t$', 'Pr$(>|t|)$'),
+                   html  = c('<i>t</i>', 'Pr(&#62;&#124;<i>t</i>&#124;)'),
+                   plain = c('t',   'Pr(>|t|)') )
+
         rownames(U) <- names(beta)
+
         if(length(obj$aux)) {
-          U <- cbind(U, formatNP(obj$aux, digits, latex=latex))
+          U <- cbind(U, formatNP(obj$aux, digits, lang=lang))
           colnames(U)[ncol(U)] <- obj$auxname
         }
-        if(latex) {
-          ct(skipt(1, latex=TRUE))
-          rownames(U) <- latexTranslate(names(beta))
+        if(lang %in% c('latex', 'html')) {
+          R <- c(R, skipt(1))
+          rownames(U) <- if(lang == 'latex')
+                           latexTranslate(names(beta))
+                         else
+                           htmlTranslate(names(beta))
+          
           if(is.numeric(coefs)) {
             U <- U[1:coefs,,drop=FALSE]
             U <- rbind(U, rep('', ncol(U)))
-            rownames(U)[nrow(U)] <- '\\dots'
+            rownames(U)[nrow(U)] <- if(lang == 'html') '&hellip;' else '\\dots'
           }
-          if(!missing(needspace) && latex)
-            ct('\\Needspace{', needspace, '}\n', sep='')
-          latex(U, file=file, first.hline.double=FALSE,
-                table=FALSE, longtable=TRUE,
-                lines.page=lines.page,
-                col.just=rep('r',ncol(U)), rowlabel='',
-                math.col.names=TRUE, append=TRUE)
+          ## Translate interaction symbol (*) to times symbol
+          rownames(U) <- gsub('\\*', specs$times, rownames(U))
+ 
+          if(! missing(needspace) && lang == 'latex')
+            R <- c(R, paste0('\\Needspace{', needspace, '}'))
+
+          if(lang == 'latex') 
+            R <- c(R,   # was capture.output(latex())
+                   capture.output(latex(U, file='',
+                                        first.hline.double=FALSE,
+                                        table=FALSE, longtable=TRUE,
+                                        lines.page=lines.page,
+                                        col.just=rep('r',ncol(U)), rowlabel='',
+                                        math.col.names=FALSE, append=TRUE)))
+          else {
+            al <- paste(rep('r', ncol(U)), collapse='')
+            R <- c(R, as.character(
+                        htmlTable::htmlTable(U,
+                                             css.cell = 'min-width: 7em;',
+                                             align=al, align.header=al,
+                                             rowlabel='')))
+            }
         } else {
           if(is.numeric(coefs)) {
             U <- U[1:coefs,,drop=FALSE]
             U <- rbind(U, rep('', ncol(U)))
             rownames(U)[nrow(U)] <- '. . .'
           }
-          print(U, quote=FALSE)
-          ct('\n')
+          R <- c(R, '', capture.output(print(U, quote=FALSE)), '')
         }
-      }
-    } else {
-      if(tex) {
-        ct('\\begin{center}\n')
-        if(length(titl)) ct(titl, '\n\n')
+      }   ## end if(coefs)
+    }     ## end coefmatrix
+    else {
+      if(tex) {    ### ??? how does this apply to html?
+        R <- c(R, '\\begin{center}',
+               if(length(titl)) c(titl, '\n'))
       } else {
-        bverb()
-        ct(skipt(preskip, latex=tex))
+        R <- c(R,  skipt(preskip))
       }
-      if(type == 'latex.naprint.delete')
-        do.call(type, c(obj, list(file=file, append=TRUE)))
-      else do.call(type, obj)
-      ## unlike do.call, eval(call(...)) dispatches on class of ...
-      if(tex) ct('\\end{center}\n')
-      else {
-        ct('\n')
-        everb()
-      }
+      R <- c(R,
+             if(type == 'html.naprint.delete')
+               do.call(type, obj)
+             else if(type == 'latex.naprint.delete')
+               capture.output(do.call(type,
+                                      c(obj, list(file=''))))
+             else do.call(type, obj),
+#####             else capture.output(do.call(type, obj)),
+             ## unlike do.call, eval(call(...)) dispatches on class of ...
+             if(tex) '\\end{center}' else c('')
+      )
     }
   }
-  ct('\n')
-  if(rmarkdown) {
-    w <- list(file=file, style='longtable')
-    class(w) <- 'latex'
-    html(w, rmarkdown=TRUE)
-  }
+  R <- paste0(R, '\n')
+  switch(lang,
+         html  = htmltools::HTML(R),
+         latex = cat(R),
+         plain = cat(R))
 }
 
 latex.naprint.delete <- function(object, file='', append=TRUE, ...) {
@@ -848,8 +904,11 @@ latex.naprint.delete <- function(object, file='', append=TRUE, ...) {
       print(g)
       cat('\\end{verbatim}\n')
     } else {
+      maxlen <- max(nchar(names(g)))
+      est <- function(X, Y, x) approx(X, Y, xout=x, rule=2)$y
       z <- latexDotchart(g, names(g), auxdata=g, auxtitle='N',
-                         w=3, h=min(max(2.5*lg/20, 1), 8))
+                         w = 1 + est(c(2, 60), c(.5, 6), maxlen),
+                         h = min(max(2.5*lg/20, 1), 8))
       cat(z, sep='\n')
     }
     cat("\n")
@@ -864,15 +923,42 @@ latex.naprint.delete <- function(object, file='', append=TRUE, ...) {
   invisible()
 }
                          
+html.naprint.delete <- function(object, ...) {
+  lg <- length(g <- object$nmiss)
+  R <- character(0)
+  if(lg) {
+    R <- "Frequencies of Missing Values Due to Each Variable"
+    
+    if(sum(g > 0) < 4)
+      R <- c(R, '<pre>', capture.output(print(g)), '</pre>')
+    else {
+      maxlen <- max(nchar(names(g)))
+      print(dotchartp(g, names(g), auxdata=g, auxtitle='N',
+                      showlegend = FALSE,
+                      sort   = 'descending',
+                      xlab   = 'Missing',
+                      width  = min(550, 300 + 20 * maxlen),
+                      height = plotlyParm$heightDotchart(lg)))
+    }
+  }
+  
+  if(length(g <- object$na.detail.response)) {
+    R <- c(R, '',
+           'Statistics on Response by Missing/Non-Missing Status of Predictors<br>',
+           '<pre>', capture.output(print(unclass(g))), '</pre>')
+  }
+  R
+}
     
 ## Function to print model fit statistics
 ## Example:
 #prStats(list('Observations', c('Log','Likelihood'),
-#            c('Rank','Measures'),
-#            c('Mean |difference|','Measures')),
-#       list(c(N0=52, N1=48), c('max |deriv|'=1e-9,'-2 LL'=1332.23,c(NA,2)),
-#            c(tau=-.75, Dxy=-.64, C=.743, 2),
-#            c(g=1.25, gr=11.3, 2)))
+##            c('Rank','Measures'),
+##            c('Mean |difference|','Measures')),
+##       list(list(N0=52, N1=48), list('max |deriv|'=1e-9,'-2 LL'=1332.23,
+##            c(NA,2)),
+#            list(tau=-.75, Dxy=-.64, C=.743, 2),
+#            list(g=1.25, gr=11.3, 2)))
 ## Note that when there is an unnamed element of w, it is assumed to be
 ## the number of digits to the right of the decimal place (recycling of
 ## elements is done if fewer elements are in this vector), causing
@@ -880,141 +966,209 @@ latex.naprint.delete <- function(object, file='', append=TRUE, ...) {
 ## format without nsmall and without rounding (useful for integers and for
 ## scientific notation)
 
-prStats <- function(labels, w, latex=FALSE, file='', append=TRUE) {
-  ct <- function(...) cat(..., file=file, append=append)
-  spaces <- function(n)
-    if(n <= 0.5) '' else
-  substring('                                                         ',
-            1, floor(n))
-  
+prStats <- function(labels, w, lang=c('plain', 'latex', 'html')) {
+
+  lang  <- match.arg(lang)
+  lorh  <- lang != 'plain'
+  specs <- markupSpecs[[lang]]
+
+  spaces <- function(n) if(n <= 0.5) '' else
+   substring('                                                         ',
+             1, floor(n))
+  ## strsplit returns character(0) for ""
+  ssplit <- function(x) {
+    x <- strsplit(x, split='\n')
+    for(i in 1 : length(x)) if(! length(x[[i]])) x[[i]] <- ''
+    x
+    }
+  trans <- switch(lang,
+                  latex = latexTranslate,
+                  html  = htmlTranslate,
+                  plain = function(x) x )
   ## Find maximum width used for each column
   p <- length(labels)
   width <- numeric(p)
-  for(i in 1:p) {
-    width[i] <- max(nchar(labels[[i]]))
+for(i in 1:p) {
+    labs <- ssplit(labels[i])[[1]]
+    width[i] <- max(nchar(labs))
     u <- w[[i]]
     dig <- NA
     if(any(names(u)=='')) {
-      dig <- u[names(u)=='']
-      u   <- u[names(u)!='']
+      dig <- unlist(u[names(u) == ''])
+      u   <- u[names(u) != '']
     }
-    lu <- length(u)
+    lu  <- length(u)
     dig <- rep(dig, length=lu)
-    fu <- character(lu)
-    for(j in 1:length(u)) {
+    fu  <- character(lu)
+    for(j in 1 : length(u)) {
+      uj <- u[[j]]
+      nuj <- names(u)[j]
       dg <- dig[j]
-      fu[j] <- if(names(u)[j] == 'Cluster on')
-                 ifelse(latex,
-                        paste('\\texttt{\\small ', latexTranslate(u[j]),
-                              '}', sep=''),
-                        u[j]) else
-      if(is.na(dg)) format(u[j]) else
-      if(dg < 0) formatNP(u[j], -dg, pvalue=TRUE, latex=latex) else
-      formatNP(u[j], dg, latex=latex)
+      fu[j] <- if(nuj == 'Cluster on') specs$code(trans(uj))
+               else
+                 if(nuj == 'max |deriv|')
+                   formatNP(signif(uj, 1), lang=lang)
+               else
+                 if(is.na(dg)) format(uj)
+               else
+                 if(dg < 0) formatNP(uj, -dg, pvalue=TRUE, lang=lang)
+               else
+                 formatNP(uj, dg, lang=lang)
     }
     names(fu) <- names(u)
-    w[[i]] <- fu
-    for(j in 1:length(u))
+    w[[i]]    <- fu
+    for(j in 1 : length(u))
       width[i] <- max(width[i],
-                      1 + nchar(names(u))[j] + nchar(fu[j]))
+                      1 + nchar(nuj) + nchar(fu[j]))
   }
-  if(latex) {
-    ct('\\centerline{\\begin{tabular}{|', rep('c|',p), '}\\hline\n',
-        sep='')
-    if(sum(nchar(unlist(labels))) > 0) {
-      maxl <- max(sapply(labels, length))
-      for(i in 1:maxl) {
-        lab <- sapply(labels, function(x) if(length(x) < i) '' else x[i])
-        ct(paste(lab, collapse='&'), '\\\\ \n', sep='')
-        }
-      ct('\\hline\n')
-    }
+  if(lorh) {
     maxl <- max(sapply(w, length))
     z <- matrix('', nrow=maxl, ncol=p)
-    for(i in 1:p) {
-      k <- latexTranslate(names(w[[i]]), greek=TRUE)
-      k[k=='Dxy']   <- '$D_{xy}$'
-      k[k=='LR chi2']  <- 'LR $\\chi^{2}$'
-      k[k=='Score chi2'] <- 'Score $\\chi^{2}$'
-      k[k=='Pr($>$ chi2)'] <- 'Pr$(>\\chi^{2})$'
-      k[k=='$\\tau$-a'] <- '$\\tau_{a}$'
-      k[k=='R2']    <- '$R^{2}$'
-      k[k=='R2 adj'] <- '$R^{2}_{\\textrm{adj}}$'
-      k[k=='C']     <- '$C$'
-      k[k=='g']     <- '$g$'
-      k[k=='gp']    <- '$g_{p}$'
-      k[k=='gr']    <- '$g_{r}$'
-      k[k=='max $|$deriv$|$'] <- '$\\max|\\frac{\\partial\\log L}{\\partial \\beta}|$'
-      k[k=='mean $|$Y-Yhat$|$'] <- 'mean $|Y-\\hat{Y}|$'
-      k[k=='Unique Y'] <- 'Unique $Y$'
-      k[k=='Median Y'] <- '$Y_{0.5}$'
-      k[k=='$|$Pr(Y$\\geq$median)-0.5$|$'] <-
-        '$|\\overline{\\mathrm{Pr}(Y\\geq Y_{0.5})-\\frac{1}{2}}|$'
-      z[1:length(k),i] <- paste(k, '~\\hfill ', w[[i]], sep='')
+    fil <- if(lang == 'latex') '~\\hfill ' else '&emsp;'
+    
+    trans <- rbind(
+      'Dxy'        = c(latex = '$D_{xy}$',
+                       html  = '<i>D</i><sub>xy</sub>'),
+      'LR chi2'    = c(latex = 'LR $\\chi^{2}$',
+                       html  = 'LR &chi;<sup>2</sup>'),
+      'Score chi2' = c(latex = 'Score $\\chi^{2}$',
+                       html  = 'Score &chi;<sup>2</sup>'),
+      'Pr(> chi2)' = c(latex = 'Pr$(>\\chi^{2})$',
+                       html  = 'Pr(&#62;&chi;<sup>2</sup>)'),
+      'tau-a'      = c(latex = '$\\tau_{a}$',
+                       html  = '&tau;<sub>a</sub>'),
+      'gamma'      = c(latex = '$\\gamma$',
+                       html  = '&gamma;'),
+      'R2'         = c(latex = '$R^{2}$',
+                       html  = '<i>R</i><sup>2</sup>'),
+      'R2 adj'     = c(latex = '$R^{2}_{\\textrm{adj}}$',
+                       html  = paste0('<i>R</i>', specs$subsup('adj', '2'))),
+      'C'          = c(latex = '$C$',
+                       html  = '<i>C</i>'),
+      'g'          = c(latex = '$g$',
+                       html  = '<i>g</i>'),
+      'gp'         = c(latex = '$g_{p}$',
+                       html  = '<i>g</i><sub>p</sub>'),
+      'gr'         = c(latex = '$g_{r}$',
+                       html  = '<i>g</i><sub>r</sub>'),
+      'max |deriv|'   = c(latex = '$\\max|\\frac{\\partial\\log L}{\\partial \\beta}|$',
+                          html  = 'max &#124;&#8706;log <i>L</i>/&#8706;&beta;&#124;'),
+      'mean |Y-Yhat|' = c(latex = 'mean $|Y-\\hat{Y}|$',
+                          html  = 'mean &#124;<i>Y - Y</i>&#770;&#124;'),
+      'Unique Y'   = c(latex = 'Unique $Y$',
+                       html  = 'Unique <i>Y</i>'),
+      'Median Y'   = c(latex = '$Y_{0.5}$',
+                       html  = '<i>Y</i><sub>0.5</sub>'),
+      '|Pr(Y>=median)-0.5|'  =
+        c(latex = '$|\\overline{\\mathrm{Pr}(Y\\geq Y_{0.5})-\\frac{1}{2}}|$',
+          html  = '<span style="text-decoration: overline">&#124;Pr(<i>Y</i> &#8805; median)-&#189;&#124;</span>')
+
+    )
+    
+    for(i in 1 : p) {
+      k <- names(w[[i]])
+      j <- k %in% rownames(trans)
+      if(any(j)) k[j] <- trans[k[j], lang]
+      j <- ! j
+      if(any(j))
+        k[j] <- switch(lang,
+                       plain = k[j],
+                       latex = latexTranslate(k[j], greek=TRUE),
+                       html  = htmlTranslate (k[j], greek=TRUE) )
+      
+      z[1 : length(k), i] <- paste0(k, fil, w[[i]])
     }
-    for(j in 1:maxl) ct(paste(z[j,], collapse='&'), '\\\\ \n', sep='')
-    ct('\\hline\n')
-    ct('\\end{tabular}}\n\n')
-    return()
+    
+    al <- paste0('|', paste(rep('c|', p), collapse=''))
+    
+    if(lang == 'latex')
+      w <- latexTabular(z, headings=labels, align=al, halign=al,
+                        translate=FALSE, hline=2, center=TRUE)
+    else {
+      labels <- gsub('\n', '<br>', labels)
+      w <- htmlTable::htmlTable(z,
+                                header=labels,
+                                css.cell = 'min-width: 9em;',
+                                align=al, align.header=al)
+      w <- htmltools::HTML(paste0(w, '\n'))
+    }
+    return(w)
   }
   z <- labs <- character(0)
   for(i in 1:p) {
     wid <- width[i]
-    lab <- labels[[i]]
+    lab <- ssplit(labels[i])[[1]]
     for(j in 1:length(lab))
-      lab[j] <- paste(spaces((wid - nchar(lab[j]))/2), lab[j], sep='')
+      lab[j] <- paste0(spaces((wid - nchar(lab[j])) / 2), lab[j])
     labs <- c(labs, paste(lab, collapse='\n'))
     u   <- w[[i]]
     a <- ''
     for(i in 1:length(u))
-      a <- paste(a, names(u)[i],
+      a <- paste0(a, names(u)[i],
                  spaces(wid - nchar(u[i]) - nchar(names(u[i]))),
                  u[i],
-                 if(i < length(u)) '\n', sep='')
+                 if(i < length(u)) '\n')
     z <- c(z, a)
   }
   res <- rbind(labs, z)
   rownames(res) <- NULL
-  print.char.matrix(res, vsep='', hsep='    ', csep='',
-                    top.border=FALSE, left.border=FALSE)
+  capture.output(print.char.matrix(res, vsep='', hsep='    ', csep='',
+                                   top.border=FALSE, left.border=FALSE))
 }
 
-## reVector is used in conjunction with pstats
+## reListclean is used in conjunction with pstats
 ## Example:
 # x <- c(a=1, b=2)
 # c(A=x[1], B=x[2])
-# reVector(A=x[1], B=x[2])
-# reVector(A=x['a'], B=x['b'], C=x['c'])
-reVector <- function(..., na.rm=TRUE)
-  {
-    d <- list(...)
-    d <- d[sapply(d, function(x) !is.null(x))]
-    x <- unlist(d)
-    names(x) <- names(d)
-    if(na.rm) x[!is.na(x)] else x
-  }
+# reListclean(A=x[1], B=x[2])
+# reListclean(A=x['a'], B=x['b'], C=x['c'])
+#reListclean <- function(..., na.rm=TRUE) {
+#  d <- list(...)
+#  d <- d[sapply(d, function(x) ! is.null(x))]
+#  x <- unlist(d)
+#  names(x) <- names(d)
+#  if(na.rm) x[! is.na(x)] else x
+#}
+reListclean <- function(..., na.rm=TRUE) {
+  d <- list(...)
+  g <- if(na.rm) function(x) length(x) > 0 && ! is.na(x)
+       else
+         function(x) length(x) > 0
+  d[sapply(d, g)]
+}
 
-formatNP <- function(x, digits=NULL, pvalue=FALSE, latex=FALSE)
-  {
-    if(! all.is.numeric(x)) return(x)
-    digits <- as.numeric(digits)  # Needed but can't figure out why
+
+
+formatNP <- function(x, digits=NULL, pvalue=FALSE,
+                     lang=c('plain', 'latex', 'html')) {
+  lang <- match.arg(lang)
+  if(! is.numeric(x)) return(x)
+  digits <- as.numeric(digits)  # Needed but can't figure out why
     x <- as.numeric(x)
-    f <- if(length(digits))
-      format(round(x, digits), nsmall=digits, scientific=1) else
-      format(x, scientific=1)
-    sci <- grep('e', f)
-    if(latex && length(sci)) f[sci] <- paste('$', latexSN(f[sci]), '$', sep='')
-    f <- ifelse(is.na(x), '', f)
-    if(!pvalue) return(f)
-    if(!length(digits)) stop('must specify digits if pvalue=TRUE')
-    s <- !is.na(x) & x < 10^(-digits)
-    if(any(s)) {
-      w <- paste('0.', paste(rep('0', digits-1), collapse=''), '1', sep='')
-      f[s] <- if(latex) paste('$<', w, '$', sep='') else
-      paste('<', w, sep='')
-    }
-    f
+  f <- if(length(digits) && ! is.na(digits))
+         format(round(x, digits), nsmall=digits, scientific=1) else
+         format(x, scientific=1)
+  sci <- grep('e', f)
+  if(length(sci)) {
+    if(lang == 'latex') f[sci] <- paste0('$', latexSN(f[sci]), '$')
+    else
+      if(lang == 'html') f[sci] <- htmlSN(f[sci])
   }
+  f <- ifelse(is.na(x), '', f)
+
+  if(! pvalue) return(f)
+  
+  if(! length(digits)) stop('must specify digits if pvalue=TRUE')
+  s <- ! is.na(x) & x < 10 ^ (-digits)
+  if(any(s)) {
+    w <- paste0('0.', paste0(rep('0', digits - 1), collapse=''), '1')
+    f[s] <- switch(lang,
+                   latex = paste0('$<$', w),
+                   html  = paste0('&#60;', w),
+                   plain = paste0('<', w))
+  }
+  f
+}
 
 logLik.ols <- function(object, ...) {
   ll <- getS3method('logLik', 'lm')(object)

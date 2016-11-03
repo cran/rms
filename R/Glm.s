@@ -93,7 +93,7 @@ Glm <-
   fit
 }
 
-print.Glm <- function(x, digits=4, coefs=TRUE, latex=FALSE,
+print.Glm <- function(x, digits=4, coefs=TRUE, latex=FALSE, md=FALSE,
                       title='General Linear Model', ...)
 {
   k <- 0
@@ -111,16 +111,15 @@ print.Glm <- function(x, digits=4, coefs=TRUE, latex=FALSE,
   pval <- 1 - pchisq(lr, dof)
 
   ci <- x$clusterInfo
-  misc <- reVector(Obs=length(x$residuals),
+  misc <- reListclean(Obs=length(x$residuals),
                    'Residual d.f.'=x$df.residual,
                    'Cluster on'=ci$name,
                    Clusters=ci$n,
                    g = x$g)
-  lr   <- reVector('LR chi2'     = lr,
+  lr   <- reListclean('LR chi2'     = lr,
                    'd.f.'        = dof,
                    'Pr(> chi2)' = pval)
-  headings <- list('',
-                   c('Model Likelihood', 'Ratio Test'))
+  headings <- c('', 'Model Likelihood\nRatio Test')
   data <-  list(c(misc, c(NA,NA,NA,NA,3)),
                 c(lr,   c(2, NA,-4)))
   k <- k + 1
@@ -130,7 +129,9 @@ print.Glm <- function(x, digits=4, coefs=TRUE, latex=FALSE,
   k <- k + 1
   z[[k]] <- list(type='coefmatrix',
                  list(coef=cof, se=se))
-  prModFit(x, title=title, z, digits=digits, coefs=coefs, latex=latex, ...)
+  prModFit(x, title=title, z, digits=digits, coefs=coefs,
+           lang=if(latex) 'latex' else if(md) 'html' else 'plain',
+           ...)
 }
 
 summary.Glm <- function(...) summary.rms(...)

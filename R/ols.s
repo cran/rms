@@ -57,6 +57,7 @@ ols <- function(formula, data, weights, subset, na.action=na.delete,
     X <- model.matrix(Terms, X)
     alt <- attr(mmcolnames, 'alt')
     if(! all(mmcolnames %in% colnames(X)) && length(alt)) mmcolnames <- alt
+    ## prn(mmcolnames); prn(colnames(X))
     X <- X[, c('(Intercept)', mmcolnames), drop=FALSE]
     colnames(X) <- c('Intercept', atr$colnames)
     #if(length(atr$colnames)) 
@@ -224,7 +225,7 @@ predict.ols <-
   }
 
 print.ols <- function(x, digits=4, long=FALSE, coefs=TRUE, latex=FALSE,
-                      title="Linear Regression Model", ...)
+                      md=FALSE, title="Linear Regression Model", ...)
 {
   k <- 0
   z <- list()
@@ -253,18 +254,18 @@ print.ols <- function(x, digits=4, long=FALSE, coefs=TRUE, latex=FALSE,
   lrchisq <- stats['Model L.R.']
   ci <- x$clusterInfo
   if(lst <- length(stats)) {
-    misc <- reVector(Obs=stats['n'],
+    misc <- reListclean(Obs=stats['n'],
                      sigma=sigma,
                      'd.f.'=df[2],
                      'Cluster on'=ci$name,
                      Clusters=ci$n)
-    lr   <- reVector('LR chi2'     = lrchisq,
+    lr   <- reListclean('LR chi2'     = lrchisq,
                      'd.f.'        = ndf,
                      'Pr(> chi2)' = 1 - pchisq(lrchisq, ndf))
-    disc <- reVector(R2=r2, 'R2 adj'=rsqa, g=stats['g'])
-    headings <- list('',
-                     c('Model Likelihood', 'Ratio Test'),
-                     c('Discrimination', 'Indexes'))
+    disc <- reListclean(R2=r2, 'R2 adj'=rsqa, g=stats['g'])
+    headings <- c('',
+                  'Model Likelihood\nRatio Test',
+                  'Discrimination\nIndexes')
     data <- list(c(misc, c(NA,digits,NA,NA,NA)), c(lr, c(2,NA,4)), c(disc,3))
     k <- k + 1
     z[[k]] <- list(type='stats', list(headings=headings, data=data))
@@ -320,5 +321,7 @@ print.ols <- function(x, digits=4, long=FALSE, coefs=TRUE, latex=FALSE,
     }
   }
   prModFit(x, title=title, z, digits=digits,
-           coefs=coefs, latex=latex, ...)
+           coefs=coefs,
+           lang=if(latex) 'latex' else if(md) 'html' else 'plain',
+           md=md, ...)
 }

@@ -2,6 +2,7 @@
 \alias{summary.rms}
 \alias{print.summary.rms}
 \alias{latex.summary.rms}
+\alias{html.summary.rms}
 \alias{plot.summary.rms}
 \title{Summary of Effects in Model}
 
@@ -16,18 +17,29 @@ the predictor.  Factors requiring multiple parameters are handled, as
 differences.  By default, inter-quartile range effects (odds ratios,
 hazards ratios, etc.) are printed for continuous factors, and all
 comparisons with the reference level are made for categorical factors.
-\code{print.summary.rms} prints the results, \code{latex.summary.rms} typesets
-the results, and \code{plot.summary.rms}
+\code{print.summary.rms} prints the results, \code{latex.summary.rms}
+and \code{html.summary.rms} typeset the results, and \code{plot.summary.rms}
 plots shaded confidence bars to display the results graphically.
 The longest confidence bar on each page is labeled with confidence levels
 (unless this bar has been ignored due to \code{clip}).  By default, the
 following confidence levels are all shown: .9, .95, and .99, using 
-blue of different transparencies.
+blue of different transparencies.  The \code{html} method is for use
+with R Markdown using html with LaTeX math (using MathJax).
 
 If \code{usebootcoef=TRUE} and the fit was run through \code{bootcov},
 the confidence intervals are bootstrap nonparametric percentile
 confidence intervals, basic bootstrap, or BCa intervals, obtained on contrasts
 evaluated on all bootstrap samples.
+
+If \code{options(grType='plotly')} is in effect and the \code{plotly}
+package is installed, \code{plot} is used instead of base graphics to
+draw the point estimates and confidence limits when the \code{plot}
+method for \code{summary} is called.  Colors and other graphical
+arguments to \code{plot.summary} are ignored in this case.  Various
+special effects are implemented such as only drawing 0.95 confidence
+limits by default but including a legend that allows the other CLs to be
+activated.  Hovering over point estimates shows adjustment values if
+there are any.  \code{nbar} is not implemented for \code{plotly}.
 }
 \usage{
 \method{summary}{rms}(object, \dots, est.all=TRUE, antilog,
@@ -39,12 +51,14 @@ usebootcoef=TRUE, boot.type=c("percentile","bca","basic"), verbose=FALSE)
 
 \method{latex}{summary.rms}(object, title, table.env=TRUE, \dots)
 
+\method{html}{summary.rms}(object, digits=4, dec=NULL, \dots)
+
 \method{plot}{summary.rms}(x, at, log=FALSE,
     q=c(0.9, 0.95, 0.99), xlim, nbar, cex=1, nint=10,
     cex.main=1, clip=c(-1e30,1e30), main,
     col=rgb(red=.1,green=.1,blue=.8,alpha=c(.1,.4,.7)),
     col.points=rgb(red=.1,green=.1,blue=.8,alpha=1), pch=17,
-    lwd=if(length(q) == 1) 3 else 2 : (length(q) + 1), \dots)
+    lwd=if(length(q) == 1) 3 else 2 : (length(q) + 1), digits=4, \dots)
 }
 \arguments{
 \item{object}{
@@ -118,6 +132,13 @@ factor levels for categorical variables in the model.}
 \code{title} to pass to \code{latex}.  Default is name of fit object passed to
 \code{summary} prefixed with \code{"summary"}.}
 \item{table.env}{see \code{\link[Hmisc]{latex}}}
+\item{digits,dec}{for \code{html.summary.rms}; \code{digits} is the
+	number of significant digits for printing for effects, standard
+	errors, and confidence limits.  It is ignored if \code{dec} is
+	given. The statistics are rounded to \code{dec} digits to the right of
+	the decimal point of \code{dec} is given.  \code{digits} is also the
+	number of significant digits to format numeric hover text and labels
+	for \code{plotly}.}
 \item{at}{
 vector of coordinates at which to put tick mark labels on the main axis.  If
 \code{log=TRUE}, \code{at} should be in anti-log units.
@@ -157,7 +178,8 @@ e.g., \code{"log Odds Ratio"}.
 \item{col}{vector of colors, one per value of \code{q}}
 \item{col.points}{color for points estimates}
 \item{pch}{symbol for point estimates.  Default is solid triangle.}
-\item{lwd}{line width for confidence intervals, corresponding to \code{q}}
+\item{lwd}{line width for confidence intervals, corresponding to
+	\code{q}}
 }
 \value{
 For \code{summary.rms}, a matrix of class \code{summary.rms} 
@@ -220,7 +242,8 @@ s <- summary(fit)                # Estimate effects using default ranges
                                  # compared to 1st quartile
 \dontrun{
 latex(s)                         # Use LaTeX to print nice version
-latex(s, file="")                # Just write LaTeX code to screen
+latex(s, file="")                # Just write LaTeX code to console
+html(s)                          # html/LaTeX to console for knitr
 }
 summary(fit, sex='male', age=60) # Specify ref. cell and adjustment val
 summary(fit, age=c(50,70))       # Estimate effect of increasing age from

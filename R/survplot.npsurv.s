@@ -74,10 +74,13 @@ survplot.npsurv <-
     convert <- if(mstate) {
       istate    <- match(state, states)
       conv <- function(f, istate) {
-        f$surv    <- 1 - f$prev   [, istate]
+        f$surv    <- 1 - f$pstate [, istate]
         f$lower   <- 1 - f$lower  [, istate]
         f$upper   <- 1 - f$upper  [, istate]
         f$std.err <-     f$std.err[, istate]
+        f$n.risk  <- f$n.risk[, ncol(f$n.risk)]
+        if(all(f$n.risk == 0))
+          stop('expected n.risk to be last column of n.risk matrix for competing risks')
         f
       }
       formals(conv) <- list(f=NULL, istate=istate)
@@ -263,7 +266,7 @@ survplot.npsurv <-
                 col = col.fill[i], type = "s")
       }
       else if(conf == 'diffbands')
-        survdiffplot(fit.orig, conf=conf, fun=fun, convert=convert)
+        survdiffplot(fit.orig, conf=conf, fun=fun, convert=convert, xlim=xlim)
 
       else {
         j <- if(ns == 1) TRUE else vs == olev[i]
@@ -402,7 +405,7 @@ survdiffplot <-
   if(conf == 'diffbands') {
     lo <- surv - 0.5 * z * se
     hi <- surv + 0.5 * z * se
-    k <- !is.na(times + lo + hi)
+    k <- ! is.na(times + lo + hi) & times < xlim[2]
     polyg(c(times[k], rev(times[k])), c(lo[k], rev(hi[k])),
            col=gray(.9), type='s')
     return(invisible(slev))
