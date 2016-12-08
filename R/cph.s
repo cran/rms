@@ -203,7 +203,7 @@ cph <- function(formula     = formula(data),
         else agreg.fit
       }
       else if (method == 'exact') {
-        if(type == 'right') getFromNamespace('coxexact.fit', 'survival')
+        if(ytype == 'right') getFromNamespace('coxexact.fit', 'survival')
         else
           agexact.fit
         }
@@ -596,7 +596,7 @@ predict.cph <- function(object, newdata=NULL,
 }
 
 print.cph <- function(x, digits=4, table=TRUE, conf.int=FALSE,
-                      coefs=TRUE, latex=FALSE, md=FALSE,
+                      coefs=TRUE,
                       title='Cox Proportional Hazards Model', ...)
 { 
   k <- 0
@@ -659,6 +659,5 @@ print.cph <- function(x, digits=4, table=TRUE, conf.int=FALSE,
   }
   
   prModFit(x, title=title,
-           z, digits=digits, coefs=coefs,
-           lang=if(latex) 'latex' else if(md) 'html' else 'plain', ...)
+           z, digits=digits, coefs=coefs, ...)
 }

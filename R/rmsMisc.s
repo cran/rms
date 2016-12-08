@@ -777,7 +777,7 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE,
     
     preskip <- z$preskip
     if(! length(preskip)) preskip <- 0
-    if(! tex && length(titl)) R <- c(R, catl(titl, pre=preskip, skip=1))
+    if(! tex && length(titl)) R <- c(R, '', catl(titl, pre=preskip, skip=1))
     if(type == 'stats') {
       R <- c(R, prStats(obj[[1]], obj[[2]], lang=lang))
     } else if(type == 'coefmatrix') {
@@ -836,7 +836,7 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE,
             rownames(U)[nrow(U)] <- if(lang == 'html') '&hellip;' else '\\dots'
           }
           ## Translate interaction symbol (*) to times symbol
-          rownames(U) <- gsub('\\*', specs$times, rownames(U))
+          rownames(U) <- gsub('*', specs$times, rownames(U), fixed=TRUE)
  
           if(! missing(needspace) && lang == 'latex')
             R <- c(R, paste0('\\Needspace{', needspace, '}'))
@@ -848,7 +848,8 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE,
                                         table=FALSE, longtable=TRUE,
                                         lines.page=lines.page,
                                         col.just=rep('r',ncol(U)), rowlabel='',
-                                        math.col.names=FALSE, append=TRUE)))
+                                        already.math.col.names=TRUE,
+                                        append=TRUE)))
           else {
             al <- paste(rep('r', ncol(U)), collapse='')
             R <- c(R, as.character(
@@ -877,13 +878,17 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE,
       R <- c(R,
              if(type == 'html.naprint.delete')
                do.call(type, obj)
-             else if(type == 'latex.naprint.delete')
-               capture.output(do.call(type,
-                                      c(obj, list(file=''))))
-             else do.call(type, obj),
-#####             else capture.output(do.call(type, obj)),
+             else
+               if(type == 'latex.naprint.delete')
+                 capture.output(do.call(type,
+                                        c(obj, list(file=''))))
+             else
+               if(type == 'print')
+                 c(bverb(), capture.output(do.call(type, obj)), everb())
+             else
+               do.call(type, obj),
              ## unlike do.call, eval(call(...)) dispatches on class of ...
-             if(tex) '\\end{center}' else c('')
+             if(tex) '\\end{center}' else ''
       )
     }
   }
@@ -1163,7 +1168,7 @@ formatNP <- function(x, digits=NULL, pvalue=FALSE,
   if(any(s)) {
     w <- paste0('0.', paste0(rep('0', digits - 1), collapse=''), '1')
     f[s] <- switch(lang,
-                   latex = paste0('$<$', w),
+                   latex = paste0('\\textless ', w),
                    html  = paste0('&#60;', w),
                    plain = paste0('<', w))
   }

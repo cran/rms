@@ -382,7 +382,10 @@ anova.rms <- function(object, ..., main.effect=FALSE, tol=1e-9,
 
 print.anova.rms <- function(x, which=c('none','subscripts',
                                           'names','dots'),
-                               ...) {
+                            ...) {
+  lang <- prType()
+  if(lang != 'plain') return(latex.anova.rms(x, file='', table.env=FALSE, ...))
+
   stats <- x
   digits <- c('Chi-Square'=2, F=2, 'd.f.'=0, 'Partial SS'=15, MS=15, P=4)
   cstats <- matrix('', nrow=nrow(stats), ncol=ncol(stats), 
@@ -475,9 +478,10 @@ latex.anova.rms <-
   function(object,
            title=paste('anova',attr(object,'obj.name'),sep='.'),
            dec.chisq=2, dec.F=2, dec.ss=NA,
-           dec.ms=NA, dec.P=4, table.env=TRUE, caption=NULL, html=FALSE, ...) {
+           dec.ms=NA, dec.P=4, table.env=TRUE, caption=NULL, ...) {
 
-    lang <- if(html) 'html' else 'latex'
+    lang <- prType()
+    html <- lang == 'html'
     
     sn   <- colnames(object)
     rowl <- rownames(object)
@@ -491,7 +495,8 @@ latex.anova.rms <-
     
     
     ## Translate interaction symbol (*) to times symbol
-    rowl <- gsub('\\*', specs$times, rowl)
+    ## rowl <- gsub('\\*', specs$times, rowl)   # changed * to $times$
+    rowl <- gsub('*', specs$times, rowl, fixed=TRUE)
   
     ## Put TOTAL rows in boldface
     rowl <- ifelse(substring(rowl, 1, 5) %in% c("REGRE", "ERROR"),
@@ -505,7 +510,7 @@ latex.anova.rms <-
   
     dstats <- as.data.frame(object)
     attr(dstats, 'row.names') <- rowl
-  
+    
     digits <- c('Chi-Square'=dec.chisq, F=dec.F, 'd.f.'=0,
                 'Partial SS'=dec.ss, MS=dec.ms, P=dec.P)
 
@@ -543,7 +548,7 @@ latex.anova.rms <-
   }
 
 html.anova.rms <-
-  function(object, ...) latex.anova.rms(object,  html=TRUE, ...)
+  function(object, ...) latex.anova.rms(object, ...)
 
 
 plot.anova.rms <-

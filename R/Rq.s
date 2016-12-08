@@ -118,14 +118,14 @@ RqFit <- function(fit, wallow=TRUE, passdots=FALSE)
     g
   }
 
-print.Rq <- function(x, digits=4, coefs=TRUE, latex=FALSE, md=FALSE, title, ...)
+print.Rq <- function(x, digits=4, coefs=TRUE, title, ...)
   {
     k <- 0
     z <- list()
 
     ftau <- format(round(x$tau, digits))
     if(missing(title))
-      title <- if(latex)
+      title <- if(prType() == 'latex')
         paste('Quantile Regression~~~~$\\tau$', ftau, sep='=') else
         paste('Quantile Regression\t\ttau:',     ftau)
 
@@ -163,26 +163,24 @@ print.Rq <- function(x, digits=4, coefs=TRUE, latex=FALSE, md=FALSE, title, ...)
         z[[k]] <- list(type='cat', list(mes, '\n'))
       }
 
-    prModFit(x, title=title, z, digits=digits, coefs=coefs,
-             lang=if(latex) 'latex' else if(html) 'html' else 'plain',
-             ...)
+    prModFit(x, title=title, z, digits=digits, coefs=coefs, ...)
   }
 
 latex.Rq <-
   function(object,
            file = paste(first.word(deparse(substitute(object))),
              ".tex", sep = ""), append=FALSE,
-           which, varnames, columns=65, inline=FALSE, caption=NULL,
-           md=FALSE, ...)
+           which, varnames, columns=65, inline=FALSE, caption=NULL, ...)
 {
-  if(md) file <- ''
+  html <- prType() == 'html'
+  if(html) file <- ''
   
   f   <- object
-    tau <- f$tau
-    at  <- f$Design
+  tau <- f$tau
+  at  <- f$Design
     
   w <- if (length(caption)) {
-         if(md) paste('<div align=center><strong>', caption,
+         if(html) paste('<div align=center><strong>', caption,
                       '</strong></div>', sep='')
          else
            paste("\\begin{center} \\bf", caption, "\\end{center}")
@@ -199,7 +197,7 @@ latex.Rq <-
     
     cat(w, file = file, sep = if (length(w)) "\n"  else "", append = append)
     latexrms(f, file=file, append=TRUE, which=which, inline=inline,
-             varnames=varnames, columns=columns, caption, md=md, ...)
+             varnames=varnames, columns=columns, caption, ...)
   }
 
 predict.Rq <- function(object, ..., kint=1, se.fit=FALSE)

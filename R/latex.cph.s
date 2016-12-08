@@ -16,7 +16,7 @@ latex.cph <-
   
   lev <- names(f$freq)
   Intercept <- -f$center
-  strata <- f$strata
+  strata <- levels(f$strata)    ## was f$strata
   w <- if(length(caption)) {
          if(md) paste('<div align=center><strong>', caption,
                       '</strong></div>')
@@ -49,7 +49,7 @@ latex.cph <-
                 before=before, after=after,
                 prefix=if(!whichThere)"X\\hat{\\beta}" else NULL, 
                 intercept=Intercept, inline=inline,
-                pretrans=pretrans, digits=digits, size=size, md=md)
+                pretrans=pretrans, digits=digits, size=size)
   if(md) Z <- c(paste0(w, '\n'), as.character(z))
 
   if(inline)
@@ -57,7 +57,7 @@ latex.cph <-
   
   ss <- f$surv.summary
   if(surv && length(ss)) {
-    fs <- f$strata
+    fs <- levels(f$strata)   # was f$strata
     nstrat <- 0; if(length(fs)) nstrat <- length(fs)
     times <- as.numeric(dimnames(ss)[[1]])
     maxtime <- f$maxtime
@@ -94,7 +94,7 @@ latex.cph <-
         s <- rbind(s, smax)
         times <- c(times, maxtime)
       }    
-      
+
       dimnames(s) <- list(format(times),
                           paste("$S_{", n, "}(t)$", sep=""))
       if(md) {
