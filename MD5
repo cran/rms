@@ -1,13 +1,13 @@
-b65ea940a8c646d137df3bd533dbcc38 *DESCRIPTION
-8e185f795516a1524408ed341c9c1760 *INDEX
-c45b9812f7c7f04cdd5628df37eb25f9 *NAMESPACE
-b6254d31d028e2355e96c7f756d3ed8b *NEWS
+f16a99d45778decee35d7fd32e8c090e *DESCRIPTION
+f8ef737636e050d264cf2a56823241bf *INDEX
+2ff95d5c74b71416a80a9722d2df4e62 *NAMESPACE
+db085114f9516644964754ba9798fe64 *NEWS
 988dcf3f375b7a60fc14d9f1cb4e72bb *R/Function.rms.s
 cfc474a1f3b2c2ecf27a4ddaadfe0daa *R/Glm.s
 6daa8e99e8cdeb7b4ac8b206f2f27656 *R/Gls.s
-a91e722af9eb850c1f11706dc40ca759 *R/Predict.s
+b12ec3b9a86559dcb5f64c0d02aa44d8 *R/Predict.s
 8a5f0d530c6c9524d4b6affe962545cb *R/Rq.s
-5c1949f124d26e8441e7fea19038aa2f *R/anova.rms.s
+65895d204159582e12122a407b5d8664 *R/anova.rms.s
 f6ad40680769f374cdf3263ecadbfd97 *R/bj.s
 a684122d37546a33ee8a827018e88f20 *R/bootcov.s
 3facce56093ac3e4e904d8f640e6046f *R/bplot.s
@@ -46,6 +46,7 @@ e5a9def2c0568c61cbc0562b9f683058 *R/pentrace.s
 923375b3f4794a9a149e781e48ce8754 *R/plot.Predict.s
 181837dc6972d157884f57239e4f944e *R/plot.nomogram.s
 13e3c07f0bef461881b7f3e2688c8502 *R/plot.xmean.ordinaly.s
+3d1024623241a7fb5e4f9db4149261d9 *R/plotp.Predict.s
 5863a81bcc7e54c317961a96567734de *R/pphsm.s
 4f07cbaf06f6bf129452b6f270676a7c *R/predab.resample.s
 e1b9bcdfdcba638377ddd9e66bc7fdb5 *R/predict.lrm.s
@@ -67,7 +68,7 @@ f4a73248c0c0de253fedbb4a674f4fa5 *R/summary.rms.s
 b9b6b0b7aaa6475625958a7488af2158 *R/survfit.cph.s
 dc5f5dd552db8e67bc04a8f102addcf6 *R/survplot.npsurv.s
 ee251131b9dc4f6ef7c54cb8b191a0b6 *R/survplot.rms.s
-0f15743929547dc7efbc9d3dbe4ba68d *R/survplotp.npsurv.s
+940df793d300635a7cc9eae7ee23a0ab *R/survplotp.npsurv.s
 042d1cab4966f0c9c484b072266526f2 *R/survreg.distributions.s
 25e3b5e119ebe51f1dce5f74eba4e675 *R/val.prob.s
 254230ab29d9c613551a37c98faf4419 *R/val.surv.s
@@ -96,7 +97,7 @@ adbe7641f0122e3401acd626dcc572eb *inst/tests/cph.s
 8df570ced5278d86a1567cf69b4a11f4 *inst/tests/cph3.r
 a54fbdf9d11eb39db2e0b89f8fda5d9c *inst/tests/cph4.r
 0ef542ac08db6a1c88f02cfe1c8209f9 *inst/tests/cphtdc.r
-233a88c58f80c624aa89410afcf57f4e *inst/tests/examples.Rmd
+e5217889a61598134d6839d08c6ca851 *inst/tests/examples.Rmd
 27f517ba6ad9743756bc9495ce7ed4cd *inst/tests/ggplot.Predict.Rd.timing.r
 614dbbecfaeb31d079ebd5ed37d27948 *inst/tests/ggplot2-without-ggplot.Predict.r
 805ca8322aeef7fb0b6f17bc1f43e157 *inst/tests/ggplot2.r
@@ -125,7 +126,7 @@ e877fdb6c10ec5187f09a3aa1d9790e2 *inst/tests/orm2.s
 a5775dcc1798405805eee86e3298b7dc *inst/tests/pentrace.s
 69b043a0be51ad0b4de8c3a4cc9a02a2 *inst/tests/perlcode.s
 1e9ec84290636a62fe7a2695aee756e0 *inst/tests/plot.Predict.s
-f72401c37ff896d6d25291b6f93c9cda *inst/tests/plotly-Predict.r
+c4d07b10b33c09476c5e36d9052e3946 *inst/tests/plotly-Predict.r
 003ea0bb57c65c09ad9e70e36cf06945 *inst/tests/predictrms.s
 12a88bc8b9dbc7273ea2e59de6ee2e4c *inst/tests/psm.s
 d02db66f5d4051ad57d42b66c6ae65d1 *inst/tests/psm2.s
@@ -157,7 +158,7 @@ fbedb8b2f56136034f3e320f358b32df *inst/tests/val.surv.s
 87dfd71bdd4463c9f3115d075e88bd17 *man/Function.Rd
 b0a2744272f7659d8fdc9dd4af7847bd *man/Glm.Rd
 0608d343a71023a1071b4a0b2896bbe0 *man/Gls.Rd
-fab471b4a2eb69502108fdb11ed4bc9e *man/Predict.Rd
+5a8214e38c404861ff912099576148c5 *man/Predict.Rd
 b461e4cc6c2b8e6e3a772574186203c3 *man/Rq.Rd
 5ab15a75f227486b08632c8ce7764581 *man/anova.rms.Rd
 61474d112167eec6abe496dfa23b2a43 *man/bj.Rd
@@ -187,8 +188,9 @@ c6861299ac7727cd6599b4109670958f *man/ols.Rd
 020fff1a9ae00e92401ed5d38fc42cb7 *man/orm.Rd
 d8baca60cd4aa78f8bec5d38edf0e8eb *man/orm.fit.Rd
 009dcfc34d11944fbca2900fbc6168a8 *man/pentrace.Rd
-9c6ae97a56f468a13edc4517c1f2c793 *man/plot.Predict.Rd
+89e845cf3aea3289425f040568646514 *man/plot.Predict.Rd
 444214bc44e3d3197df7158b051b0dcb *man/plot.xmean.ordinaly.Rd
+0fa4cbe677e88db3df598ec35c42eb80 *man/plotp.Predict.Rd
 75923adb47d575f38be910017e1656b0 *man/pphsm.Rd
 b2dea6e81a1a07aa1c7270da807e8211 *man/predab.resample.Rd
 344f4cd6f07f120ac05601beb06ce1d7 *man/predict.lrm.Rd
@@ -222,7 +224,7 @@ e97381b247c59c08ef4e4e98c44c2f50 *man/validate.Rq.Rd
 5a365d0d0635b6c90c563d127dec6b32 *man/validate.rpart.Rd
 6bbf0f12392c39daa11eb63613e98b1f *man/vif.Rd
 61c878449adba2ddbb2c7c317cda323e *man/which.influence.Rd
-7e0485bd846dffd9973553d0e7055a0b *man/zzzrmsOverview.Rd
+944bdeffba3a4e1a805a720a71307850 *man/zzzrmsOverview.Rd
 52e5158b30a8a7b6f6832a10e09133ee *src/lrmfit.f
 ce0bcaf5e15b9792ebb9f634476f90d7 *src/mlmats.f
 2ae77be06ac3f9ba6267485431a27cd8 *src/ormuv.f
