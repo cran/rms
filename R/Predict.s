@@ -15,7 +15,8 @@ Predict <-
   conf.type <- match.arg(conf.type)
   boot.type <- match.arg(boot.type)
   
-  oldopt <- options(digits=digits)
+  oldopt <- options('digits')
+  options(digits=digits)
   on.exit(options(oldopt))
   
   dotlist <- if(length(factors)) factors else rmsArgs(substitute(list(...)))
@@ -344,12 +345,16 @@ rbind.Predict <- function(..., rename) {
   ## If first varying variable is not always the same but the second
   ## is, take varying[1] to be ".x."
 
+  ## What in the heck is this for???
+
+  if(FALSE) {
   first  <- sapply(d, function(x) attr(x, 'info')$varying[1])
   second <- sapply(d, function(x) {
     y <- attr(x, 'info')$varying
     if(length(y) < 2) '' else y[2] } )
   if((length(unique(first)) > 1) && (all(second == second[1])))
     info$varying[1] <- '.x.'
+  }
 
   if(! missing(rename)) for(i in 1L : ns)
     names(d[[i]]) <- trans(names(d[[i]]), rename)

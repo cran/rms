@@ -381,10 +381,12 @@ anova.rms <- function(object, ..., main.effect=FALSE, tol=1e-9,
 }
 
 print.anova.rms <- function(x, which=c('none','subscripts',
-                                          'names','dots'),
+                                       'names','dots'),
+                            table.env=FALSE, 
                             ...) {
   lang <- prType()
-  if(lang != 'plain') return(latex.anova.rms(x, file='', table.env=FALSE, ...))
+  if(lang != 'plain')
+    return(latex.anova.rms(x, file='', table.env=table.env, ...))
 
   stats <- x
   digits <- c('Chi-Square'=2, F=2, 'd.f.'=0, 'Partial SS'=15, MS=15, P=4)
@@ -476,7 +478,7 @@ print.anova.rms <- function(x, which=c('none','subscripts',
 
 latex.anova.rms <-
   function(object,
-           title=paste('anova',attr(object,'obj.name'),sep='.'),
+           title=paste('anova', attr(object, 'obj.name'), sep='.'),
            dec.chisq=2, dec.F=2, dec.ss=NA,
            dec.ms=NA, dec.P=4, table.env=TRUE, caption=NULL, ...) {
 
@@ -543,7 +545,9 @@ latex.anova.rms <-
       }
     else
       latex(dstats, title=title,
-            caption = if(table.env) caption else NULL,
+            caption    = if(table.env) caption else NULL,
+            insert.top = if(length(caption) && ! table.env)
+                           paste0('\\Needspace{2in}\n', caption),
             rowlabel="", col.just=rep('r',length(sn)), table.env=table.env, ...)
   }
 
