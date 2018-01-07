@@ -54,13 +54,14 @@ vcov.orm <- function(object, regcoef.only=TRUE,
                      intercepts='mid', ...) {
   v <- object$var
   if(! length(intercepts)) return(v)
+  li1 <- length(intercepts) == 1
   iat <- attr(v, 'intercepts')  # handle fit.mult.impute (?), robcov
   # robcov re-writes var object and uses all intercepts
   iref <- object$interceptRef
-  if(is.numeric(intercepts) && length(intercepts) == 1 &&
+  if(is.numeric(intercepts) && li1 &&
      intercepts == iref) intercepts <- 'mid'
   if(! length(iat)) {
-    if(length(intercepts) == 1 && intercepts == 'mid') {
+    if(li1 && intercepts == 'mid') {
       i <- c(iref, (num.intercepts(object, 'var') + 1) : nrow(v))
       return(object$var[i, i, drop=FALSE])
     }
@@ -68,10 +69,10 @@ vcov.orm <- function(object, regcoef.only=TRUE,
                     intercepts=intercepts, ...))
   }
   
-  if(intercepts == 'none')
+  if(li1 && intercepts == 'none')
     return(object$var[-(1 : length(iat)),
                       -(1 : length(iat)), drop=FALSE])
-    if(intercepts == 'mid' && length(iat) == 1) return(object$var)
+    if(li1 && intercepts == 'mid' && length(iat) == 1) return(object$var)
   
   iref <- object$interceptRef
   info <- object$info.matrix
@@ -82,15 +83,18 @@ vcov.orm <- function(object, regcoef.only=TRUE,
   nx <- p - ns
   scale <- attr(info, 'scale')
   name <- names(coef(object))
-  if(length(scale) && (! is.character(intercepts) || intercepts == 'all')) {
+  if(length(scale) && (! is.character(intercepts) ||
+                       (li1 && intercepts == 'all'))) {
     xbar  <- scale$mean
     xsd   <- scale$sd
     trans <- 
       rbind(cbind(diag(ns), matrix(0, nrow=ns, ncol=nx)),
-            cbind(-matrix(rep(xbar / xsd, ns), ncol=ns), diag(1 / xsd)))
+            cbind(-matrix(rep(xbar / xsd, ns), ncol=ns),
+                  diag(1 / as.vector(xsd))))
   }
+  
                        
-  if(is.character(intercepts)) {
+  if(li1 && is.character(intercepts)) {
     if(intercepts != 'mid' && isbootcov)
       stop('intercepts must be "mid" if object produced by bootcov')
       switch(intercepts,
@@ -683,6 +687,13 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE,
 
   lang  <- prType()
   specs <- markupSpecs[[lang]]
+
+#  cca  <- htmlSpecial('combiningcircumflexaccent')
+  nbsp <- htmlSpecial('nbsp')
+  gt   <- htmlTranslate('>')
+  vbar <- htmlTranslate('|')
+  chi2 <- specs$chisq()
+  beta <- htmlGreek('beta')
   
   R <- character(0)
 
@@ -785,14 +796,14 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE,
         errordf <- obj$errordf
         beta <- obj$coef
         se   <- obj$se
-        Z    <- beta/se
+        Z    <- beta / se
         P    <- if(length(errordf)) 2 * (1 - pt(abs(Z), errordf))
                 else
                   1 - pchisq(Z ^ 2, 1)
         pad <- function(x)
           switch(lang, 
                  latex = paste0('~', x, '~'),
-                 html  = paste0('&nbsp;', x),
+                 html  = paste0(nbsp, x),
                  plain  = x)
 
         U    <- cbind('Coef' =
@@ -808,13 +819,15 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE,
                            'Pr$(>|Z|)$')
         else
           if(lang == 'html')
-            colnames(U) <- c('&beta;&#770;', 'S.E.', 'Wald <i>Z</i>',
-                             'Pr(&#62;&#124;<i>Z</i>&#124;)')
+            colnames(U) <- c(htmlGreek('beta'),   # did have cca
+                             'S.E.', 'Wald <i>Z</i>',
+                             paste0('Pr(', gt, vbar, '<i>Z</i>', vbar, ')'))
         if(length(errordf))
           colnames(U)[3:4] <-
             switch(lang,
                    latex = c('$t$', 'Pr$(>|t|)$'),
-                   html  = c('<i>t</i>', 'Pr(&#62;&#124;<i>t</i>&#124;)'),
+                   html  = c('<i>t</i>', paste0('Pr(', gt, vbar, '<i>t</i>',
+                                                vbar, ')')),
                    plain = c('t',   'Pr(>|t|)') )
 
         rownames(U) <- names(beta)
@@ -856,7 +869,7 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE,
                         htmlTable::htmlTable(U,
                                              css.cell = 'min-width: 7em;',
                                              align=al, align.header=al,
-                                             rowlabel='')))
+                                             rowlabel='', escape.html=FALSE)))
             }
         } else {
           if(is.numeric(coefs)) {
@@ -977,6 +990,13 @@ prStats <- function(labels, w, lang=c('plain', 'latex', 'html')) {
   lorh  <- lang != 'plain'
   specs <- markupSpecs[[lang]]
 
+  partial <- htmlSpecial('part')
+  vbar    <- htmlTranslate('|')
+  cca     <- htmlSpecial('combiningcircumflexaccent')
+  beta    <- htmlGreek('beta')
+  geq     <- htmlTranslate('>=')
+
+
   spaces <- function(n) if(n <= 0.5) '' else
    substring('                                                         ',
              1, floor(n))
@@ -1029,21 +1049,23 @@ for(i in 1:p) {
   if(lorh) {
     maxl <- max(sapply(w, length))
     z <- matrix('', nrow=maxl, ncol=p)
-    fil <- if(lang == 'latex') '~\\hfill ' else '&emsp;'
+    fil <- if(lang == 'latex') '~\\hfill ' else htmlSpecial('emsp')
+
+    chisq <- specs$chisq()
     
     trans <- rbind(
       'Dxy'        = c(latex = '$D_{xy}$',
                        html  = '<i>D</i><sub>xy</sub>'),
-      'LR chi2'    = c(latex = 'LR $\\chi^{2}$',
-                       html  = 'LR &chi;<sup>2</sup>'),
-      'Score chi2' = c(latex = 'Score $\\chi^{2}$',
-                       html  = 'Score &chi;<sup>2</sup>'),
+      'LR chi2'    = c(latex = paste0('LR ', chisq),
+                       html  = paste0('LR ', chisq)),
+      'Score chi2' = c(latex = paste0('Score ', chisq),
+                       html  = paste0('Score ', chisq)),
       'Pr(> chi2)' = c(latex = 'Pr$(>\\chi^{2})$',
-                       html  = 'Pr(&#62;&chi;<sup>2</sup>)'),
+                       html  = paste0('Pr(', htmlTranslate('>'), chisq, ')')),
       'tau-a'      = c(latex = '$\\tau_{a}$',
-                       html  = '&tau;<sub>a</sub>'),
+                       html  = paste0(htmlGreek('tau'), '<sub>a</sub>')),
       'gamma'      = c(latex = '$\\gamma$',
-                       html  = '&gamma;'),
+                       html  = htmlGreek('gamma')),
       'R2'         = c(latex = '$R^{2}$',
                        html  = '<i>R</i><sup>2</sup>'),
       'R2 adj'     = c(latex = '$R^{2}_{\\textrm{adj}}$',
@@ -1057,16 +1079,22 @@ for(i in 1:p) {
       'gr'         = c(latex = '$g_{r}$',
                        html  = '<i>g</i><sub>r</sub>'),
       'max |deriv|'   = c(latex = '$\\max|\\frac{\\partial\\log L}{\\partial \\beta}|$',
-                          html  = 'max &#124;&#8706;log <i>L</i>/&#8706;&beta;&#124;'),
+                          html  = paste0('max ', vbar, partial,
+                                         'log <i>L</i>/', partial,
+                                         beta, vbar)),
       'mean |Y-Yhat|' = c(latex = 'mean $|Y-\\hat{Y}|$',
-                          html  = 'mean &#124;<i>Y - Y</i>&#770;&#124;'),
+                          html  = paste0('mean ', vbar, '<i>Y - Y</i>',
+                                         cca, vbar)),
       'Unique Y'   = c(latex = 'Unique $Y$',
                        html  = 'Unique <i>Y</i>'),
       'Median Y'   = c(latex = '$Y_{0.5}$',
                        html  = '<i>Y</i><sub>0.5</sub>'),
       '|Pr(Y>=median)-0.5|'  =
         c(latex = '$|\\overline{\\mathrm{Pr}(Y\\geq Y_{0.5})-\\frac{1}{2}}|$',
-          html  = '<span style="text-decoration: overline">&#124;Pr(<i>Y</i> &#8805; median)-&#189;&#124;</span>')
+          html  = paste0('<span style="text-decoration: overline">', vbar,
+                         'Pr(<i>Y</i> ', geq, ' median)-',
+                       htmlSpecial('half'), vbar,
+                         '</span>'))
 
     )
     
@@ -1080,7 +1108,7 @@ for(i in 1:p) {
                        plain = k[j],
                        latex = latexTranslate(k[j], greek=TRUE),
                        html  = htmlTranslate (k[j], greek=TRUE) )
-      
+
       z[1 : length(k), i] <- paste0(k, fil, w[[i]])
     }
     
@@ -1094,7 +1122,8 @@ for(i in 1:p) {
       w <- htmlTable::htmlTable(z,
                                 header=labels,
                                 css.cell = 'min-width: 9em;',
-                                align=al, align.header=al)
+                                align=al, align.header=al,
+                                escape.html=FALSE)
       w <- htmltools::HTML(paste0(w, '\n'))
     }
     return(w)
@@ -1169,7 +1198,7 @@ formatNP <- function(x, digits=NULL, pvalue=FALSE,
     w <- paste0('0.', paste0(rep('0', digits - 1), collapse=''), '1')
     f[s] <- switch(lang,
                    latex = paste0('\\textless ', w),
-                   html  = paste0('&#60;', w),
+                   html  = paste0(htmlTranslate('<'), w),
                    plain = paste0('<', w))
   }
   f
@@ -1259,7 +1288,7 @@ removeFormulaTerms <- function(form, which=NULL, delete.response=FALSE) {
   }
   ## [.terms ignores offset variables.  Above logic handles nested () unlike
   ## what is below
-  form <- deparse(form)
+  form <- paste(deparse(form), collapse='')  # no string splitting
   if(delete.response) form <- gsub('.*~', '~', form)
   for(w in which) {
     pattern <- sprintf('\\+?[ ]*?%s\\(.*?\\)[ ]*?\\+{0,1}', w)  ## assume additive form

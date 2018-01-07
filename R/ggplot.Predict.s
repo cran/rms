@@ -2,6 +2,7 @@ ggplot.Predict <-
   function(data, mapping, formula=NULL, groups=NULL,
            aestype=c('color', 'linetype'),
            conf=c('fill', 'lines'),
+           conflinetype=1,
            varypred=FALSE,
            sepdiscrete=c('no', 'list', 'vertical', 'horizontal'),
            subset, xlim., ylim., xlab, ylab,
@@ -91,10 +92,12 @@ ggplot.Predict <-
 
   pmlabel <- character(length(label))
   names(pmlabel) <- names(label)
-  for(i in 1 : length(label))
-    pmlabel[i] <-
-      if(isbase) as.character(labelPlotmath(label[i], units[i]))
-      else markupSpecs$html$varlabel(label[i], units[i])
+  for(i in 1 : length(label)) {
+    rl <- if(isbase) as.character(labelPlotmath(label[i], units[i]))
+          else
+            markupSpecs$html$varlabel(label[i], units[i])
+    if(length(rl)) pmlabel[i] <- rl
+  }
   
   if(predpres)
     data$.Predictor. <- if(vnames != 'labels') data$.predictor.
@@ -275,8 +278,8 @@ ggplot.Predict <-
               if(conf == 'fill')
                 sprintf("geom_ribbon(aes(x=.xx., ymin=lower, ymax=upper),%s)",
                         ribbonargs)
-              else c("geom_line(aes(x=.xx., y=lower))",
-                     "geom_line(aes(x=.xx., y=upper))")
+              else c("geom_line(aes(x=.xx., y=lower), linetype=conflinetype)",
+                     "geom_line(aes(x=.xx., y=upper), linetype=conflinetype)")
             g <- c(g, h)
           }
 
@@ -498,8 +501,8 @@ ggplot.Predict <-
             if(conf == 'fill')
               sprintf("geom_ribbon(aes(ymin=lower, ymax=upper), %s)",
                       ribbonargs)
-            else c("geom_line(aes(x=.xx., y=lower))",
-                   "geom_line(aes(x=.xx., y=upper))")
+            else c("geom_line(aes(x=.xx., y=lower), linetype=conflinetype)",
+                   "geom_line(aes(x=.xx., y=upper), linetype=conflinetype)")
             ## geom_ribbon with fill=NA draws vertical lines at
             ## ends of confidence regions
           }
@@ -604,8 +607,8 @@ res <- if(jplot == 1) plrend(Plt[[1]])
           if(conf == 'fill')
             sprintf("geom_ribbon(data=data, aes(ymin=lower, ymax=upper),%s)",
                     ribbonargs)
-          else c(sprintf('geom_line(data=data, aes(x=%s, y=lower))', xn),
-                 sprintf('geom_line(data=data, aes(x=%s, y=upper))', xn))
+          else c(sprintf('geom_line(data=data, aes(x=%s, y=lower), linetype=conflinetype)', xn),
+                 sprintf('geom_line(data=data, aes(x=%s, y=upper), linetype=conflinetype)', xn))
         g <- c(g, h)
       }  # end if(conf.int)
     }
