@@ -26,6 +26,7 @@
 
 
 Design <- function(mf, allow.offset=TRUE, intercept=1) {
+  debug <- length(.Options$rmsdebug) && .Options$rmsdebug
   Terms <- Terms.orig <- attr(mf, "terms")
   Term.labels <- attr(Terms, 'term.labels')
   ## offsets are not included anywhere in terms even though they are
@@ -39,26 +40,29 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
 
   mmnames <- function(assume.code, rmstrans.names, term.label, iaspecial,
                       class) {
-     ## prn(assume.code); prn(rmstrans.names); prn(term.label); prn(iaspecial); prn(class)
+    if(debug) {
+      prn(assume.code); prn(rmstrans.names); prn(term.label); prn(iaspecial); prn(class) }
     ## Don't let >=i be translated to >i:
     rmst <- gsub('>=', '>>', rmstrans.names)
     ## Don't let <=i be translated to <i:
     rmst <- gsub('<=', '<<', rmst)
     ## Don't let == be translated to blank
     rmst <- gsub('==', '@EQ@', rmst)
-    ## prn(class);prn(assume.code);prn(term.label)
+    if(debug) {prn(class);prn(assume.code);prn(term.label)}
     w <- if(assume.code == 1)
            ifelse(class == 'logical', paste0(term.label, 'TRUE'),
                   term.label)
     else if(length(iaspecial) && iaspecial) term.label
     else if(assume.code == 5) {
       ## Handle explicit catg() as well as implicit
+      ## Use sub to only change the first occurrence; value
+      ## labels may contain = also
       if(substring(term.label, 1, 5) == 'catg(')
-        paste0(term.label, gsub('.*=', '', rmst))
-      else gsub('=', '', rmst)
+        paste0(term.label, sub('.*=', '', rmst))
+      else sub('=', '', rmst)
       }
     else if(assume.code == 8)
-      paste0(term.label, gsub('.*=', '', rmst))
+      paste0(term.label, sub('.*=', '', rmst))
     else if(assume.code == 10)
       if(length(rmst) > 1) gsub('\\[', '', gsub('\\]', '', rmst)) else
              term.label
@@ -182,8 +186,9 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
         else if(is.character(xi) | is.factor(xi)) {
           if(is.ordered(xi) &&
              .Options$contrasts[2] != 'contr.treatment')
-            stop(paste('Variable', nam, 'is an ordered factor.\n',
-                          'You should set options(contrasts=c("contr.treatment", "contr.treatment"))\nor rms will not work properly.'))
+            stop(paste('Variable', nam,
+                       'is an ordered factor with non-numeric levels.\n',
+                       'You should set options(contrasts=c("contr.treatment", "contr.treatment"))\nor rms will not work properly.'))
           xi <- catg(xi, name=nam, label=lab)
         }
         else if(is.matrix(xi)) xi <- matrx(xi, name=nam, label=lab)
@@ -206,6 +211,7 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
         mmcolnam[[i1]] <- mmn
         alt <- attr(mmn, 'alt')
         mmcolnamalt[[i1]] <- alt
+        if(debug) prn(c(mmn, alt))
         if(za != 8 && length(colnam)) {
           name   <- c(name,   colnam  [[i1]])
           mmname <- c(mmname, mmcolnam[[i1]])
@@ -371,6 +377,10 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
     else names(funits) <- fname[asm != 9]
 
     attr(mmname, 'alt') <- if(! all(Altcolnam == mmname)) Altcolnam
+    if(any(duplicated(mmname)))
+      stop(paste0('duplicated column name in for design matrix:',
+                 paste(mmname[duplicated(mmname)], collapse=' '),
+                 '\nMost likely caused by a variable name concatenated to a factor level\nbeing the same is the name of another variable.'))
     atr <- list(name=fname, label=flabel, units=funits,
                 colnames=name, mmcolnames=mmname,
                 assume=c("asis", "polynomial", "lspline", "rcspline",

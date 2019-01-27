@@ -11,15 +11,10 @@ output:
       collapsed: false
     code_folding: hide
     theme: cerulean
-css: stewarttoc.css
 ---
-<button id="toc-toggle" type="button" class="btn btn-default btn-xs code-folding-btn pull-right collapsed" onclick="toggletoc()"><span>Outline</span></button>
-
-<script>
-function toggletoc(){
-$("#TOC").toggle();
-}
-</script>
+<!--
+To copy html output of server: cpaws examples.html R/rms/
+-->
 
 # Introduction
 ## Markdown
@@ -27,7 +22,12 @@ This is an R Markdown html document using the template that is [here](http://bio
 
 ```{r, results='hide'}
 require(rms)
+knitrSet(lang='markdown')
 ```
+
+The following (<code>r hidingTOC(buttonLabel="Outline")</code>) uses the Hmisc `hidingTOC` function to define HTML styles related to a floating table of contents that can be minimized or be collapsed to major outline levels.  For more details see [this](http://biostat.mc.vanderbilt.edu/KnitrHtmlTemplate).
+
+`r hidingTOC(buttonLabel="Outline")`
 
 # Data {.tabset}
 ## Setup
@@ -37,6 +37,8 @@ mu <- markupSpecs$html   # markupSpecs is in Hmisc
 subtext <- mu$subtext
 code    <- mu$code
 ```
+
+
 ## Data Dictionary
 ```{r ddict}
 html(contents(titanic3), maxlevels=10, levelType='table')
@@ -87,19 +89,15 @@ plot(nomogram(f, fun=plogis, funlabel='Prob(survive)'))
 ```
 
 # Survival Plots for `r mu$code('pbc')` Dataset
+Hover over the curves to see particular probability estimates and numbers at risk.  Click on legend components to show/hide components.
 ```{r pbc,fig.height=6,fig.width=7}
 getHdata(pbc)
 pbc <- upData(pbc, 
               fu.yrs = fu.days / 365.25,
               units = c(fu.yrs = 'year'))
 f <- npsurv(Surv(fu.yrs, status) ~ spiders, data=pbc)
-survplotp(f, time.inc=1, times=c(5, 10))
+survplotp(f, time.inc=1, times=c(5, 10), fun=function(y) 1 - y)
 ```
 
 # Computing Environment
 `r mu$session()`
-
-
-<!---
-To update html notebook on the server: cdatar examples.html rms
--->
