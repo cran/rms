@@ -1,4 +1,4 @@
-bbcbdeb2b9318ea10fbe08f162ac4d5a *DESCRIPTION
+a212e4c8a385350b6a195340d42cbd63 *DESCRIPTION
 1c2417c65d5bef72fce2c7834a3820e5 *NAMESPACE
 3ffb783be2ec6de9c533e3634a865078 *NEWS
 756acad7b93dc956759a54d1b36990c1 *R/Function.rms.s
@@ -159,13 +159,13 @@ fbedb8b2f56136034f3e320f358b32df *inst/tests/val.surv.s
 042369d3dc4216bdccc38b8499c5944a *inst/tests/validate.ols.r
 2c89fe9a97b84c8f611e78038c8cfed5 *inst/tests/validate.rpart.r
 8fac65462c15034d04baea9f48b93764 *man/ExProb.Rd
-87dfd71bdd4463c9f3115d075e88bd17 *man/Function.Rd
+1953aa612e360294318037256445c1c9 *man/Function.Rd
 b0a2744272f7659d8fdc9dd4af7847bd *man/Glm.Rd
 0608d343a71023a1071b4a0b2896bbe0 *man/Gls.Rd
 5a8214e38c404861ff912099576148c5 *man/Predict.Rd
 b461e4cc6c2b8e6e3a772574186203c3 *man/Rq.Rd
 477d64b483e36f6233fce47c47f064d9 *man/anova.rms.Rd
-61474d112167eec6abe496dfa23b2a43 *man/bj.Rd
+e8e0228026106d84eecb37f3fbdcb44a *man/bj.Rd
 8429775bf40e40c26f56e73a41c78d2e *man/bootBCa.Rd
 97b7d5da81725f2d67023d5c48a3b863 *man/bootcov.Rd
 1d2d1df35671dfe48a3c496ef23511fd *man/bplot.Rd
@@ -210,7 +210,7 @@ b0840eb0403c706ed9d3b9f99412e14f *man/rms-internal.Rd
 05d0db6c1c214f5fd5d8ca66008c0ff9 *man/rms.trans.Rd
 df41d2cdb8accc985e1fff567c01a49c *man/rmsMisc.Rd
 449111bd5b87f10d03467f0b5ea31c43 *man/robcov.Rd
-da0b2b1a2f51ed9058d72c0575068c7e *man/sensuc.Rd
+9ce1b5ae8c1dbf39063f7abcc45581be *man/sensuc.Rd
 66f608027598577fe42e4e88c9a9b1d9 *man/setPb.Rd
 a88339681eb0cc11e57bb5500f0d770a *man/specs.rms.Rd
 f5f36b17881228bf7c42eba282a4e389 *man/summary.rms.Rd
