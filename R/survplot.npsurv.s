@@ -78,9 +78,12 @@ survplot.npsurv <-
         f$lower   <- 1 - f$lower  [, istate]
         f$upper   <- 1 - f$upper  [, istate]
         f$std.err <-     f$std.err[, istate]
-        f$n.risk  <- f$n.risk[, ncol(f$n.risk)]
+        icens     <- which(states == '(s0)')
+        if(! length(icens))
+          stop('Program logic error: did not find (s0) column with competing risks')
+        f$n.risk  <- f$n.risk[, icens]
         if(all(f$n.risk == 0))
-          stop('expected n.risk to be last column of n.risk matrix for competing risks')
+          stop('program logic error: all n.risk are zero')
         f
       }
       formals(conv) <- list(f=NULL, istate=istate)
@@ -129,6 +132,9 @@ survplot.npsurv <-
   if(n.risk | (conf.int > 0 & conf == "bars")) {
     stime <- seq(mintime, maxtime, time.inc)
     v <- convert(summary(fit.orig, times=stime, print.it=FALSE))
+    v$surv  <- fun(v$surv)
+    v$lower <- fun(v$lower)
+    v$upper <- fun(v$upper)
     vs <- if(ns > 1) as.character(v$strata)
     ## survival:::summary.survfit was not preserving order of strata levels
   }
