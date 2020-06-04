@@ -1,3 +1,36 @@
+Changes in version 6.0-0 (2020-06-04)
+   * orm.fit: changed to result in a fail=TRUE fit if NA, NaN element of variance matrix (Thanks: Thomas Dupont)
+   * prModFit: changed default in catl function to center=FALSE
+   * residuals.psm: added transformation of survival time when computing censored normalized residuals
+   * added SUGGESTS for rstan
+   * added utility functions for rstan: stanDx, stanGet, coef.rmsb, vcov.rmsb, print.rmsb, stanCompile (fetches Stan code from github.com/harrelfe/stan and compiles it to a central place on your machine)
+   * new function blrm for Bayesian binary and ordinal logistic regression along the lines of rms::lrm
+   * new function blrmStats to compute posterior distributions and credible intervals for several predictive accuracy measures for blrm including Dxy (which is easily translated to c-index (= AUROC in binary Y case), Brier score, and measures of explained variation; print method print.blrmStats also added
+   * modified predictrms and contrast.rms for Bayesian calculations, adding new argument posterior.summary for predictrms and Predict
+   * enhanced anova.rms for approximate relative explained variation measures for Bayesian models
+   * extended Function.rms to use posterior mean/median coefficients
+   * new function PostF to generate an R function that computes posterior probabilities of assertions
+   * added stanDxplot and plot methods for Bayesian fits
+   * extended nomogram to use posterior mean or median parameter values
+   * extended Design() to deal with time() variables (for blrm)
+   * extended blrm to use Ben Goodrich's AR(1) model
+   * HPDint: new function, adopted from the coda package
+   * distSym: new function: symmetry measure for a distribution
+   * stackMI: new function: Bayesian fitting with multiple imputation by posterior stacking
+   * import MASS::kde2d and bandwidth.nrd and cluster::ellipsoidhull for 2-d posterior density estimation
+   * pdensityContour: new function
+   * plot.contrast.rms: new function for Bayesian posterior densities and 2-d densities
+   * made dependent on survival >= 3.1-12
+   * fixed bug related to changes in survival which no longer stores $y matrix as transformed; affects val.surv.s, calibrate.psm.s, validate.psm.s, psm.s.  Thanks: Aida Eslami <Aida.Eslami@fmed.ulaval.ca>
+   * which.influence: fixed bug when model has more than one intercept (thanks: Yuwei Zhu)
+   * blrm: added partial proportional odds model
+   * stanQr: new function
+   * predict.blrm: new function
+   * Mean.blrm, Quantile.blrm, ExProb.blrm: new functions
+   * residuals.lrm: implemented score residuals for all link functions using code from Yuqi Tian
+   * contrast.rms: added fun= for Bayesian models for getting posterior distributions of differences of nonlinearly transformed estimates; enhanceds plot.contrast.rms and print.contrast.rms to handle this
+   * fitIF, fitLoad, fitSave: removed (rejected by CRAN since fitIf assigned to global environment)
+
 Changes in version 5.1-4 (2019-11-16)
    * anova.rms: added which LaTeX packages are needed in help page
 	 * survplot.npsurv: added use of fun for conf type bars.  Thanks: Joonas Lehto
