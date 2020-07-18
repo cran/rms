@@ -24,10 +24,22 @@
 #
 #
 
-
-Design <- function(mf, allow.offset=TRUE, intercept=1) {
+  
+Design <- function(mf, formula=NULL, specials=NULL,
+                   allow.offset=TRUE, intercept=1) {
   debug <- length(.Options$rmsdebug) && .Options$rmsdebug
-  Terms <- Terms.orig <- attr(mf, "terms")
+  if(debug) {
+    cat('--------------------------------------------------\n')
+    prn(list(names(mf), formula, specials))
+    }
+
+  if(length(formula)) {
+    Terms <- terms(formula, specials=specials, data=mf)
+    attr(mf, 'terms') <- Terms
+    }
+  else Terms <- attr(mf, 'terms')
+
+  Terms.orig  <- Terms
   Term.labels <- attr(Terms, 'term.labels')
   ## offsets are not included anywhere in terms even though they are
   ## in the model frame
@@ -134,6 +146,8 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
   wts <- if(any(namx == '(weights)'))(1 : length(namx))[namx == '(weights)']
          else 0
 
+  if(debug) prn(llist(names(mf), ioffset, response.pres, wts))
+
   coluse <- setdiff(1 : ncol(mf), c(ioffset, 1 * response.pres, wts))
 
   inner.name <- if(length(Terms) > 0) unique(var.inner(Terms))
@@ -177,7 +191,10 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
 
   anyfactors <- length(coluse) > 0
   i1.noia <- 0
-  if(length(Term.labels) < length(coluse)) stop('program logic error tl')
+  if(length(Term.labels) < length(coluse))
+    stop(paste('program logic error tl\nTerm.labels:',
+               paste(Term.labels, collapse=', '), '\ncoluse:',
+               paste(coluse, collapse=', ')))
   it <- 0
   if(anyfactors) for(i in coluse) {
     if(i  != wts) {
@@ -435,4 +452,138 @@ Design <- function(mf, allow.offset=TRUE, intercept=1) {
   
   if(length(offs))    attr(mf, 'offset')  <- offs
   mf
+}
+
+modelData <- function(data=environment(formula), formula, formula2=NULL,
+                      weights=NULL, subset=NULL, na.action=na.delete,
+                      dotexpand=TRUE, callenv=parent.frame(n=2)) {
+  ## calibrate.cph etc. uses a matrix, even if only one column
+  ismat <- function(z) {
+    cl <- class(z)
+    ('matrix' %in% cl) && ('rms' %nin% cl) ## && ncol(z) > 1
+    }
+  
+  ## Get a list of all variables in either formula
+  ## This is for innermost variables, e.g. Surv(a,b) will produce a,b
+  v1 <- all.vars(formula)
+  v2 <- all.vars(formula2)
+  V  <- unique(c(v1, v2))
+
+  edata <- is.environment(data)
+
+  rhsdot <- length(v1) == 2 && v1[2] == '.'
+  if(rhsdot && edata)
+    stop('may not specify ~ . in formula when data= is absent')
+
+  if(edata) {
+    env  <- data
+    data <- list()
+    for(v in V) {
+      xv <- env[[v]]
+      if(is.factor(xv)) xv <- xv[, drop=TRUE]
+      ## Note: Surv() has class 'Surv' without class 'matrix'
+      ## This keeps columns together by calling as.data.frame.rms
+      else if(ismat(xv)) class(xv) <- unique(c('rms', class(xv)))
+      data[[v]] <- xv
+    }
+    ## Any variables whose length is not equal to the maximum length over
+    ## all variables mentioned in the formulas remain in the original
+    ## environment and will be found in the later eval()
+    ## E.g. rcs(x, knots) where knots is a separate variable
+    n <- sapply(data, NROW)
+    if(! length(n)) stop('no data found')
+    if(diff(range(n)) != 0) data <- data[which(n == max(n))]
+    ## Watch out: if a variable in data has dimnames[[2]], as.data.frame
+    ## uses that as the new variable name even if the variable already
+    ## had a name in the list.  This is why a 1-column matrix is kept
+    ## as a matrix in the ismat function above
+    data <- as.data.frame(data)
+  }
+  ## Can't do else data[V] here as formula may have e.g. Surv(time,event)
+  ## and hasn't been evaluated yet, where data has time and event
+  if(length(weights)) data$`(weights)` <- weights
+
+  if(length(subset)) data <- data[subset, ]
+
+  ## Make sure that the second formula doesn't create any NAs on
+  ## observations that didn't already have an NA for variables in main formula
+  if(length(formula2)) {
+    i <- ! complete.cases(data[intersect(names(data), v1)])
+    j <- ! complete.cases(data[intersect(names(data), v2)])
+    if(any(j & ! i))
+      stop('A variable in the second formula was missing on an observation that was not missing on any variable in main formula')
+  }
+
+  noexpand <- rhsdot & ! dotexpand
+  deparse2 <- function(x)   # from stats
+    paste(deparse(x, width.cutoff = 500L, backtick = !is.symbol(x) && 
+                  is.language(x)), collapse = " ")
+
+  processdata <- function(formula, data) {
+    if(noexpand) {   # no RHS variables to be used
+      predvars <- formula[[2]]
+      varnames <- deparse(predvars)
+      if(length(weights)) {
+        predvars[[2]] <- as.name('(weights)')
+        varnames      <- c(varnames, '(weights)')
+      }
+    }
+    else {
+      Terms    <- terms(formula, data=data, specials=NULL)
+      vars     <- attr(Terms, 'variables')
+      predvars <- attr(Terms, 'predvars')
+      if( ! length(predvars)) predvars <- vars
+      if(length(weights))
+        predvars[[length(predvars) + 1]] <- as.name('(weights)')
+    }
+    varnames <- vapply(predvars, deparse2, " ")[-1L]
+    data <- if(edata) eval(predvars, data, env)
+            else
+              eval(predvars, data, callenv)
+    if(is.matrix(data)) data <- data.frame(data)  # e.g. Surv() object
+    names(data) <- varnames
+
+    ## Any remaining matrices not of class 'rms' must be given class rms
+    ## so that as.data.frame will not split up their variables
+    ism <- sapply(data, ismat)
+    if(any(ism))
+      for(i in which(ism))
+        class(data[[i]]) <- unique(c('rms', class(data[[i]])))
+    
+    ## If any variables are less than the maximum length, these must
+    ## have come from the parent environment and did not have subset applied
+    len <- sapply(data, NROW)
+    if(min(len) != max(len)) {
+      if(! length(subset))
+        stop('program logic error: variables vary in length but subset= was not given')
+      for(i in which(len > min(len))) {
+        x <- data[[i]]
+        data[[i]] <- if(is.matrix(x)) x[subset,,drop=FALSE] else x[subset]
+      }
+      len <- sapply(data, NROW)
+      if(min(len) != max(len)) stop('program logic error in variable lengths')
+    }
+    data        <- as.data.frame(data, check.names=FALSE)
+    data        <- na.action(data)
+    nac         <- attr(data, 'na.action')
+    attr(data, 'na.action') <- nac
+    data
+  }
+  dat  <- processdata(formula, data)
+  if(length(formula2)) {
+    omit <- attr(dat, 'na.action')$omit
+    if(length(omit)) data <- data[-omit, , drop=FALSE]
+    dat2 <- processdata(formula2, data)
+    attr(dat, 'data2') <- dat2
+    }
+  dat
+  }
+
+## Handle spline and other variables with rms class
+as.data.frame.rms <- function(x, row.names = NULL, optional = FALSE, ...) {
+  nrows <- NROW(x)
+  row.names <- if(optional) character(nrows) else as.character(1:nrows)
+  value <- list(x)
+  if(! optional) names(value) <- deparse(substitute(x))[[1]]
+  structure(value, row.names=row.names, class='data.frame')
 }

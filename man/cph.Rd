@@ -17,7 +17,7 @@
   unless a restricted mean is explicitly requested.
 }
 \usage{
-cph(formula = formula(data), data=parent.frame(),
+cph(formula = formula(data), data=environment(formula),
     weights, subset, na.action=na.delete, 
     method=c("efron","breslow","exact","model.frame","model.matrix"), 
     singular.ok=FALSE, robust=FALSE,
@@ -318,7 +318,7 @@ cph(formula = formula(data), data=parent.frame(),
   \code{\link[Hmisc]{na.detail.response}},  \code{\link{print.cph}},
   \code{\link{latex.cph}}, \code{\link{vif}}, \code{\link{ie.setup}},
   \code{\link{GiniMd}}, \code{\link{dxy.cens}},
-  \code{\link[survival]{survConcordance}}
+  \code{\link[survival:survConcordance]{survConcordance}}
 }
 \examples{
 # Simulate data from a population model in which the log hazard

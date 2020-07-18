@@ -9,15 +9,20 @@ predictrms <-
              "adjto", "adjto.data.frame", "model.frame"),
            se.fit=FALSE, conf.int=FALSE,
            conf.type=c('mean', 'individual', 'simultaneous'),
-           kint=NULL,
-           na.action=na.keep, expand.na=TRUE,
+           kint=NULL, na.action=na.keep, expand.na=TRUE,
            center.terms=type=="terms", ref.zero=FALSE,
-           posterior.summary=c('mean', 'median', 'mode'), ...)
+           posterior.summary=c('mean', 'median', 'mode'), second=FALSE, ...)
 {
   type              <- match.arg(type)
   conf.type         <- match.arg(conf.type)
   posterior.summary <- match.arg(posterior.summary)
-  
+
+  # Prevents structure(NULL, ...) below (now deprecated)
+  nulll <- function(z) if(is.null(z)) list() else z
+
+  if(second && type %nin% c('lp', 'x', 'adjto', 'adjto.data.frame'))
+    stop('type not implemented when second=TRUE')
+
   draws <- fit$draws
   bayes <- length(draws) > 0
   if(bayes) param <- fit$param
@@ -27,19 +32,19 @@ predictrms <-
     warning('se.fit ignored for Bayesian models')
     se.fit <- FALSE
     }
-  if(conf.type == 'simultaneous') {
+  if(second || conf.type == 'simultaneous') {
     ## require(multcomp)
     if(missing(newdata) || ! length(newdata))
-      stop('newdata must be given if conf.type="simultaneous"')
+      stop('newdata must be given if conf.type="simultaneous" or second=TRUE')
   }
 
-  at        <- fit$Design
+  at        <- if(second) fit$zDesign else fit$Design
   assume    <- at$assume.code
   Limval    <- Getlim(at, allow.null=TRUE, need.all=FALSE)
   Values    <- Limval$values
   non.ia    <- assume != 9L
   non.strat <- assume != 8L
-  f <- sum(non.ia)
+  f         <- sum(non.ia)
   nstrata   <- sum(assume == 8L)
   somex     <- any(non.strat)
   rnam      <- NULL
@@ -50,7 +55,8 @@ predictrms <-
 
   parms   <- at$parms
   name    <- at$name
-  coeff   <- if(bayes) getParamCoef(fit, posterior.summary)
+  coeff   <- if(bayes) rmsb::getParamCoef(fit, posterior.summary,
+                                    what=if(second) 'taus' else 'betas')
              else
                fit$coefficients
   nrp     <- num.intercepts(fit)
@@ -59,7 +65,7 @@ predictrms <-
 
   int.pres <- nrp > 0L
 
-  assign <- fit$assign
+  assign <- if(second) fit$zassign else fit$assign
   nama <- names(assign)[1L]
   asso <- 1*(nama=="Intercept" | nama=="(Intercept)")
 
@@ -74,8 +80,10 @@ predictrms <-
            options(Design.attr=NULL)})
 
   ## Formula without response variable any offsets:
-  formulano <- removeFormulaTerms(fit$sformula, which='offset',
-                                  delete.response=TRUE)
+  formulano <- if(second) fit$zsformula
+                 else
+                   removeFormulaTerms(fit$sformula, which='offset',
+                                      delete.response=TRUE)
 
   offset <- 0; offpres <- FALSE
   ## offset is ignored for prediction (offset set to zero)
@@ -143,7 +151,7 @@ predictrms <-
   }
 
   adjto <- NULL
-  
+
   if(type %nin% c('adjto', 'adjto.data.frame')) {
     X <- NULL
     if(missing(newdata) || ! length(newdata)) {
@@ -176,7 +184,7 @@ predictrms <-
           }
       }   # end type='lp' with linear.predictors stored in fit
       else
-        if(type=="x") return(structure(naresid(naa, fit$x),
+        if(type=="x") return(structure(nulll(naresid(naa, fit$x)),
              strata=if(length(stra <- fit$strata))
              naresid(naa, stra) else NULL))
       X <- fit[['x']]
@@ -254,9 +262,9 @@ predictrms <-
               ## are levels
               ww <- is.na(newdata[,i]) & ! is.na(unclass(w))
               if(any(ww)) 	{
-                cat("Error in predictrms: Values in",names(newdata)[i],
-                    "not in",V,":\n")
-                print(as.character(w[ww]),quote=FALSE); stop()
+                cat("Error in predictrms: Values in", names(newdata)[i],
+                    "not in", V, ":\n")
+                print(as.character(w[ww]), quote=FALSE); stop()
               }
             }
           }
@@ -307,7 +315,7 @@ predictrms <-
   if(type %in% c('adjto.data.frame', 'adjto')) return(Adjto(type))
   
   if(type=="x") return(
-       structure(naresid(naa, X),
+       structure(nulll(naresid(naa, X)),
                  strata=if(nstrata > 0)  naresid(naa, strata) else NULL,
                  na.action=if(expand.na) NULL else naa)
        )
@@ -319,9 +327,9 @@ predictrms <-
       names(xb) <- rnam
       if(bayes && conf.int) {
         xB <- matxv(X, draws, kint=kint, bmat=TRUE)
-        xB <- apply(xB, 1, HPDint, prob=conf.int)  # ??
-        lower <- xB[, 1]
-        upper <- xB[, 2]
+        xB <- apply(xB, 1, rmsb::HPDint, prob=conf.int)
+        lower <- xB[1, ]
+        upper <- xB[2, ]
         }
     }
     else {
@@ -366,7 +374,7 @@ predictrms <-
               else
                 xb - ycenter
       if(bayes) {lower <- lower - ycenter; upper <- upper - ycenter}
-      retlist <- structure(ww, 
+      retlist <- structure(nulll(ww), 
                            na.action=if(expand.na) NULL else naa)
       if(conf.int) {
         if(conf.type == 'simultaneous') {
@@ -446,7 +454,7 @@ predictrms <-
         fitted <- w
       }
     
-    fitted <- structure(naresid(naa, fitted),
+    fitted <- structure(nulll(naresid(naa, fitted)),
                         strata=if(nstrata==0) NULL else naresid(naa, strata))
     
     if(se.fit) {
