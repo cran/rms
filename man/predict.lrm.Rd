@@ -12,7 +12,13 @@ Computes a variety of types of predicted values for fits from
 observations.  The \code{Mean.lrm} and \code{Mean.orm} functions produce
 an R function to compute the predicted mean of a numeric ordered
 response variable given the linear predictor, which is assumed to use
-the first intercept in its computation. 
+the first intercept when it was computed.  The returned function has two
+optional arguments if confidence intervals are desired: \code{conf.int}
+and the design matrix \code{X}.  When this derived function is called
+with nonzero \code{conf.int}, an attribute named \code{limits} is attached
+	to the estimated mean.  This is a list with elements \code{lower} and
+	\code{upper} containing normal approximations for confidence limits
+	using the delta method.
 }
 \usage{
 \method{predict}{lrm}(object, \dots, type=c("lp", "fitted",
@@ -73,7 +79,10 @@ or \code{type="fitted.ind"}), a data frame, or a design matrix.  For
 Frank Harrell\cr
 Department of Biostatistics\cr
 Vanderbilt University\cr
-f.harrell@vanderbilt.edu
+fh@fharrell.com\cr
+For the \code{Quantile} function:\cr
+Qi Liu and Shengxin Tu\cr
+Department of Biostatistics, Vanderbilt University
 }
 \references{
 Hannah M, Quigley P: Presentation of ordinal regression analysis on the

@@ -61,9 +61,9 @@ with \code{xYplot} or \code{Dotplot} (see the last example before the
 \code{type="joint"} examples).
 
 When \code{fit} is the result of a Bayesian model fit and \code{fun} is
-specified, \code{contrast.rms} operates altogether difficulty.  \code{a}
+specified, \code{contrast.rms} operates altogether differently.  \code{a}
 and \code{b} must both be specified and \code{a2, b2} not specified.
-\code{fun} is evaluated on the \code{fun} transformed estimates
+\code{fun} is evaluated on the estimates
 separately on \code{a} and \code{b} and the subtraction is deferred.  So
 even in the absence of interactions, when \code{fun} is nonlinear, the
 settings of factors (predictors) will not cancel out and estimates of
@@ -72,7 +72,7 @@ in the model besides the one being varied to get from \code{a} to \code{b}).
 }
 \usage{
 contrast(fit, \dots)
-\method{contrast}{rms}(fit, a, b, a2, b2, y=NULL, cnames=NULL,
+\method{contrast}{rms}(fit, a, b, a2, b2, ycut=NULL, cnames=NULL,
          fun=NULL, funint=TRUE,
          type=c("individual", "average", "joint"),
          conf.type=c("individual","simultaneous"), usebootcoef=TRUE,
@@ -108,15 +108,15 @@ design matrix generated from \code{a} is analyzed alone.
 \item{a2}{an optional third list of settings of predictors}
 \item{b2}{an optional fourth list of settings of predictors.  Mandatory
 	if \code{a2} is given.}
-\item{y}{used of the fit is a constrained partial proportional odds
+\item{ycut}{used of the fit is a constrained partial proportional odds
        model fit, to specify the single value or vector of values
        (corresponding to the multiple contrasts) of the response
        variable to use in forming contrasts.  When there is
        non-proportional odds, odds ratios will vary over levels of the
        response variable.  When there are multiple contrasts and only
-       one value is given for \code{y}, that value will be propagated to
+       one value is given for \code{ycut}, that value will be propagated to
        all contrasts.  To show the effect of non-proportional odds, let
-       \code{y} vary.}
+       \code{ycut} vary.}
 \item{cnames}{
 vector of character strings naming the contrasts when
 \code{type!="average"}.  Usually \code{cnames} is not necessary as
@@ -206,7 +206,7 @@ used for compute confidence intervals.
 Frank Harrell\cr
 Department of Biostatistics\cr
 Vanderbilt University School of Medicine\cr
-f.harrell@vanderbilt.edu
+fh@fharrell.com
 }
 \seealso{
   \code{\link{Predict}}, \code{\link{gendata}}, \code{\link{bootcov}},

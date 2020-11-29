@@ -264,86 +264,182 @@ Mean.orm <- function(object, codes=FALSE, ...)
   Mean.lrm(object, codes=codes, ...)
 
 Quantile.orm <- function(object, codes=FALSE, ...)
-  {
-    ns <- object$non.slopes
-    if(ns < 5)
-stop('using this function only makes sense for >5 ordered response categories')
-    if(codes) vals <- 1:length(object$yunique)
-    else
-      {
-        vals <- as.numeric(object$yunique)
-        if(any(is.na(vals)))
-          stop('values of response levels must be numeric for codes=FALSE')
-      }
-    f <- function(q=.5, lp=numeric(0), intercepts=numeric(0), values=numeric(0),
-                  interceptRef=integer(0), cumprob=NULL, inverse=NULL)
-      {
-        ## Solve inverse(1 - q) = a + xb; inverse(1 - q) - xb = a
-        ## Shift intercepts to left one position because quantile
-        ## is such that Prob(Y <= y) = q whereas model is stated in
-        ## Prob(Y >= y)
-        lp <- lp - intercepts[interceptRef]
-        ## Interpolation on linear predictors scale:
-        ## z <- approx(c(intercepts, -1e100), values,
-        ##             xout=inverse(1 - q) - lp, rule=2)$y
-        ## Interpolation approximately on Y scale:
-        lpm <- mean(lp, na.rm=TRUE)
-        z <- approx(c(cumprob(intercepts + lpm), 0), values,
-                    xout=cumprob(inverse(1 - q) - lp + lpm), rule=2)$y
-        names(z) <- names(lp)
-        z
-      }
-    trans <- object$trans
-    formals(f) <- list(q=.5, lp=numeric(0), intercepts=object$coef[1:ns],
-                       values=vals, interceptRef=object$interceptRef,
-                       cumprob=trans$cumprob, inverse=trans$inverse)
-    f
+{
+  ns <- object$non.slopes
+  if(ns < 2)
+    stop('using this function only makes sense for >2 ordered response categories')
+  if(codes) vals <- 1:length(object$freq)
+  else {
+    vals <- object$yunique
+    if(!length(vals)) vals <- names(object$freq)
+    vals <- as.numeric(vals)
+    if(any(is.na(vals)))
+      stop('values of response levels must be numeric for codes=FALSE')
   }
+  f <- function(q=numeric(0), lp=numeric(0), X=numeric(0),
+                intercepts=numeric(0), slopes=numeric(0),
+                info=numeric(0), values=numeric(0),
+                interceptRef=integer(0), trans=trans, conf.int=0, 
+                method=c('interpolated', 'discrete'))
+  {
+    inverse <- trans$inverse 
+    cumprob <- trans$cumprob
+    deriv   <- trans$deriv
+    ns <- length(intercepts)
+    method <- match.arg(method)
+    lp <- if(length(lp)) lp - intercepts[interceptRef] else matxv(X, slopes)    
+    lb <- matrix(sapply(intercepts, '+', lp), ncol = ns)
+    if(method == 'interpolated'){
+      m.yvals <- matrix(NA, nrow = nrow(lb), ncol = ns + 2)
+      cp <- cbind(cumprob(lb), 0)
+      for(j in 1:nrow(lb)){
+        ws <- c(0, (cp[j, -ns-1] - cp[j, 1]) / (cp[j, ns] - cp[j, 1]), 1)
+        m.yvals[j,] <- (1 - ws) * c(values[1], values) + ws * c(values, values[ns + 1])
+      }
+      z  <- sapply(1:nrow(lb),
+                   function(i) approx(c(1, cp[i,]), m.yvals[i,], 
+                                      xout = cumprob(inverse(1 - q)), rule = 2)$y)
+    }
+    if(method == 'discrete'){
+      m.cdf <- cbind(1 - cumprob(lb), 1)
+      id <- apply(m.cdf, 1, FUN=function(x) {min(which(x >= q))[1]})
+      z <- values[id]
+    }
+    names(z) <- names(lp)
+    if(conf.int) {
+      if(! length(X)) stop('when conf.int > 0 must provide X')
+      lb.se <- matrix(NA, ncol = ns, nrow = nrow(X))
+      info.inverse <- as.matrix(solve(info))
+      idx <- which(names(c(intercepts, slopes)) %in% colnames(X))
+      dlb.dtheta <- as.matrix(cbind(1, X))
+      for(i in 1:ns){
+        v.i <- info.inverse[c(i, idx), c(i, idx)]
+        lb.se[, i] <- sqrt(diag(dlb.dtheta %*% v.i %*% t(dlb.dtheta)))
+      }
+      w <- qnorm((1 + conf.int) / 2)
+      ci.ub <- matrix(sapply(1:ns, FUN=function(i) {1 - cumprob(lb[, i] - w * lb.se[, i])}), ncol = ns)
+      ci.lb <- matrix(sapply(1:ns, FUN=function(i) {1 - cumprob(lb[, i] + w * lb.se[, i])}), ncol = ns)
+      if(method == 'interpolated'){
+        z.ub <- sapply(1:nrow(lb),
+                       function(i) approx(c(1, 1 - ci.lb[i,], 0), m.yvals[i,], 
+                                          xout = cumprob(inverse(1 - q)),
+                                          rule = 2)$y)
+        z.lb <- sapply(1:nrow(lb),
+                       function(i) approx(c(1, 1 - ci.ub[i,], 0), m.yvals[i,],
+                                          xout = cumprob(inverse(1 - q)),
+                                          rule = 2)$y)
+      }
+      if(method == 'discrete'){
+        id <- apply(cbind(ci.lb, 1), 1, FUN=function(x) {min(which(x >= q))[1]})
+        z.ub <- values[id]
+        id <- apply(cbind(ci.ub, 1), 1, FUN=function(x) {min(which(x >= q))[1]})
+        z.lb <- values[id]
+      }
+      attr(z, 'limits') <- list(lower = z.lb, 
+                                upper = z.ub)  
+    }
+    z
+  }
+  ## Re-write first derivative so that it doesn't need the f argument
+  if(object$family == "logistic")
+    object$trans$deriv <- function(x) {p <- plogis(x); p * (1. - p)}
+  trans <- object$trans
+  if(! length(trans)) trans <- probabilityFamilies$logistic
+  ir <- object$interceptRef
+  if(! length(ir)) ir <- 1
+  formals(f) <- list(q=numeric(0), lp=numeric(0), X=numeric(0),
+                     intercepts=object$coef[1:ns],
+                     slopes=object$coef[-(1 : ns)],
+                     info=object$info.matrix,   
+                     values=vals, interceptRef=ir, trans=trans,
+                     conf.int=0, method=c('interpolated', 'discrete'))
+  f 
+}
+
+
+
 
 ExProb <- function(object, ...) UseMethod("ExProb")
 
 ExProb.orm <- function(object, codes=FALSE, ...)
-  {
-    ns <- object$non.slopes
-    if(codes) vals <- 1:length(object$freq)
-    else {
-      vals <- as.numeric(object$yunique)
-      if(any(is.na(vals)))
-        stop('values of response levels must be numeric for codes=FALSE')
-    }
-    f <- function(lp=numeric(0), y=NULL, intercepts=numeric(0),
-                  values=numeric(0),
-                  interceptRef=integer(0), cumprob=NULL, yname=NULL)
-      {
-        lp <- lp - intercepts[interceptRef]
-        prob <- cumprob(sapply(c(1e30, intercepts), '+', lp))
-        dim(prob) <- c(length(lp), length(values))
-        
-        if(!length(y)) {
-          colnames(prob) <- paste('Prob(Y>=', values, ')', sep='')
-          return(structure(list(y=values, prob=prob, yname=yname),
-                           class='ExProb'))
-        }
-        p <- t(apply(prob, 1,
-                   function(probs) {
-                     pa <- approx(values, probs, xout=y,
-                                  f=1, method='constant')$y
-                     pa[y < min(values)] <- 1.
-                     pa[y > max(values)] <- 0.
-                     pa
-                   } ) )
-        if(length(y) > 1) {
-          colnames(p) <- paste('Prob(Y>=', y, ')', sep='')
-          p <- list(y=y, prob=p)
-        }
-        structure(drop(p), class='ExProb')
-      }
-    trans <- object$trans
-    formals(f) <- list(lp=numeric(0), y=NULL, intercepts=object$coef[1:ns],
-                       values=vals, interceptRef=object$interceptRef,
-                       cumprob=trans$cumprob, yname=all.vars(object$terms)[1])
-    f
+{
+  ns <- object$non.slopes
+  if(codes) vals <- 1:length(object$freq)
+  else {
+    vals <- as.numeric(object$yunique)
+    if(any(is.na(vals)))
+      stop('values of response levels must be numeric for codes=FALSE')
   }
+  f <- function(lp=numeric(0), X=numeric(0), y=NULL,
+                intercepts=numeric(0), slopes=numeric(0),
+                info=numeric(0), values=numeric(0),
+                interceptRef=integer(0), trans=trans, yname=NULL,
+                conf.int=0)
+  {
+    cumprob <- trans$cumprob
+    lp <- if(length(lp)) lp - intercepts[interceptRef] else matxv(X, slopes) 
+    prob <- cumprob(sapply(c(1e30, intercepts), '+', lp))
+    dim(prob) <- c(length(lp), length(values))
+    if(! length(y)) {
+      colnames(prob) <- paste('Prob(Y>=', values, ')', sep='')
+      y <- values 
+      result <- structure(list(y=values, prob=prob, yname=yname),
+                       class='ExProb')
+    }
+    else {
+      p <- t(apply(prob, 1,
+                 function(probs) {
+                   pa <- approx(values, probs, xout=y,
+                                f=1, method='constant')$y
+                   pa[y < min(values)] <- 1.
+                   pa[y > max(values)] <- 0.
+                   pa
+                 } ) )
+      if(length(y) > 1) {
+        colnames(p) <- paste('Prob(Y>=', y, ')', sep='')
+        p <- list(y=y, prob=p)
+      }
+      result <- structure(drop(p), class='ExProb') 
+    }
+    if(conf.int){
+      if(! length(X)) stop('must specify X if conf.int > 0')
+      index <- sapply(y, FUN=function(x) {if(x <= min(values)) result <- 1
+      else if(x >= max(values)) result <- length(values)
+      else which(x <= values)[1] - 1})
+      info.inverse <- as.matrix(solve(info))
+      idx <- which(names(c(intercepts, slopes)) %in% colnames(X))
+      dlb.dtheta <- as.matrix(cbind(1, X))
+      lb.se <- sapply(1:length(y), function(i) 
+        {diag(dlb.dtheta %*% info.inverse[c(index[i], idx), c(index[i], idx)] %*% t(dlb.dtheta)) 
+        })
+      lb.se <- matrix(sqrt(lb.se), ncol = length(y))
+      m.alpha <- c(intercepts, slopes)[index]
+      lb <- matrix(sapply(m.alpha, '+', lp), ncol = length(y))
+      ci.ub <- matrix(sapply(1:length(y), FUN=function(i) 
+      {cumprob(lb[, i] + qnorm((1 + conf.int) / 2) * lb.se[, i])}), ncol = length(y))
+      ci.lb <- matrix(sapply(1:length(y), FUN=function(i) 
+      {cumprob(lb[, i] - qnorm((1 + conf.int) / 2) * lb.se[, i])}), ncol = length(y))
+      ci.ub[, which(y <= min(values))] <- ci.lb[, which(y <= min(values))] <- 1
+      ci.ub[, which(y >= max(values))] <- ci.lb[, which(y >= max(values))] <- 0
+      if(length(y) > 1)
+        colnames(ci.ub) <- colnames(ci.lb) <- colnames(result$prob)
+      attr(result, 'limits') <- list(lower = ci.lb, 
+                                     upper = ci.ub)  
+    }
+    result
+  }
+  trans <- object$trans
+  formals(f) <- list(lp=numeric(0), X=numeric(0), y=NULL, 
+                     intercepts=object$coef[1:ns], 
+                     slopes=object$coef[-(1 : ns)],
+                     info=object$info.matrix, values=vals, 
+                     interceptRef=object$interceptRef, 
+                     trans=trans, yname=all.vars(object$terms)[1],
+                     conf.int=0)
+ 
+  f
+}
+
 
 plot.ExProb <- function(x, ..., data=NULL,
                         xlim=NULL, xlab=x$yname, ylab=expression(Prob(Y>=y)),

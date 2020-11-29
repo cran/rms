@@ -533,13 +533,13 @@ demo(all, 'rms')
   The primary resource for the rms package is
   \emph{Regression Modeling Strategies, second edition} by
   FE Harrell (Springer-Verlag, 2015) and the web page
-  \url{https://hbiostat.org/R/rms}.  See also
+  \url{https://hbiostat.org/R/rms/}.  See also
   the Statistics in Medicine articles by Harrell \emph{et al} listed
   below for case studies of modeling and model validation using rms.
 
   Several datasets useful for multivariable modeling with
   rms are found at
-  \url{http://hbiostat.org/data}.
+  \url{https://hbiostat.org/data/}.
 }
 
 \section{Published Applications of rms and Regression Splines}{
@@ -726,7 +726,7 @@ demo(all, 'rms')
 
 \section{Bug Reports}{
   The author is willing to help with problems.  Send
-  E-mail to \email{f.harrell@vanderbilt.edu}.  To report bugs,
+  E-mail to \email{fh@fharrell.com}.  To report bugs,
   please do the following:
 
   \enumerate{
@@ -769,7 +769,7 @@ demo(all, 'rms')
   Harrell FE (2009): rms: S functions for
   biostatistical/epidemiologic modeling, testing,
   estimation, validation, graphics, and prediction.
-  Programs available from \url{https://hbiostat.org/R/rms}.
+  Programs available from \url{https://hbiostat.org/R/rms/}.
   Be sure to reference other packages used as well as 
   \R itself.
 }
