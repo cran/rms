@@ -190,24 +190,26 @@ oos.loglik.Glm <- function(fit, lp, y, ...)
 #insert columns with NAs for variables not defined
 #at is attr(fit$terms,"Design") (now fit$Design)
 
-Getlim <- function(at, allow.null=FALSE, need.all=TRUE)
-{
-nam <- at$name[at$assume!="interaction"]
+Getlim <- function(at, allow.null=FALSE, need.all=TRUE) {
+nam    <- at$name[at$assume!="interaction"]
 limits <- at$limits
 values <- at$values
 
 XDATADIST <- .Options$datadist
 X <- lims <- vals <- NULL
-if(!is.null(XDATADIST) && exists(XDATADIST))
-  {
-    X <- eval(as.name(XDATADIST))
+if(! is.null(XDATADIST)) {
+  X <- if(inherits(XDATADIST, 'datadist')) XDATADIST
+       else
+         if(exists(XDATADIST)) eval(as.name(XDATADIST))
+  if(! is.null(X)) {
     lims <- X$limits
     if(is.null(lims)) stop(paste("options(datadist=",XDATADIST,
                                  ") not created with datadist"))
     vals <- X$values
+    }
   }
 
-if((length(X)+length(limits))==0) {
+if((length(X) + length(limits)) == 0) {
   if(allow.null) {
     lims <- list()
     for(nn in nam) lims[[nn]] <- rep(NA,7)
@@ -769,7 +771,8 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
 
   lsub <- length(subtitle)
   if(title != '') R <- c(R, catl(title, pre=1, bold=TRUE,
-                                 skip=if(lsub) 0 else 1))
+                                 skip=1))
+  ## was skip=if(lsub) 0 else 1
   if(lsub)
     for(i in lsub) R <- c(R, catl(subtitle[i], bold=FALSE))
   

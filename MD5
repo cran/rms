@@ -1,6 +1,6 @@
-e783cd4eff80cfe3cacd2a16e3f55133 *DESCRIPTION
+bb5f33764ed1e20910dbecf40d29f233 *DESCRIPTION
 b4444624da10ca76c833abb9ab763f40 *NAMESPACE
-0c44dbfacd1578d4a89d67a34755d497 *NEWS
+a42f548884c3509e149b5d7cccc23110 *NEWS
 a5263ced794350451f27b08a43049789 *R/Function.rms.s
 199bcb3cdc16592748f2bc6777937ae2 *R/Glm.r
 bb679c037dd774df497420c28a00ded9 *R/Gls.s
@@ -58,9 +58,9 @@ fb566e20a8fa1a80a10fb1b710484e08 *R/predictrms.s
 489aa87bc081c9beb220dbc832db9f97 *R/residuals.cph.s
 9cbd5896ef27eb326283c5d40058fa89 *R/residuals.lrm.s
 b68bfa76a0838cec25be23f352234d82 *R/residuals.ols.s
-3ebefbd95745ecb9882b68aad55444e9 *R/rms.s
+5d5546241d196912c33b38feb3ccf9c1 *R/rms.s
 4e6cb17078fd371af2b70a1b4ce2eaa8 *R/rms.trans.s
-9d4684f5d49bafc531f2e240efedd5bf *R/rmsMisc.s
+d9cef288154fc3c4dd083a8126eff9e0 *R/rmsMisc.s
 e9d38f83f574873c3bfe7bb3989c25f7 *R/robcov.s
 72c85f219fc0d0570ddb2f9c64e6f4f3 *R/sensuc.s
 f9b32e895f447b50391e86912da129d5 *R/specs.rms.s
