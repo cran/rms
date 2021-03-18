@@ -8,11 +8,13 @@
 \alias{scored}
 \alias{strat}
 \alias{matrx}
+\alias{gTrans}
 \alias{\%ia\%}
 \title{rms Special Transformation Functions}
 \description{
 This is a series of functions (\code{asis}, \code{pol}, \code{lsp},
-\code{rcs}, \code{catg}, \code{scored}, \code{strat}, \code{matrx}, and
+\code{rcs}, \code{catg}, \code{scored}, \code{strat}, \code{matrx},
+\code{gTrans}, and
 \code{\%ia\%}) that set up special attributes  (such as
 knots and nonlinear term indicators) that are carried through to fits
 (using for example \code{lrm},\code{cph}, \code{ols},
@@ -42,7 +44,28 @@ in the model.  \code{asis, catg, scored, matrx} are seldom invoked
 explicitly by the user (only to specify \code{label} or \code{name},
 usually).
 
-In the list below, functions \code{asis} through \code{strat} can have
+\code{gTrans} is a general multiple-parameter transformation function.
+It can be used to specify new polynomial bases, smooth relationships
+with a discontinuity at one or more values of \code{x}, grouped
+categorical variables, e.g., a categorical variable with 5 levels where
+you want to combine two of the levels to spend only 3 degrees of freedom in
+all but see plots of predicted values where the two combined categories
+are kept separate but will have equal effect estimates.  The first
+argument to \code{gTrans} is a regular numeric, character, or factor
+variable.  The next argument is a function that transforms a vector into
+a matrix.  If the basis functions are to include a linear term it is up
+too the user to include the original \code{x} as one of the columns.
+Column names are assigned automaticall, but any column names specified
+by the user will override the default name.  If you want to signal which
+terms correspond to linear and which correspond to nonlinear effects for
+the purpose of running \code{anova.rms}, add an integer vector attribute
+\code{nonlinear} to the resulting matrix.  This vector specifies the
+column numbers corresponding to nonlinear effects.  The default is to assume a column
+is a linear effect.  The \code{parms} attribute stored with a
+\code{gTrans} result a character vector version of the function, so as
+to not waste space carrying along any environment information.
+
+In the list below, functions \code{asis} through \code{gTrans} can have
 arguments \code{x, parms, label, name} except that \code{parms} does not
 apply to \code{asis, matrx, strat}.
 }
@@ -55,6 +78,7 @@ rcs(\dots)
 catg(\dots)
 scored(\dots)
 strat(\dots)
+gTrans(\dots)
 x1 \%ia\% x2
 }
 \arguments{
@@ -140,6 +164,23 @@ f3 <- lrm(y ~ rcs(x1) + rcs(x2) + x1 \%ia\% x2)
 # Use x1 \%ia\% x2 instead of x1:x2 because x1 \%ia\% x2 triggers
 # anova to pool x1*x2 term into x1 terms to test total effect
 # of x1
+#
+# Examples of gTrans
+#
+# Linear relationship with a discontinuity at zero:
+ldisc <- function(x) {z <- cbind(x == 0, x); attr(z, 'nonlinear') <- 1; z}
+gTrans(x, ldisc)
+# Duplicate pol(x, 2):
+pol2 <- function(x) {z <- cbind(x, x^2); attr(z, 'nonlinear') <- 2; z}
+gTrans(x, pol2)
+# Linear spline with a knot at x=10 with the new slope taking effect
+# until x=20 and the spline turning flat at that point but with a
+# discontinuous vertical shift
+dspl <- function(x) {
+  z <- cbind(x, pmax(pmin(x, 20) - 10, 0), x > 20)
+  attr(z, 'nonlinear') <- 2:3
+  z }
+gTrans(x, dspl)
 }
 }
 \keyword{models}

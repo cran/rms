@@ -131,7 +131,7 @@ predictrms <-
         if(assume[i] == 7L) xi <- scored(xi, name=name[i])
         else
           if(assume[i] == 10L)
-            xi <- matrix(parms[[name[i]]], nrow=1) #matrx col medians
+            xi <- I(matrix(parms[[name[i]]], nrow=1)) #matrx col medians
       adjto[[ii]] <- xi
     }
     names(adjto) <- name[non.ia]
@@ -176,7 +176,7 @@ predictrms <-
             retlist <- list(linear.predictors=LP)
             if(se.fit) retlist$se.fit <- naresid(naa, fit$se.fit)
             if(conf.int) {
-              plminus <- zcrit*sqrt(retlist$se.fit^2 + vconstant)
+              plminus <- zcrit * sqrt(retlist$se.fit^2 + vconstant)
               retlist$lower <- LP - plminus
               retlist$upper <- LP + plminus
             }
@@ -184,7 +184,7 @@ predictrms <-
           }
       }   # end type='lp' with linear.predictors stored in fit
       else
-        if(type=="x") return(structure(nulll(naresid(naa, fit$x)),
+        if(type == "x") return(structure(nulll(naresid(naa, fit$x)),
              strata=if(length(stra <- fit$strata))
              naresid(naa, stra) else NULL))
       X <- fit[['x']]
@@ -203,7 +203,7 @@ predictrms <-
           new <- matrix(double(1L),
                         nrow=length(newdata[[1L]]),
                         ncol=length(newdata))
-          for(j in 1L : ncol(new)) new[,j] <- newdata[[loc[j]]]
+          for(j in 1L : ncol(new)) new[, j] <- newdata[[loc[j]]]
           newdata <- new
         }
         if(! is.matrix(newdata)) newdata <- matrix(newdata, ncol=f)
@@ -231,10 +231,12 @@ predictrms <-
             if(allna) {
               xi <- matrix(double(1L),
                            nrow=length(xi), ncol=ncols)
-              for(j in 1L : ncol(xi)) xi[,j] <- parms[[name[i]]][j]
+              for(j in 1L : ncol(xi)) xi[, j] <- parms[[name[i]]][j]
+              xi <- I(xi)
             }
-            else xi <- matrix(xi, nrow=length(xi), ncol=ncols)
+            else xi <- I(matrix(xi, nrow=length(xi), ncol=ncols))
           }
+
           ##	Duplicate single value for all parts of matrix
           k <- k + 1L
           X[[k]] <- xi
@@ -255,11 +257,12 @@ predictrms <-
           j <- match(nm[i], name)
           if(! is.na(j)) {
             asj <- assume[j]
-            w   <- newdata[,i]
+            w   <- newdata[, i]
             V   <- NULL
             if(asj %in% c(5L, 7L, 8L) | 
                (name[j] %in% names(Values) &&
-                length(V <- Values[[name[j]]]) && is.character(V))) {
+                asj != 11 && length(V <- Values[[name[j]]]) &&
+                is.character(V))) {
               if(length(Pa <- parms[[name[j]]])) V <- Pa
               newdata[,i] <- factor(w, V)
               ## Handles user specifying numeric values without quotes, that
@@ -274,6 +277,7 @@ predictrms <-
           }
         }
       }  # is.data.frame(newdata)
+
       X <- model.frame(Terms, newdata, na.action=na.action, ...)
       if(type == "model.frame") return(X)
       naa  <- attr(X, "na.action")

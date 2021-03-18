@@ -12,6 +12,7 @@
 # 8	strat	stratification factor
 #10	matrx	matrix factor - used to keep groups of variables together
 #		as one factor
+#11 gTrans - general transformations
 #
 #	des.args generic function for retrieving arguments
 #	set.atr generic function to set attributes of sub design matrix
@@ -83,12 +84,12 @@
 # This is used to get predicted values when the original fitting
 # function (e.g., rcs) derived parms of the transformation from the data.
 #
-des.args <- function(x,parms.allowed,call.args) {
+des.args <- function(x, parms.allowed, call.args) {
   nam <- names(x)
-  if(! length(nam)) nam <- rep("",5)
+  if(! length(nam)) nam <- rep("", 5)
   name <- nam[1]
   if(name=="") {
-    form <- formula(call("~",as.name("...y..."),call.args[[2]]))
+    form <- formula(call("~",as.name("...y..."), call.args[[2]]))
     name <- var.inner(form)
   }
   pa <- parms.allowed
@@ -97,7 +98,7 @@ des.args <- function(x,parms.allowed,call.args) {
 	k <- charmatch(arg.name,nm,0)	#k>0 : named arg found
     ## Added karg <= length(x) 9Apr02 for R; R doesn't return NULL
     ## like S+
-	if(k>0) x[[k]] else 
+	if(k > 0) x[[k]] else 
 	if(length(nm) < karg || nm[karg] != "") NULL else
      if(karg <= length(x)) x[[karg]] else NULL
   }
@@ -107,23 +108,23 @@ des.args <- function(x,parms.allowed,call.args) {
       stop(paste("parms not allowed for",as.character(call.args[1])))
   }
  
-  nm <- argu(x,5,"name",pa,nam)
+  nm <- argu(x, 5, "name", pa, nam)
   if(length(nm)) name <- nm
   if(length(.Options$Design.attr)) {
 	atr <- .Options$Design.attr
 	i <- charmatch(name, atr$name, 0)
 	if(! length(i))stop("program logic error for options(factor.number)")
 	parmi <- atr$parms[[name]]
-	return(list(name=atr$name[i],parms=parmi,label=atr$label[i],
+	return(list(name=atr$name[i], parms=parmi, label=atr$label[i],
                 units=atr$units[i]))		# added units 9Jun99
   }
 
-  label <- argu(x,3,"label",pa,nam)
+  label <- argu(x, 3, "label", pa, nam)
   atx <- attributes(x[[1]])  # 9Jun99
   if(! length(label)) label <- atx$label   # 9Jun99 attr(x[[1]],"label")
   if(! length(label)) label <- name
 
-  list(name=name,parms=parms,label=label,units=atx$units)  #9Jun99
+  list(name=name, parms=parms, label=label, units=atx$units)  #9Jun99
   
 }
 
@@ -181,6 +182,7 @@ matrx <- function(...) {
   if(length(xd)) for(i in 1:nc)
     parms[i] <- median(xd[,i], na.rm=TRUE)
 
+  xd <- I(xd)
   attributes(xd) <- set.atr(xd, NULL, z, colname, "matrix", 10, parms,
                             rep(FALSE,nc))
   xd
@@ -361,7 +363,7 @@ scored <- function(...) {
 
   cal <- sys.call()
   xx  <- list(...)
-  z   <- des.args(xx,TRUE,cal)
+  z   <- des.args(xx, TRUE, cal)
   parms <- z$parms
   nam   <- z$name
   x <- xx[[1]]
@@ -414,6 +416,44 @@ scored <- function(...) {
                           contrasts=xd))
   x
 }
+
+# General transformations - allows discontinuities, special spline
+# functions, etc.
+gTrans <- function(...) {
+
+  cal <- sys.call()
+  xx  <- list(...)
+  z <- des.args(xx, TRUE, cal)
+  parms <- z$parms
+  if(is.character(parms)) parms <- eval(parse(text=parms))
+  nam   <- z$nam
+  x <- xx[[1]]
+  suffix <- ''
+  nam  <- z$name
+  xd   <- as.matrix(parms(x))
+  nc   <- ncol(xd)
+  name <- rep('', nc)
+  if(length(colnames(xd))) name <- colnames(xd)
+  nonlin <- rep(FALSE, nc)
+  nonlin[attr(xd, 'nonlinear')] <- TRUE
+  
+  for(j in 1 : nc) {
+    if(name[j] == '') name[j] <- paste0(nam, suffix)
+    suffix  <- paste0(suffix, "'")
+  }
+  colnames(xd) <- name
+  # model.matrix will put TRUE after a term name if logical
+  # convert to 0/1
+  if(is.logical(xd)) xd <- 1 * xd
+
+  xd <- I(xd)
+  # Store the function parms as character so environment won't
+  # be carried along (makes serialized .rds and other files large)
+  attributes(xd) <- set.atr(xd, x, z, name, "gTrans", 11,
+                            deparse(parms), nonlin)
+  xd
+}
+
 
 ## strat parms=value labels
 strat <- function(...) {
@@ -471,7 +511,7 @@ gparms <- function(fit,...) {
 ## value.chk - if x=NA, returns list of possible values of factor i defined
 ##	in object f's attributes.  For continuous factors, returns n values
 ##	in default prediction range.  Use n=0 to return trio of effect
-##	limits.  Use n<0 to return pretty(plotting range,nint=-n).
+##	limits.  Use n < 0 to return pretty(plotting range, nint = - n).
 ##       If type.range="full" uses the full range instead of default plot rng.
 ## If x is not NA, checks that list to see that each value is allowable
 ##	for the factor type, and returns x
@@ -495,7 +535,7 @@ value.chk <- function(f, i, x, n, limval, type.range="plot")
     lim    <- if(type.range=="full") limits[6:7] else limits[4:5]
   }
 
-  if(as<5 | as==6) {
+  if(as < 5 | as == 6 | as == 11) {
       if(isna) {
         if(! length(values)) {
           if(n==0) x <- limits[1:3]
@@ -518,14 +558,14 @@ value.chk <- function(f, i, x, n, limval, type.range="plot")
                        paste(values,collapse=" ")))
         }	
       }
-    } else if(as==5|as==8) {
+    } else if(as == 5 | as == 8) {
       if(isna) x <- parms
       else {
         j <- match(x, parms, 0)  #match converts x to char if needed
-        if(any(j==0))
+        if(any(j == 0))
           stop(paste("illegal levels for categorical variable:",
-                     paste(x[j==0],collapse=" "),"\nPossible levels:",
-                     paste(parms,collapse=" ")))
+                     paste(x[j == 0], collapse=" "), "\nPossible levels:",
+                     paste(parms, collapse=" ")))
         x
       }
     }
