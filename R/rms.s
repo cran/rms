@@ -168,7 +168,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
   
   fname <- flabel <- name <- mmname <- strt <- asm <- len <- 
     fname.incl.dup <- ia <- funits <- NULL
-  parm <- nonlinear <- limits <- values <- list()
+  parm <- nonlinear <- tex <- limits <- values <- list()
 
   scol      <- 1
   colnam    <- mmcolnam <- mmcolnamalt <- list()
@@ -275,6 +275,8 @@ Design <- function(mf, formula=NULL, specials=NULL,
         }
         
         if(length(nonl <- z$nonlinear)) nonlinear[[zname]] <- nonl
+
+        if(length(tx <- z$tex))         tex[[zname]]       <- tx
 
         if(za == 9) {
           iia <- match(z$ia, fname)
@@ -421,7 +423,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
                   "category", "","scored", "strata", "interaction",
                   "matrix", "gTrans")[asm],
                 assume.code=as.integer(asm), parms=parm, limits=limits,
-                values=values, nonlinear=nonlinear,
+                values=values, nonlinear=nonlinear, tex=tex,
                 interactions=if(length(ia)) structure(ia, dimnames=NULL))
     
     nact <- attr(mf, 'na.action')
@@ -513,6 +515,7 @@ modelData <- function(data=environment(formula), formula, formula2=NULL,
   if(length(formula2)) {
     i <- ! complete.cases(data[intersect(names(data), v1)])
     j <- ! complete.cases(data[intersect(names(data), v2)])
+    ## Check: longer object length not mult of shorter:  ???
     if(any(j & ! i))
       stop('A variable in the second formula was missing on an observation that was not missing on any variable in main formula')
   }
@@ -565,7 +568,7 @@ modelData <- function(data=environment(formula), formula, formula2=NULL,
           at$levels   <- at$parms <- levels(di)
           at$colnames <- paste0(at$name, '=', levels(di)[-1])
           attributes(di) <- at[c('class', 'name', 'label', 'assume',
-                                 'assume.code', 'parms', 'nonlinear',
+                                 'assume.code', 'parms', 'nonlinear', 'tex',
                                  'colnames','levels')]
           data[[i]] <- di
         }

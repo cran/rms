@@ -231,6 +231,18 @@ contrast(f, list(sex='female', age=30),
 # Duplicate overall sex effect in anova with 3 d.f.
 contrast(f, list(sex='female', age=c(30,40,50)),
             list(sex='male',   age=c(30,40,50)), type='joint')
+# For females get an array of odds ratios against age=40
+k <- contrast(f, list(sex='female', age=30:50),
+                 list(sex='female', age=40))
+print(k, fun=exp)
+# Plot odds ratios with pointwise 0.95 confidence bands using log scale
+k <- as.data.frame(k[c('Contrast','Lower','Upper')])
+ggplot(k, aes(x=30:50, y=exp(Contrast))) + geom_line() +
+   geom_ribbon(aes(ymin=exp(Lower), ymax=exp(Upper)),
+               alpha=0.15, linetype=0) +
+   scale_y_continuous(trans='log10', n.breaks=10,
+               minor_breaks=c(seq(0.1, 1, by=.1), seq(1, 10, by=.5))) +
+  xlab('Age') + ylab('OR against age 40')
 
 # For a model containing two treatments, centers, and treatment
 # x center interaction, get 0.95 confidence intervals separately
@@ -359,6 +371,8 @@ xYplot(Cbind(Contrast, Lower, Upper) ~ age | sex, data=w,
 w <- as.data.frame(w[c('age','sex','Contrast','Lower','Upper')])
 ggplot(w, aes(x=age, y=Contrast)) + geom_point() + facet_grid(sex ~ .) +
    geom_errorbar(aes(ymin=Lower, ymax=Upper), width=0)
+ggplot(w, aes(x=age, y=Contrast)) + geom_line() + facet_grid(sex ~ .) +
+   geom_ribbon(aes(ymin=Lower, ymax=Upper), width=0, alpha=0.15, linetype=0)
 xYplot(Cbind(Contrast, Lower, Upper) ~ age, groups=sex, data=w,
        ylab='Drug - Placebo', method='alt bars')
 options(datadist=NULL)

@@ -178,6 +178,7 @@ orm.fit <- function(x=NULL, y,
   r2     <- 1. - exp(-model.lr / n)
   r2.max <- 1. - exp(-llnull / n)
   r2     <- r2 / r2.max
+  r2m    <- R2Measures(model.lr, model.df, n, numy)
   if(kint > 1L) attr(lp, 'intercepts') <- kmid
   g  <- GiniMd(lp)
   ## compute average |difference| between 0.5 and the condition
@@ -190,11 +191,11 @@ orm.fit <- function(x=NULL, y,
   ##                 double(n), integer(n), PACKAGE='Hmisc')$r[2]
   
   stats <- c(n, length(numy), mediany, z$dmax, model.lr, model.df,
-             model.p, score, score.p, rho, r2, g, exp(g), pdm)
+             model.p, score, score.p, rho, r2, r2m, g, exp(g), pdm)
   
   nam <- c("Obs", "Distinct Y", "Median Y", "Max Deriv",
            "Model L.R.", "d.f.", "P", "Score", "Score P",
-           "rho", "R2", "g", "gr", "pdm") 
+           "rho", "R2", names(r2m), "g", "gr", "pdm") 
   names(stats) <- nam
   
   retlist <- list(call=cal, freq=numy, yunique=ylevels,

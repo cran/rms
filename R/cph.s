@@ -244,14 +244,15 @@ cph <- function(formula     = formula(data),
   if(xpres) {
     logtest <- -2 * (f$loglik[1] - f$loglik[2])
     R2.max  <-  1 - exp(2 * f$loglik[1] / n)
-    R2 <- (1 - exp(- logtest / n)) / R2.max
-    P  <- 1 - pchisq(logtest,nvar)
+    R2  <- (1 - exp(- logtest / n)) / R2.max
+    r2m <- R2Measures(logtest, nvar, n, nevent)
+    P   <- 1 - pchisq(logtest,nvar)
     gindex <- GiniMd(f$linear.predictors)
     dxy <- dxy.cens(f$linear.predictors, Y, type='hazard')['Dxy']
     stats <- c(n, nevent, logtest, nvar, P, f$score, 
-               1-pchisq(f$score,nvar), R2, dxy, gindex, exp(gindex))
+               1-pchisq(f$score,nvar), R2, r2m, dxy, gindex, exp(gindex))
     names(stats) <- c("Obs", "Events", "Model L.R.", "d.f.", "P", 
-                      "Score", "Score P", "R2", "Dxy", "g", "gr")
+                      "Score", "Score P", "R2", names(r2m), "Dxy", "g", "gr")
   }
   else {
     stats <- c(n, nevent)
@@ -570,8 +571,8 @@ predict.cph <- function(object, newdata=NULL,
              na.action, expand.na, center.terms, ...)
 }
 
-print.cph <- function(x, digits=4, table=TRUE, conf.int=FALSE,
-                      coefs=TRUE,
+print.cph <- function(x, digits=4, r2=c(0,2,4), table=TRUE, conf.int=FALSE,
+                      coefs=TRUE, pg=FALSE,
                       title='Cox Proportional Hazards Model', ...)
 { 
   k <- 0
@@ -600,10 +601,14 @@ print.cph <- function(x, digits=4, table=TRUE, conf.int=FALSE,
                      'Pr(> chi2)'  = stats['P'],
                      'Score chi2'  = stats['Score'],
                      'Pr(> chi2)'  = stats['Score P'])
-    disc <- reListclean(R2 = stats['R2'],
-                     Dxy = stats['Dxy'],
-                     g  = stats['g'],
-                     gr = stats['gr'])
+    newr2 <- grepl('R2\\(', names(stats))
+    disc <- reListclean(R2        = if(0 %in% r2) stats['R2'],
+                        namesFrom = if(any(newr2))
+                                      stats[newr2][setdiff(r2,0)],
+                        Dxy = stats['Dxy'],
+                        g  = if(pg) stats['g'],
+                        gr = if(pg) stats['gr'])
+                                                              
     k <- k + 1
     headings <- c('', 'Model Tests', 'Discrimination\nIndexes')
     data     <- list(misc,

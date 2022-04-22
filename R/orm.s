@@ -144,7 +144,7 @@ orm <- function(formula, data=environment(formula),
   f
 }
 
-print.orm <- function(x, digits=4, coefs=TRUE,
+print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
                       intercepts=x$non.slopes < 10,
                       title, ...) {
 
@@ -230,8 +230,14 @@ print.orm <- function(x, digits=4, coefs=TRUE,
                    'Score chi2' = stats['Score'],
                    'Pr(> chi2)' = stats['Score P'],
                    Penalty      = penaltyFactor)
-  disc <- reListclean(R2=stats['R2'], g=stats['g'], gr=stats['gr'],
-                   '|Pr(Y>=median)-0.5|'=stats['pdm'])
+  newr2 <- grepl('R2\\(', names(stats))
+  disc <- reListclean(R2=if(0 %in% r2) stats['R2'],
+                      namesFrom = if(any(newr2)) stats[newr2][setdiff(r2, 0)],
+                      g         = if(pg) stats['g'],
+                      gr        = if(pg) stats['gr'],
+                      '|Pr(Y>=median)-0.5|' = stats['pdm'])
+  if(any(newr2)) names(disc)[names(disc) == 'R2m'] <- names(stats[newr2])
+  
   discr <-reListclean(rho=stats['rho'])
   
   headings <- c('',
