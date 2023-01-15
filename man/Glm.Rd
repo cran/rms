@@ -25,9 +25,7 @@ Glm(
 \arguments{
 \item{formula, family, data, weights, subset, na.action, start, offset, control, model, method, x, y, contrasts}{see \code{\link[stats:glm]{stats::glm()}}; for \code{print} \code{x} is the result of \code{Glm}}
 
-\item{...}{ignored
-model coefficients, standard errors, etc.  Specify \code{coefs=n} to print
-only the first \code{n} regression coefficients in the model.}
+\item{...}{ignored}
 }
 \value{
 a fit object like that produced by \code{\link[stats:glm]{stats::glm()}} but with

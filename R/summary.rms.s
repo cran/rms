@@ -409,7 +409,7 @@ plot.summary.rms <-
            col=rgb(red=.1, green=.1, blue=.8, alpha=c(.1,.4,.7)),
            col.points=rgb(red=.1, green=.1, blue=.8, alpha=1),
            pch=17, lwd=if(length(q) == 1) 3 else 2 : (length(q) + 1),
-           digits=4, ...)
+           digits=4, declim=4, ...)
 {
   isbase <- Hmisc::grType() == 'base'
   pp <- plotlyParm   # in Hmisc
@@ -452,10 +452,9 @@ plot.summary.rms <-
   if(any(is.na(dif))) lab[is.na(dif)] <- sub(' - ', sep, lab[is.na(dif)])
   lb <- ifelse(is.na(x[, 'Diff.']), lab,
                paste(lab, sep,
-                     fmt(x[, 'High']), ':', fmt(x[, 'Low']), sep=''))
-  
-
-  
+                     fmt(round(x[, 'High'], declim)), ' : ',
+                     fmt(round(x[, 'Low'],  declim)), sep=''))
+   
   if(isbase) {
     confbar <-
       function(y, est, se, q, col, col.points,
@@ -558,12 +557,16 @@ plot.summary.rms <-
   feffect <- fun(effect)
   hte     <- format(feffect, digits=digits)
   if(adjust != '') hte <- paste(hte, adjust, sep='<br>')
+
+  height <- pp$heightDotchartb(lb)
+  auto   <- .Options$plotlyauto
+  if(length(auto) && auto) height <- NULL
   
   p <- plotly::plot_ly(x=~ feffect, y=~ lb,
                        text = ~ hte,
                        type = 'scatter', mode='markers', hoverinfo='text',
                        name = 'Estimate',
-                       height = pp$heightDotchartb(lb))
+                       height = height)
 
   
   for(i in 1 : n) {

@@ -155,6 +155,7 @@ impactPO <- function(formula,
                  dimnames=list(NULL, NULL, nam,
                                c('PPO', 'Multinomial')[c(do.ppo, do.mn)]))
   if(B > 0) {
+    if(! is.data.frame(data)) data <- model.frame(formula, data=data)
     for(i in 1 : B) {
       j   <- sample(nrow(data), nrow(data), replace=TRUE)
       dat <- data[j, ]
@@ -256,11 +257,11 @@ print.impactPO <- function(x, estimates=nrow(x$estimates) < 16, ...) {
     for(i in 1 : nd) {
       cat('\n')
       print(x$newdata[i, ])
-      b <- boot[, i, , , drop=TRUE]
-      b <- round(apply(b, 2:3, cl), 3)
-      for(model in dimnames(b)[[3]]) {
+      b <- boot[, i, , , drop=FALSE]
+      b <- round(apply(b, 2 : 4, cl), 3)
+      for(model in dimnames(b)[[4]]) {
         cat('\nPO - ', model, ' probability estimates\n\n', sep='')
-        print(b[, , model])
+        print(b[, , , model])
         }
       }
     }

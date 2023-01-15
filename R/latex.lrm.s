@@ -11,22 +11,23 @@ latex.lrm <-
   
   if(missing(which) & !inline)
     {
-      Y <- paste("{\\rm ",as.character(attr(f$terms,"formula")[2]),"}",sep="")
+      Y <- paste("\\text{", as.character(attr(f$terms,"formula")[2]),
+                 "}", sep="")
       lev <- names(f$freq)
       nrp <- f$non.slopes
       
-      w <- '\\['
+      w <- '$$'
       
-      j <- if(lev[2]=="TRUE") "" else paste("=",lev[2],sep="")
-      if(nrp==1) w <- paste(w,"{\\rm Prob}\\{",Y, j,
-           "\\} = \\frac{1}{1+\\exp(-X\\beta)}", sep="")
+      j <- if(lev[2]=="TRUE") "" else paste("=", lev[2], sep="")
+      if(nrp==1) w <- paste(w, "\\Pr(", Y, j,
+           ") = \\frac{1}{1+\\exp(-X\\beta)}", sep="")
 
       else
-        w <- paste(w,"{\\rm Prob}\\{", Y, 
-                   "\\geq j\\} = \\frac{1}{1+\\exp(-\\alpha_{j}-X\\beta)}",
+        w <- paste(w,"\\Pr(", Y, 
+                   "\\geq j) = \\frac{1}{1+\\exp(-\\alpha_{j}-X\\beta)}",
                    sep="")
 
-      w <- paste(w, ", {\\rm \\ \\ where} \\\\ \\]", sep="")
+      w <- paste(w, ", \\text{~~where} \\\\ $$", sep="")
 
       if(length(caption)) {
         if(md) w <- c(paste('<div align=center><strong>', caption,
@@ -37,12 +38,12 @@ latex.lrm <-
         }
       
       if(nrp > 1) {
-        w <- c(w,"\\begin{eqnarray*}")
+        w <- c(w,"\\begin{array}")
         cof <- format(f$coef[1:nrp])
         for(i in 1:nrp)
           w <- c(w, paste("\\hat{\\alpha}_{\\rm ",
                           lev[i+1],"} &=&",cof[i],"\\\\",sep=""))
-        w <- c(w,"\\end{eqnarray*}",sep="")
+        w <- c(w,"\\end{array}",sep="")
       }
     }
   else
@@ -52,15 +53,12 @@ latex.lrm <-
 
   if(missing(which))    which    <- 1:length(at$name)
   if(missing(varnames)) varnames <- at$name[at$assume.code!=9]
-  if(! md) 
-    cat(w, file=file, append=append, sep=if(length(w))"\n" else "")
-  z <- latexrms(f, file=file, append=TRUE, which=which, varnames=varnames, 
-                columns=columns, 
-                before=before, after=after, prefix="X\\hat{\\beta}",
-                inline=inline, pretrans=pretrans, digits=digits,
-                size=size)
-  if(md) htmltools::HTML(c(paste0(w, '\n'), as.character(z)))
-  else z
+  cat(w, file=file, append=append, sep=if(length(w))"\n" else "")
+  latexrms(f, file=file, append=TRUE, which=which, varnames=varnames, 
+           columns=columns, 
+           before=before, after=after, prefix="X\\hat{\\beta}",
+           inline=inline, pretrans=pretrans, digits=digits,
+           size=size)
 }
 
 
@@ -79,7 +77,8 @@ latex.orm <-
   
   if(missing(which) & !inline)
     {
-      Y <- paste("{\\rm ",as.character(attr(f$terms,"formula")[2]),"}",sep="")
+      Y <- paste("\\text{", as.character(attr(f$terms,"formula")[2]),
+                 "}", sep="")
       lev <- names(f$freq)
       nrp <- f$non.slopes
 
@@ -94,12 +93,12 @@ latex.orm <-
                loglog   = paste('\\exp(-\\exp(', zm, '))', sep=''),
                cloglog  = paste('1 - \\exp(-\\exp(', z, ')', sep=''))
                      
-      w <- '\\['
+      w <- '$$'
       
-      w <- paste(w, "{\\rm Prob}\\{", Y, 
-                   "\\geq y | X\\} = ", dist, sep='')
+      w <- paste(w, "\\Pr(", Y, 
+                   "\\geq y | X) = ", dist, sep='')
 
-      w <- paste(w, ", {\\rm \\ \\ where} \\\\ \\]", sep="")
+      w <- paste(w, "\\text{~~where}$$", sep="")
 
       if(length(caption)) {
         if(md) w <- c(paste('<div align=center><strong>', caption,
@@ -112,12 +111,12 @@ latex.orm <-
       if(intercepts) {
         nl <- as.numeric(lev)
         if(!any(is.na(nl))) lev <- format(nl, digits=digits)
-          w <- c(w,"\\begin{eqnarray*}")
+          w <- c(w,"\\begin{array}")
           cof <- format(f$coef[1:nrp], digits=digits)
           for(i in 1:nrp)
-            w <- c(w, paste("\\hat{\\alpha}_{\\rm ",
-                            lev[i+1],"} &=&",cof[i],"\\\\",sep=""))
-          w <- c(w, "\\end{eqnarray*}", sep="")
+            w <- c(w, paste("\\hat{\\alpha}_{\\text{",
+                            lev[i+1], "}} &=&", cof[i], "\\\\", sep=""))
+          w <- c(w, "\\end{array}", sep="")
       }
     }
   else w <- NULL
@@ -125,12 +124,10 @@ latex.orm <-
 
   if(missing(which)) which <- 1:length(at$name)
   if(missing(varnames)) varnames <- at$name[at$assume.code!=9]
-  if(! md) cat(w, file=file, append=append, sep=if(length(w))"\n" else "")
-  z <- latexrms(f, file=file, append=TRUE, which=which, varnames=varnames, 
-                columns=columns, 
-                before=before, after=after, prefix="X\\hat{\\beta}",
-                inline=inline, pretrans=pretrans, digits=digits,
-                size=size)
-  if(md) htmltools::HTML(c(paste0(w, '\n'), as.character(z)))
-  else z
+  cat(w, file=file, append=append, sep=if(length(w))"\n" else "")
+  latexrms(f, file=file, append=TRUE, which=which, varnames=varnames, 
+           columns=columns, 
+           before=before, after=after, prefix="X\\hat{\\beta}",
+           inline=inline, pretrans=pretrans, digits=digits,
+           size=size)
 }
