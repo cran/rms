@@ -1,14 +1,14 @@
 Package: rms
-Version: 6.4-1
-Date: 2023-01-22
+Version: 6.5-0
+Date: 2023-02-09
 Title: Regression Modeling Strategies
 Author: Frank E Harrell Jr <fh@fharrell.com>
 Maintainer: Frank E Harrell Jr <fh@fharrell.com>
-Depends: R (>= 3.5.0), Hmisc (>= 4.7-0), survival (>= 3.1-12), lattice,
+Depends: R (>= 3.5.0), Hmisc (>= 4.8-0), survival (>= 3.1-12), lattice,
         ggplot2 (>= 2.2), SparseM
 Imports: methods, quantreg, rpart, nlme (>= 3.1-123), polspline,
         multcomp, htmlTable (>= 1.11.0), htmltools, MASS, cluster,
-        digest
+        digest, colorspace
 Suggests: boot, tcltk, plotly (>= 4.5.6), knitr, mice, rmsb, nnet, VGAM
 Description: Regression modeling, testing, estimation, validation,
 	graphics, prediction, and typesetting by storing enhanced model design
@@ -29,6 +29,6 @@ URL: https://hbiostat.org/R/rms/, https://github.com/harrelfe/rms
 LazyLoad: yes
 RoxygenNote: 7.1.2
 NeedsCompilation: yes
-Packaged: 2023-01-22 23:05:42 UTC; harrelfe
+Packaged: 2023-02-09 14:04:54 UTC; harrelfe
 Repository: CRAN
-Date/Publication: 2023-01-23 00:30:02 UTC
+Date/Publication: 2023-02-09 15:10:02 UTC

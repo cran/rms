@@ -42,9 +42,10 @@ each draw (or for the summary) the ratio of the partial Wald chi-square
 to the total Wald statistic for the model is computed as REV.
 
 The \code{print} method calls \code{latex} or \code{html} methods
-depending on \code{options(prType=)}, and output is to the console.  For
+depending on \code{options(prType=)}.  For
 \code{latex} a \code{table} environment is not used and an ordinary
-\code{tabular} is produced.
+\code{tabular} is produced.  When using html with Quarto or RMarkdown,
+  \code{results='asis'} need not be written in the chunk header.
 
 \code{html.anova.rms} just calls \code{latex.anova.rms}.
 }
@@ -68,7 +69,7 @@ depending on \code{options(prType=)}, and output is to the console.  For
 
 \method{latex}{anova.rms}(object, title, dec.chisq=2,
       dec.F=2, dec.ss=NA, dec.ms=NA, dec.P=4, dec.REV=3, table.env=TRUE,
-      caption=NULL, fontsize=1, \dots)
+      caption=NULL, fontsize=1, params, \dots)
 
 \method{html}{anova.rms}(object, \dots)
 }
@@ -216,6 +217,7 @@ digits to the right for mean squares (default is \code{NA})
 \item{caption}{caption for table if \code{table.env} is \code{TRUE}.
   Default is constructed from the response variable.}
 \item{fontsize}{font size for html output; default is 1 for \code{1em}}
+\item{params}{used internally when called through print.}
 }
 \value{
 \code{anova.rms} returns a matrix of class \code{anova.rms} containing factors
