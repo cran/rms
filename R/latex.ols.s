@@ -31,16 +31,16 @@ latex.ols <-
   if(missing(which)) which <- 1:length(at$name)
   
   if(missing(varnames)) varnames <- at$name[at$assume.code!=9]
-  # cat(w, file=file, sep=if(length(w)) "\n" else "", append=append)
-  z <- c(w, 
-  latexrms(f, file=file, append=TRUE, which=which, varnames=varnames, 
-           columns=columns, 
-           before=before, after=after, prefix="X\\hat{\\beta}",
-           inline=inline, 
-           pretrans=pretrans, digits=digits, size=size)
-  )
-
-  if(file == '' && prType() != 'plain') rendHTML(z, html=FALSE)
-  else
-    cat(z, file=file, append=append, sep='\n')
+  if(file != '') cat(w, file=file, sep=if(length(w)) "\n" else "",
+                     append=append)
+  ltx <- latexrms(f, file=file, append=TRUE, which=which, varnames=varnames, 
+                  columns=columns, 
+                  before=before, after=after, prefix="X\\hat{\\beta}",
+                  inline=inline, 
+                  pretrans=pretrans, digits=digits, size=size)
+  if(inline) return(ltx)
+  z <- c(w, ltx)
+  if(file == '' && prType() != 'plain') return(rendHTML(z, html=FALSE))
+  cat(z, file=file, append=append, sep='\n')
+  invisible()
 }

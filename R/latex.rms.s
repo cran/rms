@@ -597,12 +597,9 @@ latexrms <-
     if(size != '')   tex <- c(paste0('{\\', size), tex)
     if(after  != '') tex <- c(tex, after)
     if(size != '')   tex <- c(tex, '}')
-#    if(html) return(htmltools::HTML(paste0(tex, '\n')))
-    if(html) return(tex)
-#      cat(tex, sep="\n", file=file, append=append)
-#      return(invisible())
-#      }
-    return(structure(list(file=file,style=NULL), class='latex'))
+    if(file == '') return(tex)
+    cat(tex, sep='\n', file=file, append=append)
+    return(invisible())
   }
   
   tex <- c(tex, '\\end{array}')  # was eqnarray*

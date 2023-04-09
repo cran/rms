@@ -24,21 +24,25 @@ latex.pphsm <-
     {
       dist <- paste("\\exp(-t^{", format(1 / sc, digits=digits),
                     "} \\exp(X\\hat{\\beta}))")
-      w <- c(w,paste("$$\\Prob(T\\geq t) = ", dist,
+      w <- c(w,paste("$$\\Pr(T\\geq t) = ", dist,
                      "~\\mathrm{where}~~$$",sep=""))
     }				
   if(!whichThere) which <- 1:length(at$name)
-  if(missing(varnames)) varnames <- at$name[at$assume.code!=9]
-  # cat(w, file=file, sep=if(length(w))"\n" else "", append=append)
-  z <- latexrms(object, file=file, append=TRUE, which=which, varnames=varnames, 
-           columns=columns, 
-           before=before, after=after,
-           prefix=if(!whichThere)"X\\hat{\\beta}" else NULL, 
-           inline=inline,pretrans=pretrans, digits=digits,
-           size=size)
-  z <- paste(z, collapse='\n')
-  if(file == '' && prType() != 'plain') return(rendHTML(z))
-  cat(z, file=file, append=append)
+  if(missing(varnames)) varnames <- at$name[at$assume.code != 9]
+  if(file != '') cat(w, file=file, sep=if(length(w))"\n" else "",
+                     append=append)
+
+  ltx <- latexrms(object, file=file, append=TRUE, which=which,
+                  varnames=varnames, 
+                  columns=columns, 
+                  before=before, after=after,
+                  prefix=if(!whichThere)"X\\hat{\\beta}" else NULL, 
+                  inline=inline,pretrans=pretrans, digits=digits,
+                  size=size)
+  if(inline) return(ltx)
+  z <- c(w, ltx)
+  if(file == '' && prType() != 'plain') return(rendHTML(z, html=FALSE))
+  cat(z, file=file, append=append, sep='\n')
   invisible()
 }
 

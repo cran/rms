@@ -217,9 +217,11 @@ fh@fharrell.com
   \code{\link{validate}}, \code{\link{predab.resample}},
   \code{\link{groupkm}}, \code{\link[Hmisc]{errbar}},
   \code{\link[Hmisc]{scat1d}}, \code{\link{cph}}, \code{\link{psm}},
-  \code{\link{lowess}}
+  \code{\link{lowess}},\code{\link[Hmisc]{fit.mult.impute}},
+	\code{\link{processMI}}
 }
 \examples{
+require(survival)
 set.seed(1)
 n <- 200
 d.time <- rexp(n)
@@ -227,7 +229,7 @@ x1 <- runif(n)
 x2 <- factor(sample(c('a', 'b', 'c'), n, TRUE))
 f <- cph(Surv(d.time) ~ pol(x1,2) * x2, x=TRUE, y=TRUE, surv=TRUE, time.inc=1.5)
 #or f <- psm(S ~ \dots)
-pa <- 'polspline' \%in\% row.names(installed.packages())
+pa <- requireNamespace('polspline')
 if(pa) {
  cal <- calibrate(f, u=1.5, B=20)  # cmethod='hare'
  plot(cal)

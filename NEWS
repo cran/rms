@@ -1,3 +1,17 @@
+Changes in version 6.6-0 (2023-04-08)
+   * latex.* for model fits: fixed case for file not blank, fixed bugs in latex.cph
+   * Import knitr::kable and kableExtra::kable_styling and used these in latex.cph so that math notation can appear in html tables of survival probabilities
+   * val.surv.Rd, calibrate.Rd: changed installed.packages to requireNamespace for speed
+   * impactPO: automatically call new Hmisc::combine.levels to combine adjacent levels of Y until minimum Y-level frequency >= minfreq
+   * processMI: new function to process Hmisc::fit.mult.impute objects, especially for averaging model validations over multiple imputations
+   * Removed package dependencies except for Hmisc
+   * Exported survival::Surv function so users will not have to load the survival package just to access Surv; likewise for ggplot so it's easy to do ggplot(Predict(fit))
+   * npsurv: re-wrote to recognize that survfit is imported, not attached
+   * html.na.print.delete: changed from using plotly to using Hmisc::dotchart3 converted to base64 image so that will render correctly in Quarto reports
+   * predab.resample: respected prmodelsel in not printing title
+   * residuals.lrm, orm: Chun Li greatly improved calculation speed for Li-Shepherd residuals
+   * fixed bug in Hmisc::dotchartp that made plot.anova.rms not work with changes in R in handling of matrix[NULL,]
+
 Changes in version 6.5-0 (2023-02-06)
    * modelData: preserved row.names so that fitted values, residuals will have them
    * ols.influence: added row names back to dfbetas (makes which.influence work)

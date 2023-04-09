@@ -943,7 +943,10 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
   }
   if(length(footer))
     R <- c(R, paste(specs$smallskip, transl(footer)))
-  
+
+  if(getOption('rmsdebug', FALSE))
+    cat(R, sep='\n', append=TRUE, file='/tmp/rmsdebug.txt')
+
   switch(lang,
          html  = rendHTML(R),
          latex = cat(R, sep='\n'),
@@ -983,18 +986,29 @@ html.naprint.delete <- function(object, ...) {
   lg <- length(g <- object$nmiss)
   R <- character(0)
   if(lg) {
-    R <- c("", "<br>", "Frequencies of Missing Values Due to Each Variable", "<br>", "")
-    
     if(sum(g > 0) < 4)
-      R <- c(R, '<pre>', capture.output(print(g)), '</pre>')
+      R <- c('',
+             'Frequencies of Missing Values Due to Each Variable<br>',
+             '', '<pre>', capture.output(print(g)), '</pre>')
     else {
       maxlen <- max(nchar(names(g)))
-      print(dotchartp(g, names(g), auxdata=g, auxtitle='N',
-                showlegend = FALSE,
-                sort   = 'descending',
-                xlab   = 'Missing',
-                width  = min(550, 300 + 20 * maxlen),
-                height = plotlyParm$heightDotchart(lg)) ) 
+      g  <- g[order(g)]
+      fi <- tempfile(fileext='.png')
+      png(fi, width=400, height=30 + length(g) * 24)
+      opar <- par(mar=c(4,4,2,3), mgp=c(3-.75,1-.5,0))
+      on.exit(par(opar))
+      dotchart3(g, names(g), auxdata=g,
+                xlab='Missing',
+                main='Frequencies of NAs Due to Each Variable')
+      dev.off()
+      R <- c(tobase64image(fi), '<br>')
+      #print(dotchartp(g, names(g), auxdata=g, auxtitle='N',
+      #          main='Frequencies of Missing Values Due to Each Variable',
+      #          showlegend = FALSE,
+      #          sort   = 'descending',
+      #          xlab   = 'Missing',
+      #          width  = min(550, 300 + 20 * maxlen),
+      #          height = plotlyParm$heightDotchart(lg)) ) 
     }
   }
   

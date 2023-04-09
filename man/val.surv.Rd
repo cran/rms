@@ -195,6 +195,7 @@ prediction scores.  Stat in Med 28:377--388.
 }
 \examples{
 # Generate failure times from an exponential distribution
+require(survival)
 set.seed(123)              # so can reproduce results
 n <- 1000
 age <- 50 + 12*rnorm(n)
@@ -216,7 +217,7 @@ S <- Surv(t, ev)
 # In addition, use groupkm to show that grouping predictions into
 # intervals and computing Kaplan-Meier estimates is not as accurate.
 
-if('polspline' \%in\% row.names(installed.packages())) {
+if(requireNamespace('polspline')) {
   s1 <- exp(-h*1)
   w <- val.surv(est.surv=s1, S=S, u=1,
                 fun=function(p)log(-log(p)))
