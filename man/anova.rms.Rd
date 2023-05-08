@@ -4,7 +4,7 @@
 \alias{plot.anova.rms}
 \alias{latex.anova.rms}
 \alias{html.anova.rms}
-\title{Analysis of Variance (Wald and F Statistics)}
+\title{Analysis of Variance (Wald, LR, and F Statistics)}
 \description{
 The \code{anova} function automatically tests most meaningful hypotheses
 in a design. For example, suppose that age and cholesterol are
@@ -21,9 +21,17 @@ nonlinear terms in the model are also performed.  For any multiple
 d.f. effects for continuous variables that were not modeled through
 \code{rcs}, \code{pol}, \code{lsp}, etc., tests of linearity will be
 omitted.  This applies to matrix predictors produced by e.g.
-\code{poly} or \code{ns}.  \code{print.anova.rms} is the printing
+\code{poly} or \code{ns}.
+
+For \code{lrm, orm, cph, psm} and \code{Glm} fits, the better likelihood
+ratio chi-square tests may be obtained by specifying \code{test='LR'}.
+Fits must use \code{x=TRUE, y=TRUE} to run LR tests.  The tests are run
+fairly efficiently by subsetting the design matrix rather than
+recreating it.
+
+\code{print.anova.rms} is the printing
 method.  \code{plot.anova.rms} draws dot charts depicting the importance
-of variables in the model, as measured by Wald \eqn{\chi^2}{chi-square},
+of variables in the model, as measured by Wald or LR \eqn{\chi^2}{chi-square},
 \eqn{\chi^2}{chi-square} minus d.f., AIC, \eqn{P}-values, partial
 \eqn{R^2}, \eqn{R^2} for the whole model after deleting the effects in
 question, or proportion of overall model \eqn{R^2} that is due to each
@@ -31,6 +39,10 @@ predictor.  \code{latex.anova.rms} is the \code{latex} method.  It
 substitutes Greek/math symbols in column headings, uses boldface for
 \code{TOTAL} lines, and constructs a caption.  Then it passes the result
 to \code{latex.default} for conversion to LaTeX.
+
+When the anova table was converted to account for missing data
+imputation by \code{processMI}, a separate function \code{prmiInfo} can
+be used to print information related to imputation adjustments.
 
 For Bayesian models such as \code{blrm}, \code{anova} computes relative
 explained variation indexes (REV) based on approximate Wald statistics.
@@ -51,7 +63,7 @@ depending on \code{options(prType=)}.  For
 }
 \usage{
 \method{anova}{rms}(object, \ldots, main.effect=FALSE, tol=1e-9,
-      test=c('F','Chisq'), india=TRUE, indnl=TRUE, ss=TRUE,
+      test=c('F','Chisq','LR'), india=TRUE, indnl=TRUE, ss=TRUE,
       vnames=c('names','labels'),
       posterior.summary=c('mean', 'median', 'mode'), ns=500, cint=0.95)
 
@@ -68,7 +80,8 @@ depending on \code{options(prType=)}.  For
      pl=TRUE, trans=NULL, ntrans=40, height=NULL, width=NULL, \dots)
 
 \method{latex}{anova.rms}(object, title, dec.chisq=2,
-      dec.F=2, dec.ss=NA, dec.ms=NA, dec.P=4, dec.REV=3, table.env=TRUE,
+      dec.F=2, dec.ss=NA, dec.ms=NA, dec.P=4, dec.REV=3,
+      table.env=TRUE,
       caption=NULL, fontsize=1, params, \dots)
 
 \method{html}{anova.rms}(object, \dots)
@@ -82,10 +95,11 @@ allow \code{vcov} to return the variance-covariance matrix.  For
 \item{\dots}{
 If omitted, all variables are tested, yielding tests for individual factors
 and for pooled effects. Specify a subset of the variables to obtain tests
-for only those factors, with a pooled Wald tests for the combined effects
+for only those factors, with a pooled tests for the combined effects
 of all factors listed. Names may be abbreviated.  For example, specify
 \code{anova(fit,age,cholesterol)} to get a Wald statistic for testing the joint
 importance of age, cholesterol, and any factor interacting with them.
+Add \code{test='LR'} to get a likelihood ratio chi-square test instead.
 
 Can be optional graphical parameters to send to
 \code{dotchart2}, or other parameters to send to \code{latex.default}.
@@ -103,7 +117,10 @@ factor.
 singularity criterion for use in matrix inversion
 }
 \item{test}{
-For an \code{ols} fit, set \code{test="Chisq"} to use Wald \eqn{\chi^2} tests rather than F-tests.
+For an \code{ols} fit, set \code{test="Chisq"} to use Wald \eqn{\chi^2}
+tests rather than F-tests.  For \code{lrm, orm, cph, psm} and \code{Glm}
+fits set \code{test='LR'} to get likelihood ratio \eqn{\chi^2} tests.
+This requires specifying \code{x=TRUE, y=TRUE} when fitting the model.
 }
 \item{india}{set to \code{FALSE} to exclude individual tests of
   interaction from the table}
@@ -135,8 +152,7 @@ the terms being tested, and \code{which="dots"} prints dots for terms being
 tested and blanks for those just being adjusted for.
 }
 \item{what}{
-what type of statistic to plot.  The default is the Wald
-\eqn{\chi^2}{chi-square}
+what type of statistic to plot.  The default is the \eqn{\chi^2}{chi-square}
 statistic for each factor (adding in the effect of higher-ordered
 factors containing that factor) minus its degrees of freedom.  The
 R2 choices for \code{what} only apply to \code{ols} models.
@@ -247,6 +263,7 @@ fh@fharrell.com
 file with a name of the form \code{"title.tex"} (see the \code{title} argument above).
 }
 \seealso{
+\code{\link{prmiInfo}},
 \code{\link{rms}}, \code{\link{rmsMisc}}, \code{\link{lrtest}},
 \code{\link{rms.trans}}, \code{\link{summary.rms}}, \code{\link{plot.Predict}},
 \code{\link{ggplot.Predict}}, \code{\link[Hmisc]{solvet}},
@@ -282,14 +299,21 @@ y <- ifelse(runif(n) < plogis(L), 1, 0)
 
 
 fit <- lrm(y ~ treat + scored(num.diseases) + rcs(age) +
-               log(cholesterol+10) + treat:log(cholesterol+10))
+               log(cholesterol+10) + treat:log(cholesterol+10),
+           x=TRUE, y=TRUE)   # x, y needed for test='LR'
 a <- anova(fit)                       # Test all factors
 b <- anova(fit, treat, cholesterol)   # Test these 2 by themselves
                                       # to get their pooled effects
 a
 b
+a2 <- anova(fit, test='LR')
+b2 <- anova(fit, treat, cholesterol, test='LR')
+a2
+b2
+
 # Add a new line to the plot with combined effects
-s <- rbind(a, 'treat+cholesterol'=b['TOTAL',])
+s <- rbind(a2, 'treat+cholesterol'=b2['TOTAL',])
+
 class(s) <- 'anova.rms'
 plot(s, margin=c('chisq', 'proportion chisq'))
 
