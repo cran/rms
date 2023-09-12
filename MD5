@@ -1,6 +1,6 @@
-a918b3e9c3dddbd72cd7c82333182677 *DESCRIPTION
-fe0bf5bded4b67fbef0ac520e23839e3 *NAMESPACE
-73e72c5d5f991cec3e2f4fc7c8421494 *NEWS
+91deb65f69229862a1c5b3b2e405ecb0 *DESCRIPTION
+e9eec9054ec94addfcc060964ebe1426 *NAMESPACE
+7964631a258cc68611f1720b71f9845c *NEWS
 a5263ced794350451f27b08a43049789 *R/Function.rms.s
 dd408a17c2bec572c4aa2ad5ceccabec *R/Glm.r
 23b84ce2a2a1e0d77a1a7b30e732d64e *R/Gls.s
@@ -8,6 +8,7 @@ dd408a17c2bec572c4aa2ad5ceccabec *R/Glm.r
 de1908f5613d122023e360618f97ef6b *R/LRupdate.r
 6c1b7f496955f7fb876c76b8243972c0 *R/Predict.s
 3148753ef910e566f95dcefcc90f2980 *R/Rq.s
+bb177464089d3a28f559ca3c923fcbe5 *R/Xcontrast.r
 b22ce42aeeac31e5727ea463db158bb0 *R/anova.rms.s
 549afcee7cde275d53e48907e99c1dab *R/bj.s
 47240bb446a769d3dd9a2a8a6dc67f8d *R/bootcov.s
@@ -16,7 +17,7 @@ b22ce42aeeac31e5727ea463db158bb0 *R/anova.rms.s
 253f9532dfb924f49cedf04a67a3752e *R/calibrate.default.s
 f868e8ca1885d191cbd50983e796c851 *R/calibrate.psm.s
 684ccde18d88f7e20719117c55cc90d1 *R/calibrate.s
-78ba114cbde3e92d71f27edc140544ec *R/contrast.s
+b4dce00ccad986b2ae00f651d338f848 *R/contrast.s
 637828fdff9b64f45ac1c79ae7a7c783 *R/cph.s
 707e17e96143dc6256fe44d671f43963 *R/cr.setup.s
 4bcb6d69d3c683eca38eaf28fc37b019 *R/datadist.s
@@ -63,8 +64,8 @@ c5f7a6b88ee210ba65aa39e842a28330 *R/print.psm.s
 42ed866974860c0d42c49d290709eb4e *R/residuals.lrm.s
 4e687535941639c0b039e4ad54342353 *R/residuals.ols.s
 83a00099237c166954159f2f42e2cea7 *R/rms.s
-1452710b1dd3902503d580e3a9cb6a6d *R/rms.trans.s
-634fd2cacf808a1d80211dfad8615d32 *R/rmsMisc.s
+f4c10d913489dce7a92513acd475d280 *R/rms.trans.s
+1b6d5400d539a51d421bf5fae3c47ca1 *R/rmsMisc.s
 e9d38f83f574873c3bfe7bb3989c25f7 *R/robcov.s
 72c85f219fc0d0570ddb2f9c64e6f4f3 *R/sensuc.s
 3c9e9590656fca662c6a6744b3a83328 *R/specs.rms.s
@@ -195,6 +196,7 @@ adef6383815663b196d933a6c761d2a9 *man/Function.Rd
 71ef60f0fed1343831e5b51b48b24b17 *man/LRupdate.Rd
 881fc714800d00d3699d87a9566ba945 *man/Predict.Rd
 135d1fd824f429b414f16ad983c98499 *man/Rq.Rd
+c8c4c6986c7571319f260053633252fd *man/Xcontrast.Rd
 bfc41dd0701e607a34821f1bf7fcb6a1 *man/anova.rms.Rd
 448f540d72b311e1a6a2b6f7c347599b *man/bj.Rd
 8429775bf40e40c26f56e73a41c78d2e *man/bootBCa.Rd
@@ -222,8 +224,8 @@ e248571a34ef545d192de74206c6828d *man/lrm.fit.bare.Rd
 75ea79a8d4c9c93306325f86197f20d1 *man/matinv.Rd
 b908a7f4e4d8a7aaae283b3a97adb3e6 *man/nomogram.Rd
 3a0638b2b8029d66ce30d56a667ac069 *man/npsurv.Rd
-f9f1dcebe31d7bf587fda7e4af6d8fc6 *man/ols.Rd
-f60c54a676ba54319d620b0835712a8b *man/orm.Rd
+b60a36dd917a5809ce10b3fb635c7a69 *man/ols.Rd
+f1bfeafb7f5d3ecbd0f08932cdea61cf *man/orm.Rd
 ee5a9a921a140c2354221a26413c6c3a *man/orm.fit.Rd
 7362322a6e52f0dd2cd3fa916969b1a9 *man/pentrace.Rd
 c7e962d6c929d5dafd92461a52e7662b *man/plot.Predict.Rd
@@ -249,8 +251,8 @@ ed0825395204d542d5c0f7185129f1dd *man/residuals.Glm.Rd
 4168120f7d6d40a9b7bf553536685d57 *man/residuals.ols.Rd
 d8d8b14dc2053bf3d3be30f931fdfe8f *man/rms-internal.Rd
 82c739a7126c7eb298dae9960a352891 *man/rms.Rd
-2ad39fcddfa698e8269677e5f8c3e22a *man/rms.trans.Rd
-18a01e1d1a25bf8a6cc24c50fade1fc6 *man/rmsMisc.Rd
+8af8468b46ce27ce92e24af106802444 *man/rms.trans.Rd
+9032b78dbde6b5982351941f0bdfc5fb *man/rmsMisc.Rd
 1c8c30350e443bcf835339fc1f4b49fe *man/robcov.Rd
 591c8bd7411ca5ea044e7b06c7e626ca *man/sensuc.Rd
 729edbf9d97a12c48b5b62e6c1a0d761 *man/setPb.Rd
@@ -261,7 +263,7 @@ edb38520a2c2342e749fee1b185b08ce *man/survest.cph.Rd
 d5f219707c45a642e6a23a24aaa8ea28 *man/survfit.cph.Rd
 d54259046cbb95cb76154fc52e6918b2 *man/survplot.Rd
 267ea36071ef9183d6e39d3ce547bbf5 *man/val.prob.Rd
-fecf4d3c337e36d732b6d9122d4bc86c *man/val.surv.Rd
+122703dde9259e49be8519c68d36954b *man/val.surv.Rd
 a3f5a8ee724c4005656e07c80da5fb9b *man/validate.Rd
 ae89a4b05e4a158b4e15156376bcfd61 *man/validate.Rq.Rd
 e7d7982caa3737b73a79c18a31fbf7af *man/validate.cph.Rd
