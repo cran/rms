@@ -1,6 +1,6 @@
-91deb65f69229862a1c5b3b2e405ecb0 *DESCRIPTION
-e9eec9054ec94addfcc060964ebe1426 *NAMESPACE
-7964631a258cc68611f1720b71f9845c *NEWS
+a9e2ce4877155f2d8a60ac578726051e *DESCRIPTION
+af4a06b8eb9120612663269573d79325 *NAMESPACE
+e4462765507e1603d16bc77135e75c49 *NEWS
 a5263ced794350451f27b08a43049789 *R/Function.rms.s
 dd408a17c2bec572c4aa2ad5ceccabec *R/Glm.r
 23b84ce2a2a1e0d77a1a7b30e732d64e *R/Gls.s
@@ -8,7 +8,7 @@ dd408a17c2bec572c4aa2ad5ceccabec *R/Glm.r
 de1908f5613d122023e360618f97ef6b *R/LRupdate.r
 6c1b7f496955f7fb876c76b8243972c0 *R/Predict.s
 3148753ef910e566f95dcefcc90f2980 *R/Rq.s
-bb177464089d3a28f559ca3c923fcbe5 *R/Xcontrast.r
+30b622fa147c9af6b80d4522e25c21b5 *R/Xcontrast.r
 b22ce42aeeac31e5727ea463db158bb0 *R/anova.rms.s
 549afcee7cde275d53e48907e99c1dab *R/bj.s
 47240bb446a769d3dd9a2a8a6dc67f8d *R/bootcov.s
@@ -44,7 +44,7 @@ b6eef10f1355b1fa4f609f8e8fd7270a *R/matinv.s
 cbf9015d531734000689cf7f5c3e0011 *R/nomogram.s
 0ddd28ffbc81b15f3ad685af433b35a1 *R/npsurv.s
 3f2790e4768c071267c7d62e15e83de6 *R/ols.s
-cb560bd6a5b93c84a66e33aea2a385f2 *R/orm.fit.s
+2ef16ae16222d3c4bb7c64a4fd81e673 *R/orm.fit.s
 a52ac35f002ac00ccaaf3a2c2fa8be17 *R/orm.s
 f764acd51c355b1a0aa7250cadab35f2 *R/pentrace.s
 b1c66f5b0a42cb6883834edde28bb78c *R/plot.Predict.s
@@ -52,7 +52,7 @@ b1c66f5b0a42cb6883834edde28bb78c *R/plot.Predict.s
 181837dc6972d157884f57239e4f944e *R/plot.nomogram.s
 13e3c07f0bef461881b7f3e2688c8502 *R/plot.xmean.ordinaly.s
 3748109cc1a1d22663dd6b404e5a33bc *R/plotp.Predict.s
-6ee1b6f2a5ff447715f7883153f8628e *R/poma.r
+48cd3c5c3d0fd6e979d18e10ea3afb79 *R/poma.r
 5863a81bcc7e54c317961a96567734de *R/pphsm.s
 fd3de9ac3c7d9d782d652791a0143e13 *R/predab.resample.s
 ceaeb947f35e70aab2b14c4de546a6ef *R/predict.lrm.s
@@ -63,6 +63,7 @@ c5f7a6b88ee210ba65aa39e842a28330 *R/print.psm.s
 489aa87bc081c9beb220dbc832db9f97 *R/residuals.cph.s
 42ed866974860c0d42c49d290709eb4e *R/residuals.lrm.s
 4e687535941639c0b039e4ad54342353 *R/residuals.ols.s
+67ef57376cebdabf9ebf8a5935fce1fb *R/rexVar.r
 83a00099237c166954159f2f42e2cea7 *R/rms.s
 f4c10d913489dce7a92513acd475d280 *R/rms.trans.s
 1b6d5400d539a51d421bf5fae3c47ca1 *R/rmsMisc.s
@@ -163,6 +164,7 @@ d02db66f5d4051ad57d42b66c6ae65d1 *inst/tests/psm2.s
 5aa1f697cfb18696718079b6142fc5cf *inst/tests/psm3.s
 39eb77b8feecabe1d30a3ed68a8aa1d0 *inst/tests/qt50.rda
 1ef7a0b539d260bf1c5baa01fbc6ca5f *inst/tests/rcs.r
+e13d015f1390185b3025399797def122 *inst/tests/rexVar.r
 fe1a47ea68dcb943c0aa1b2baa9d733c *inst/tests/rms-lm.r
 d992c3e3f567bcef7dad3fd3f79c7cbc *inst/tests/rms.r
 78a6ba6fa3e1eef585168108954249ed *inst/tests/rms2.r
@@ -196,7 +198,7 @@ adef6383815663b196d933a6c761d2a9 *man/Function.Rd
 71ef60f0fed1343831e5b51b48b24b17 *man/LRupdate.Rd
 881fc714800d00d3699d87a9566ba945 *man/Predict.Rd
 135d1fd824f429b414f16ad983c98499 *man/Rq.Rd
-c8c4c6986c7571319f260053633252fd *man/Xcontrast.Rd
+56b1305c906ccb3fded49ae6191df7c9 *man/Xcontrast.Rd
 bfc41dd0701e607a34821f1bf7fcb6a1 *man/anova.rms.Rd
 448f540d72b311e1a6a2b6f7c347599b *man/bj.Rd
 8429775bf40e40c26f56e73a41c78d2e *man/bootBCa.Rd
@@ -226,13 +228,14 @@ b908a7f4e4d8a7aaae283b3a97adb3e6 *man/nomogram.Rd
 3a0638b2b8029d66ce30d56a667ac069 *man/npsurv.Rd
 b60a36dd917a5809ce10b3fb635c7a69 *man/ols.Rd
 f1bfeafb7f5d3ecbd0f08932cdea61cf *man/orm.Rd
-ee5a9a921a140c2354221a26413c6c3a *man/orm.fit.Rd
+2e6f2e22b08ab3ae8576bafcdeade8a5 *man/orm.fit.Rd
 7362322a6e52f0dd2cd3fa916969b1a9 *man/pentrace.Rd
 c7e962d6c929d5dafd92461a52e7662b *man/plot.Predict.Rd
 1c66176050732b0a3dac7604acfa0f1b *man/plot.contrast.rms.Rd
+eaa72ef158a87800812ef8d029d6cc97 *man/plot.rexVar.Rd
 a3835c805896d06db576b8297d4444be *man/plot.xmean.ordinaly.Rd
 2a398c222ac1241ce53cc6777cb753a1 *man/plotp.Predict.Rd
-0c60f67778faeadf6ed05a58e5b3b8a5 *man/poma.Rd
+ab5b64947d7c27c999bbeb7010f2e6fa *man/poma.Rd
 3f75405ef0fc8a622fb60061f55e10d9 *man/pphsm.Rd
 ecce341cf72edf9b459708dc96642857 *man/predab.resample.Rd
 cb512ac324ec973049721caf280ab695 *man/predict.lrm.Rd
@@ -241,6 +244,7 @@ cb512ac324ec973049721caf280ab695 *man/predict.lrm.Rd
 82c0ffe29e5f8f104dd25c1eadc1d313 *man/print.cph.Rd
 a8318fee654b7fec328199af1b50e914 *man/print.impactPO.Rd
 abefdcba6ab23d76fdb89fd7bdf75996 *man/print.ols.Rd
+ce752e2f2016842f1582adb16adbb72d *man/print.rexVar.Rd
 249ddeb10cec98627e96e3c6e5a89863 *man/prmiInfo.Rd
 9cc115845e34d4a3154dafe1697405cb *man/processMI.Rd
 bbba7eddc752508d9f3b92150136d452 *man/processMI.fit.mult.impute.Rd
@@ -249,6 +253,7 @@ ed0825395204d542d5c0f7185129f1dd *man/residuals.Glm.Rd
 23c28a1f62f254f7bcfc1dff59295a3e *man/residuals.cph.Rd
 891791f0e4d33850b4137258bc3f72d2 *man/residuals.lrm.Rd
 4168120f7d6d40a9b7bf553536685d57 *man/residuals.ols.Rd
+c27fc0f8584fac25aff39665fd24bc82 *man/rexVar.Rd
 d8d8b14dc2053bf3d3be30f931fdfe8f *man/rms-internal.Rd
 82c739a7126c7eb298dae9960a352891 *man/rms.Rd
 8af8468b46ce27ce92e24af106802444 *man/rms.trans.Rd
