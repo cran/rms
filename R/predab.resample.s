@@ -27,7 +27,10 @@ predab.resample <-
   options(digits=4)
   on.exit(options(oldopt))
 
-  efit <- function(...) list(fail=TRUE)
+  efit <- function(...) {
+    message(...)
+    list(fail=TRUE)
+  }
   
   ## Following logic prevents having to load a copy of a large x object
   if(any(match(c("x", "y"), names(fit.orig), 0) == 0))
@@ -144,7 +147,7 @@ predab.resample <-
   stra <- fit.orig$strata
 
   if(bw) {
-    if(fit.orig$fail) return()
+    if(fit.orig$fail) stop('Original fit failed')
 
     if(prmodsel) cat("\n		Backwards Step-down - Original Model\n")
     fbw <- fastbw(fit.orig, rule=rule, type=type, sls=sls, aics=aics,
@@ -161,6 +164,8 @@ predab.resample <-
     ## Refit subset of predictors on whole sample
     fit.orig <- fit(x[, xcol, drop=FALSE], y, strata=stra,
                     iter=0, tol=tol, xcol=xcol, ...)
+    if(length(fit.orig$fail) && fit.orig$fail)
+      stop('Refitting the stepdown model on the whole sample failed')
     
   }
   else orig.col.kept <- seq(along=fit.orig$coef)

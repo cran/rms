@@ -31,7 +31,7 @@ substituted for \eqn{D_{xy}}, and a new index is reported: \code{pdm}, the mean
 \method{validate}{lrm}(fit, method="boot", B=40,
          bw=FALSE, rule="aic", type="residual", sls=0.05, aics=0,
          force=NULL, estimates=TRUE,
-         pr=FALSE,  kint, Dxy.method=if(k==1) 'somers2' else 'lrm',
+         pr=FALSE,  kint, Dxy.method,
          emax.lim=c(0,1), \dots)
 \method{validate}{orm}(fit, method="boot", B=40, bw=FALSE, rule="aic",
          type="residual",	sls=.05, aics=0, force=NULL, estimates=TRUE,
@@ -48,22 +48,13 @@ In the case of an ordinal model, specify which intercept to validate.
 Default is the middle intercept.  For \code{validate.orm},
 intercept-specific quantities are not validated so this does not matter.
 }
-\item{Dxy.method}{
-\code{"lrm"} to use \code{lrm}s computation of \eqn{D_{xy}} correlation,
-which rounds predicted probabilities to nearest .002.  Use
-\code{Dxy.method="somers2"} (the default) to instead use the more
-accurate but slower \code{somers2} function.  This will matter most when
-the model is extremely predictive. The default is \code{"lrm"} for
-ordinal models, since \code{somers2} only handles binary response
-variables. 
-}
+\item{Dxy.method}{deprecated and ignored.  \code{lrm} through \code{lrm.fit} computes exact rank correlation coefficients as of version 6.9-0.}
 \item{emax.lim}{
 range of predicted probabilities over which to compute the maximum
 error.  Default is entire range. 
 }
 \item{\dots}{
-other arguments to pass to \code{lrm.fit} (now only \code{maxit} and
-\code{tol} are allowed) and to \code{predab.resample} (note especially
+other arguments to pass to \code{lrm.fit} and to \code{predab.resample} (note especially
 the \code{group}, \code{cluster}, and \code{subset} parameters)
 }}
 \value{
