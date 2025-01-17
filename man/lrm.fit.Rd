@@ -9,22 +9,21 @@ lrm.fit(
   y,
   offset = 0,
   initial,
-  opt_method = c("NR", "nlminb", "glm.fit", "nlm", "BFGS", "L-BFGS-B", "CG",
+  opt_method = c("NR", "nlminb", "LM", "glm.fit", "nlm", "BFGS", "L-BFGS-B", "CG",
     "Nelder-Mead"),
   maxit = 50,
   reltol = 1e-10,
-  abstol = if (opt_method == "NR") 1e+10 else 0,
-  gradtol = if (opt_method == "NR") 0.001 else 1e-05,
+  abstol = if (opt_method \%in\% c("NR", "LM")) 1e+10 else 0,
+  gradtol = if (opt_method \%in\% c("NR", "LM")) 0.001 else 1e-05,
   factr = 1e+07,
   eps = 5e-04,
   minstepsize = 0.01,
   trace = 0,
-  tol = 1e-14,
+  tol = .Machine$double.eps,
   penalty.matrix = NULL,
   weights = NULL,
   normwt = FALSE,
   transx = FALSE,
-  compvar = TRUE,
   compstats = TRUE,
   inclpen = TRUE,
   initglm = FALSE,
@@ -43,6 +42,7 @@ lrm.fit(
 \item{opt_method}{optimization method, with possible values
 \itemize{
 \item \code{'NR'} : the default, standard Newton-Raphson iteration using the gradient and Hessian, with step-helving.  All three convergence criteria of \verb{eps, gradtol, abstol} must be satisfied.  Relax some of these if you do not want to consider some of them at all in judging convergence.  The defaults for the various tolerances for \code{NR} result in convergence being mainly judged by \code{eps} in most uses.  Tighten the non-\code{eps} parameters to give more weight to the other criteria.
+\item \code{'LM'} : the Levenberg-Marquardt method, with the same convergence criteria as \code{'NR'}
 \item \code{'nlminb'} : a quasi-Newton method using \code{\link[stats:nlminb]{stats::nlminb()}} which uses gradients and the Hessian.  This is a fast and robust algorithm.
 \item \code{'glm.fit'} : for binary \code{y} without penalization only
 \item \code{'nlm'} : see \code{\link[stats:nlm]{stats::nlm()}}; not highly recommended
@@ -52,13 +52,13 @@ lrm.fit(
 \item \code{'Nelder-Mead'} : see \code{\link[stats:optim]{stats::optim()}} for these 4 methods
 }}
 
-\item{maxit}{maximum number of iterations allowed, which means different things for different \code{opt_method}.  For \code{NR} it is the number of updates to parameters not counting step-halving steps.  When \code{maxit=1}, \code{initial} is assumed to contain the maximum likelihood estimates already, and those are returned as \code{coefficients}, along with \code{u}, \code{info.matrix} (negative Hessian) and \code{deviance}.  If \code{compvar=TRUE}, the \code{var} matrix is also returned, and \code{stats} are only computed if \code{compstats} is explicitly set to \code{TRUE} by the user.}
+\item{maxit}{maximum number of iterations allowed, which means different things for different \code{opt_method}.  For \code{NR} it is the number of updates to parameters not counting step-halving steps.  When \code{maxit=1}, \code{initial} is assumed to contain the maximum likelihood estimates already, and those are returned as \code{coefficients}, along with \code{u}, \code{info.matrix} (negative Hessian) and \code{deviance}.  \code{stats} are only computed if \code{compstats} is explicitly set to \code{TRUE} by the user.}
 
 \item{reltol}{used by \code{BFGS}, \code{nlminb}, \code{glm.fit} to specify the convergence criteria in relative terms with regard to -2 LL, i.e., convergence is assume when one minus the fold-change falls below \code{reltol}}
 
 \item{abstol}{used by \code{NR} (maximum absolute change in parameter estimates from one iteration to the next before convergence can be declared; by default has no effect), \code{nlminb} (by default has no effect; see \code{abs.tol} argument; set to e.g. 0.001 for \code{nlminb} when there is complete separation)}
 
-\item{gradtol}{used by \code{NR} (maximuma absolute gradient before convergence can be declared) and \code{nlm} (similar but for a scaled gradient)}
+\item{gradtol}{used by \code{NR} and \code{LM} (maximum absolute gradient before convergence can be declared) and \code{nlm} (similar but for a scaled gradient).  For \code{NR} and \code{LM} \code{gradtol} is multiplied by the the sample size / 1000, because the gradient is proportional to sample size.}
 
 \item{factr}{see \code{\link[stats:optim]{stats::optim()}} documentation for \code{L-BFGS-B}}
 
@@ -70,15 +70,13 @@ lrm.fit(
 
 \item{tol}{QR singularity criterion for \code{opt_method='NR'} updates; ignored when inverting the final information matrix because \code{chol} is used for that.}
 
-\item{penalty.matrix}{a self-contained ready-to-use penalty matrix - see \code{\link[=lrm]{lrm()}}.  It is \eqn{p \times p} where \eqn{p} is the number of columns of \code{x}.}
+\item{penalty.matrix}{a self-contained ready-to-use penalty matrix - see \code{\link[=lrm]{lrm()}}.  It is \eqn{p x p} where \eqn{p} is the number of columns of \code{x}.}
 
 \item{weights}{a vector (same length as \code{y}) of possibly fractional case weights}
 
 \item{normwt}{set to \code{TRUE} to scale \code{weights} so they sum to \eqn{n}, the length of \code{y}; useful for sample surveys as opposed to the default of frequency weighting}
 
 \item{transx}{set to \code{TRUE} to center \code{x} and QR-factor it to orthogonalize.  See \href{https://hbiostat.org/rmsc/mle#qr}{this} for details.}
-
-\item{compvar}{set to \code{FALSE} to prevent the calculation of the variance-covariance matrix.}
 
 \item{compstats}{set to \code{FALSE} to prevent the calculation of the vector of model statistics}
 
@@ -115,7 +113,7 @@ a list with the following elements:
 }
 \item \code{fail}:  \code{TRUE} if any matrix inversion or failure to converge occurred, \code{FALSE} otherwise
 \item \code{coefficients}:
-\item \code{var}:  variance-covariance matrix if \code{compvar=TRUE}
+\item \code{info.matrix}: a list of 3 elements \code{a}, \code{b}, \code{ab} with \code{a} being a $k x 2$ matrix for $k$ intercepts, \code{b} being $p x p$ for $p$ predictors, and \code{ab} being $k x p$.  See \code{\link[=infoMxop]{infoMxop()}} for easy ways of operating on these 3 elements.
 \item \code{u}:  gradient vector
 \item \code{iter}:  number of iterations required.  For some optimization methods this is a vector.
 \item \code{deviance}:  vector of deviances: intercepts-only, intercepts + offset (if \code{offset} is present), final model (if \code{x} is used)
@@ -136,7 +134,9 @@ Logistic Model Fitter
 \details{
 Fits a binary or propoortional odds ordinal logistic model for a given design matrix and response vector with no missing values in either.  Ordinary or quadratic penalized maximum likelihood estimation is used.
 
-\code{lrm.fit} implements a large number of optimization algorithms with the default being Newton-Raphson with step-halving.  For binary logistic regression without penalization iteratively reweighted least squares method in \code{\link[stats:glm]{stats::glm.fit()}} is an option.  The -2 log likeilhood, gradient, and Hessian (negative information) matrix are computed in Fortran for speed.  Optionally, the \code{x} matrix is mean-centered and QR-factored to help in optimization when there are strong collinearities.  Parameter estimates and the covariance matrix are adjusted to the original \code{x} scale after fitting.  More detail and comparisons of the various optimization methods may be found \href{https://www.fharrell.com/post/mle/}{here}.  For ordinal regression with a large number of intercepts (distinct \code{y} values less one) you may want to use \verb{optim_method='BFGS', compvar=FALSE} which does away with the need to compute the Hessian.  This will be helpful if statistical tests and confidence intervals are not being computed, or when only likelihood ratio tests are done.
+\code{lrm.fit} implements a large number of optimization algorithms with the default being Newton-Raphson with step-halving.  For binary logistic regression without penalization iteratively reweighted least squares method in \code{\link[stats:glm]{stats::glm.fit()}} is an option.  The -2 log likeilhood, gradient, and Hessian (negative information) matrix are computed in Fortran for speed.  Optionally, the \code{x} matrix is mean-centered and QR-factored to help in optimization when there are strong collinearities.  Parameter estimates and the covariance matrix are adjusted to the original \code{x} scale after fitting.  More detail and comparisons of the various optimization methods may be found \href{https://www.fharrell.com/post/mle/}{here}.  For ordinal regression with a large number of intercepts (distinct \code{y} values less one) you may want to use `optim_method='BFGS', which does away with the need to compute the Hessian.  This will be helpful if statistical tests and confidence intervals are not being computed, or when only likelihood ratio tests are done.
+
+When using Newton-Raphson or Levenberg-Marquardt optimization, sparse Hessian/information/variance-covariance matrices are used throughout.  For \code{nlminb} the Hessian has to be expanded into full non-sparse form, so \code{nlminb} will not be very efficient for a large number of intercepts.
 
 When there is complete separation (Hauck-Donner condition), i.e., the MLE of a coefficient is \eqn{\pm\infty}, and \code{y} is binary and there is no penalty, \code{glm.fit} may not converge because it does not have a convergence parameter for the deviance.  Setting \code{trace=1} will reveal that the -2LL is approaching zero but doesn't get there, relatively speaking.  In such cases the default of \code{NR} with \code{eps=5e-4} or using \code{nlminb} with its default of \code{abstol=0.001} works well.
 }
@@ -146,11 +146,11 @@ When there is complete separation (Hauck-Donner condition), i.e., the MLE of a c
 # blood.pressure, and sex, assumed to be already properly coded and
 # transformed
 
-fit <- lrm.fit(cbind(age,blood.pressure,sex), death)
+fit <- lrm.fit(cbind(age,blood.pressure,sex=='male'), death)
 }
 }
 \seealso{
-\code{\link[=lrm]{lrm()}}, \code{\link[stats:glm]{stats::glm()}}, \code{\link[=cr.setup]{cr.setup()}}, \code{\link[=gIndex]{gIndex()}}, \code{\link[stats:optim]{stats::optim()}}, \code{\link[stats:nlminb]{stats::nlminb()}}, \code{\link[stats:nlm]{stats::nlm()}},\code{\link[stats:glm]{stats::glm.fit()}}, \code{\link[=recode2integer]{recode2integer()}}, \code{\link[Hmisc:qrxcenter]{Hmisc::qrxcenter()}}
+\code{\link[=lrm]{lrm()}}, \code{\link[stats:glm]{stats::glm()}}, \code{\link[=cr.setup]{cr.setup()}}, \code{\link[=gIndex]{gIndex()}}, \code{\link[stats:optim]{stats::optim()}}, \code{\link[stats:nlminb]{stats::nlminb()}}, \code{\link[stats:nlm]{stats::nlm()}},\code{\link[stats:glm]{stats::glm.fit()}}, \code{\link[=recode2integer]{recode2integer()}}, \code{\link[Hmisc:qrxcenter]{Hmisc::qrxcenter()}}, \code{\link[=infoMxop]{infoMxop()}}
 }
 \author{
 Frank Harrell \href{mailto:fh@fharrell.com}{fh@fharrell.com}

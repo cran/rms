@@ -77,12 +77,14 @@ twice the number of classes than the default for \code{hist}, and 1.5 times the
 
 
 A comprehensive example demonstrates the use of all of the functions.
+
+When bootstrapping an ordinal model for a numeric Y (when \code{ytarget} is not specified), some original distinct Y values are not sampled so there will be fewer intercepts in the model. \code{bootcov} linearly interpolates and extrapolates to fill in the missing intercepts so that the intercepts are aligned over bootstrap samples.  Also see the \code{Hmisc} \code{ordGroupBoot} function.
 }
 \usage{
 bootcov(fit, cluster, B=200, fitter, 
         coef.reps=TRUE, loglik=FALSE,
-        pr=FALSE, maxit=15, eps=0.0001, group=NULL, stat=NULL,
-        seed=sample(10000, 1), ...)
+        pr=FALSE, group=NULL, stat=NULL,
+        seed=sample(10000, 1), ytarget=NULL, ...)
 
 
 bootplot(obj, which=1 : ncol(Coef), X,
@@ -152,8 +154,6 @@ the -2 log likelihood for the original model fit.
 \item{pr}{
 set to \code{TRUE} to print the current sample number to monitor progress.
 }
-\item{maxit}{maximum number of iterations, to pass to \code{fitter}}
-\item{eps}{argument to pass to various fitters}
 \item{group}{
 a grouping variable used to stratify the sample upon bootstrapping.
 This allows one to handle k-sample problems, i.e., each bootstrap
@@ -169,6 +169,7 @@ You may specify both \code{group} and \code{cluster}.
 }
 \item{seed}{random number seed for \code{set.seed}, defaults to a random
 	integer between 1 and 10000; user should specify a constant for reproducibility}
+\item{ytarget}{when using \code{orm}, set \code{ytarget=NA} to save only the intercept that corresponds to the median Y.  Set \code{ytarget} to a specific value (including a character value) to use a different target for the sole retained intercept.}
 \item{which}{
 one or more integers specifying which regression coefficients to
 plot for \code{bootplot}
@@ -192,7 +193,7 @@ a vector of labels for labeling the axes in plots produced by \code{bootplot}.
 Default is row names of \code{X} if there are any, or sequential integers.
 }
 \item{\dots}{
-For \code{bootcov}, extra arguments to pass to \code{lrm.fit} for logistic models.
+For \code{bootcov}, extra arguments to pass to any of the fitting functions.
 For \code{bootplot} these are optional arguments passed to
 \code{histdensity}.  Also may be optional arguments passed to
 \code{plot} by \code{confplot} or optional arguments passed to
@@ -288,8 +289,9 @@ Presented at the Joint Statistical Meetings,
 Chicago, August 1996.
 }
 \seealso{
+\code{\link[Hmisc]{ordGroupBoot}},
 \code{\link{robcov}}, \code{\link{sample}}, \code{\link{rms}},
-\code{\link{lm.fit}}, \code{\link{lrm.fit}},
+\code{\link{lm.fit}}, \code{\link{lrm.fit}}, \code{\link{orm.fit}},
 \code{\link[survival]{survival-internal}}, 
 \code{\link{predab.resample}}, \code{\link{rmsMisc}},
 \code{\link{Predict}}, \code{\link{gendata}}, 
@@ -519,6 +521,24 @@ quantile(dif, c(.025,.25,.5,.75,.975))
 z <- (g$stats['C'] - f$stats['C'])/sd(dif)
 names(z) <- NULL
 c(z=z, P=2*pnorm(-abs(z)))
+
+# For an ordinal y with some distinct values of y not very popular, let
+# bootcov use linear extrapolation to fill in intercepts for non-sampled levels
+
+f <- orm(y ~ x1 + x2, x=TRUE, y=TRUE)
+bootcov(f, B=200)
+
+# Instead of filling in missing intercepts, perform minimum binning so that
+# there is a 0.9999 probability that all distinct Y values will be represented
+# in bootstrap samples
+y <- ordGroupBoot(y)
+f <- orm(y ~ x1 + x2, x=TRUE, y=TRUE)
+bootcov(f, B=200)
+
+# Instead just keep one intercept for all bootstrap fits - the intercept
+# that pertains to y=10
+
+bootcov(f, B=200, ytarget=10)   # use ytarget=NA for the median
 }
 }
 \keyword{models}

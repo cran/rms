@@ -13,13 +13,17 @@
 ##' @return a vector (if bootstrapping or Bayesian posterior sampling was not done) or a matrix otherwise, with rows corresponding to predictors and colums `REV`, `Lower`, `Upper`.  The returned object is of class `rexVar`.
 ##' @author Frank Harrell
 ##' @md
+##' @seealso [Hmisc::cutGn()]
 ##' @examples
 ##' set.seed(1)
 ##' n <- 100
 ##' x1 <- rnorm(n)
 ##' x2 <- rnorm(n)
 ##' x3 <- rnorm(n)
-##' y  <- x1 + x2 + rnorm(n) / 2.
+##' yo  <- x1 + x2 + rnorm(n) / 2.
+##' # Minimally group y so that bootstrap samples are very unlikely to miss a
+##' # value of y
+##' y <- ordGroupBoot(yo)
 ##' d <- data.frame(x1, x2, x3, y)
 ##' dd <- datadist(d); options(datadist='dd')
 ##' f  <- ols(y ~ pol(x1, 2) * pol(x2, 2) + x3,
@@ -65,7 +69,7 @@ rexVar <- function(object, data, ns=500, cint=0.95) {
   draws <- object$draws
   drawtype <- 'bayes'
   if(! length(draws)) {
-    draws <- object$boot.Coef
+    draws    <- object$boot.Coef
     drawtype <- 'bootstrap'
     }
   if(inherits(object, 'ols') && ! length(draws))
@@ -92,7 +96,7 @@ rexVar <- function(object, data, ns=500, cint=0.95) {
     ## used in X
     .lp. <- matxv(X, draws[i, , drop=TRUE])
     g <- lm.fit.qr.bare(X, as.vector(.lp.),
-                        tolerance=1e-13, intercept=TRUE, xpxi=TRUE)
+                        tolerance=.Machine$double.eps, intercept=TRUE, xpxi=TRUE)
     ## Trick to update original ols model fit; speeds up over
     ## having to recreate design matrix each time
     f$coefficients   <- g$coefficients
@@ -101,7 +105,9 @@ rexVar <- function(object, data, ns=500, cint=0.95) {
     rx[i, ] <- rex(f)
   }
 
-  lim <- apply(rx, 2, rmsb::HPDint, prob=cint)
+  lim <- switch(drawtype,
+                bayes     = apply(rx, 2, rmsb::HPDint, prob=cint),
+                bootstrap = apply(rx, 2, quantile, probs=c((1. - cint) / 2., 1. - (1. - cint) / 2.))  )
   r   <- cbind(REV=overall.rex, Lower=lim[1, ], Upper=lim[2, ])
   rownames(r) <- names(overall.rex)
   structure(r, class='rexVar', drawtype=drawtype)

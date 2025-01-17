@@ -3,10 +3,11 @@ contrast <- function(fit, ...) UseMethod("contrast")
 contrast.rms <-
   function(fit, a, b, a2, b2, ycut=NULL, cnames=NULL, fun=NULL, funint=TRUE,
            type=c('individual','average','joint'),
-           conf.type=c('individual','simultaneous'), usebootcoef=TRUE,
+           conf.type=c('individual','simultaneous','profile'), usebootcoef=TRUE,
            boot.type=c('percentile','bca','basic'),
            posterior.summary=c('mean', 'median', 'mode'),
-           weights='equal', conf.int=0.95, tol=1e-7, expand=TRUE, ...)
+           weights='equal', conf.int=0.95, tol=1e-7, expand=TRUE, se_factor=4,
+           plot_profile=FALSE, ...)
 {
   type              <- match.arg(type)
   conf.type         <- match.arg(conf.type)
@@ -16,11 +17,14 @@ contrast.rms <-
   draws <- fit$draws
   bayes <- length(draws) > 0
 
+  if(conf.type == 'profile' && type != 'individual')
+    stop('conf.type=profile only works with type=individual')
   if(bayes & (type == 'joint' || conf.type == 'simultaneous'))
     stop('type=joint or conf.type=simultaneous not allowed for Bayesian models')
   
   zcrit <- if(length(idf <- fit$df.residual)) qt((1 + conf.int) / 2, idf) else
               qnorm((1 + conf.int) / 2)
+
   bcoef <- if(usebootcoef) fit$boot.Coef
 
   pmode <- function(x) {
@@ -28,15 +32,20 @@ contrast.rms <-
     dens$x[which.max(dens$y)[1]]
     }
   
-  if(! bayes) betas <- coef(fit)
+  if(! bayes) {
+    betas <- coef(fit)
+    iparm <- 1 : length(betas)
+  }
   fite  <- fit
-  if(inherits(fit, 'orm')) {
+  if(inherits(fit, 'orm') || inherits(fit, 'lrm')) {
     nrp <- 1
-    ## Note: is 1 for orm because vcov defaults to intercepts='mid'
-    w <- c(fit$interceptRef, (num.intercepts(fit) + 1) : length(betas))
-    betas <- betas[w]
+    ## Note: is 1 for orm because vcov defaults to intercepts='mid' and
+    ## we are overriding the default vcov uses for lrm
+    fit$override_vcov_intercept <- 'mid'
+    iparm <- c(fit$interceptRef, (num.intercepts(fit) + 1) : length(betas))
+    betas <- betas[iparm]
     fite$coefficients <- betas    # for simult confint
-    if(usebootcoef) bcoef <- bcoef[, w, drop=FALSE]
+    if(usebootcoef) bcoef <- bcoef[, iparm, drop=FALSE]
   } else nrp <- num.intercepts(fit, 'var')
     
   if(length(bcoef) && conf.type != 'simultaneous')
@@ -200,8 +209,9 @@ contrast.rms <-
   else {
   est <- matxv(X, betas)
   v <- X %*% vcov(fit, regcoef.only=TRUE) %*% t(X)
+  ## vcov(lrm fit) has an override to use middle intercept - see above
   ndf <- if(is.matrix(v)) nrow(v) else 1
-  se <- as.vector(if(ndf == 1) sqrt(v) else sqrt(diag(v)))
+  se <- as.vector(if(ndf == 1) sqrt(v) else sqrt(Matrix::diag(v)))
   Z <- est / se
   P <- if(length(idf)) 2 * pt(- abs(Z), idf) else 2 * pnorm(- abs(Z))
   if(conf.type != 'simultaneous') {
@@ -216,11 +226,23 @@ contrast.rms <-
         lower <- lim[1]
         upper <- lim[2]
       }
+    } else if(conf.type == 'profile') {
+      w <- rms_profile_ci(X, fit, conf.int, est, se, plot_profile=plot_profile,
+                          se_factor=se_factor, ...)
+      lower <- w$lower
+      upper <- w$upper
+      LR    <- w$LR
+      P     <- w$P
     } else {
       lower <- est - zcrit*se
       upper <- est + zcrit*se
     }
   } else {
+    # glht uses vcov(fite) which for lrm & orm are sparse Matrix objects
+    fite$non.slopes   <- 1L
+    fite$interceptRef <- 1L
+    if(! length(fite$var))
+      fite$var <- Matrix::as.matrix(infoMxop(fite$info.matrix, i=iparm))
     u <- confint(multcomp::glht(fite, X,
                       df=if(length(idf)) idf else 0),
                  level=conf.int)$confint
@@ -241,7 +263,8 @@ contrast.rms <-
               conf.type=conf.type, conf.int=conf.int,
               posterior.summary=posterior.summary,
               cdraws = cdraws)
-  if(type != 'average') res <- c(vary, res)
+  if(conf.type == 'profile') res$LR <- LR
+  if(type != 'average')      res <- c(vary, res)
   
   r <- qr(v, tol=tol)
   nonred <- r$pivot[1 : r$rank]   # non-redundant contrasts
@@ -251,7 +274,7 @@ contrast.rms <-
   if(type=='joint') {
     est <- est[! redundant]
     v <- v[! redundant, ! redundant, drop=FALSE]
-    res$jointstat <- as.vector(est %*% solve(v, tol=tol) %*% est)
+    res$jointstat <- as.vector(est %*% solve(v, est, tol=tol))
   }
   
   structure(res, class='contrast.rms')
@@ -281,8 +304,12 @@ print.contrast.rms <- function(x, X=FALSE, fun=function(u) u,
     }
   
   edf <- x$df.residual
-  sn <- if(length(edf)) 't' else 'Z'
-  pn <- if(length(edf)) 'Pr(>|t|)' else 'Pr(>|z|)'
+  sn <- if(length(edf)) 't' else if(x$conf.type == 'profile') '\u03A7\u00B2' else 'Z'
+  pn <- if(length(edf)) 'Pr(>|t|)' else if(x$conf.type == 'profile') 'Pr(>\u03A7\u00B2)' else 'Pr(>|z|)'
+  if(length(x$LR)) {
+    x$Z  <- x$LR
+    x$LR <- NULL
+  }
   w <- x[1 : (x$nvary + 7)]
   isn <- sapply(w, is.null)
   w <- w[! isn]
@@ -315,8 +342,11 @@ print.contrast.rms <- function(x, X=FALSE, fun=function(u) u,
   # Assign modified names to w
   names(w) <- no
 
+  if(x$conf.type == 'profile')             w$S.E. <- NULL
+  if(length(w$S.E.) && all(is.na(w$S.E.))) w$S.E. <- NULL
+
   # Print w
-  if(!jointonly) {
+  if(! jointonly) {
     ## print(as.matrix(w), quote=FALSE)
     print(w, ...)
     if(any(x$redundant)) cat('\nRedundant contrasts are denoted by *\n')
@@ -337,9 +367,10 @@ print.contrast.rms <- function(x, X=FALSE, fun=function(u) u,
           round(Pval, 4),'\n', sep='')
     }
   }
-  if(!jointonly && length(edf))cat('\nError d.f.=',edf,'\n')
+  if(!jointonly && length(edf)) cat('\nError d.f.=',edf,'\n')
+  cotype <- if(x$conf.type == 'profile') 'profile likelihood' else x$conf.type
   if(x$posterior.summary == '')
-    cat('\nConfidence intervals are', x$conf.int, x$conf.type,
+    cat('\nConfidence intervals are', x$conf.int, cotype,
         'intervals\n')
   else {
     cat('\nIntervals are', x$conf.int, 'highest posterior density intervals\n')
@@ -353,3 +384,77 @@ print.contrast.rms <- function(x, X=FALSE, fun=function(u) u,
   }
   invisible()
 }
+
+rms_profile_ci <-
+  function(C, fit, conf.int, est_C, se_C, se_factor=4e0,
+          plot_profile=FALSE, ...) {
+  # Separate likelihood profile confidence intervals for contrasts in
+  # each row of C.  est_C is estimated contrast, se_C is its standard error
+
+  if(any(c('x', 'y') %nin% names(fit)))
+    stop('to use profile likelihood you must specify x=TRUE, y=TRUE when fitting')
+  X <- fit[['x']]
+
+  crit  <- qchisq(conf.int, 1)
+  p     <- ncol(C)
+  m     <- nrow(C)
+
+  if(p == (1 + length(fit$coefficients) - num.intercepts(fit))) C <- C[, -1, drop=FALSE]
+  lower <- upper <- LR <- numeric(m)
+  odev  <- getDeviance(fit)     # original deviance for full model
+  odev  <- odev[length(odev)]
+
+  g <- function(theta) {
+    dev <- quickRefit(fit, X=Z[, -1, drop=FALSE], offset=theta * Z[, 1],
+                      what='deviance', ...)
+    if(is.list(dev) && length(dev$fail) && dev$fail) {
+      message('Fit failed in profile likelihood.  theta=', format(theta), ' S.E.=', format(se),
+           ' range of offsets:', paste(format(range(theta * Z[, 1])), collapse=', '))
+      return(NA)
+    }
+    dev - odev - crit
+  }
+
+  p   <- ncol(C)
+
+  for(i in 1 : m) {
+    D <- C[i, , drop=FALSE]
+    est <- est_C[i]
+    se  <- se_C[i]
+    v <- svd(rbind(D, diag(p)))$v
+    u <- sqrt(sum(D ^ 2))
+    beta_contrast <- v[, 1] * u
+    # SVD has an arbitrary sign
+    if(max(abs(D - beta_contrast)) > 1e-6) {
+      v <- -v
+      beta_contrast <- v[, 1] * u
+      if(max(abs(D - beta_contrast)) > 1e-6)
+        stop('SVD-generated contrast could not reproduce original contrast')
+    }
+    # Compute contrast to put on design matrix that gives the above contrast in betas
+    v <- v / u
+    Z <- X %*% v
+    # Likelihood ratio chi-square obtained by removing first column of Z
+    drop1 <- quickRefit(fit, X=Z[, -1, drop=FALSE], what='deviance', ...)
+    drop1 <- drop1[length(drop1)]
+    LR[i] <- drop1 - odev
+    if(plot_profile) {
+      thetas      <- seq(est - se_factor * se, est + se_factor * se, length=50)
+      ch_deviance <- rep(NA, length(thetas))
+      for(j in 1 : length(thetas)) ch_deviance[j] <- g(thetas[j])
+      plot(thetas, ch_deviance, xlab='Contrast Estimate',
+           ylab='Change in Deviance From Full Model')
+      abline(v=c(est - se, est, est + se), col='blue')
+      title(paste('Contrast', i))
+      title(sub='Vertical lines are at point estimate of contrast \u00b1 S.E.', adj=1, cex.sub=0.65)  
+    }
+    hi <- try(uniroot(g, c(est + se/100, est + se_factor * se))$root)
+    if(inherits(hi, 'try-error')) hi <-  Inf
+    lo <- try(uniroot(g, c(est - se_factor * se, est - se/100))$root)
+    if(inherits(lo, 'try-error')) lo <- -Inf
+    lower[i] <- lo
+    upper[i] <- hi
+  }
+list(lower=lower, upper=upper, LR=LR, P=1. - pchisq(LR, 1))
+}
+

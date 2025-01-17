@@ -69,17 +69,21 @@ even in the absence of interactions, when \code{fun} is nonlinear, the
 settings of factors (predictors) will not cancel out and estimates of
 differences will be covariate-specific (unless there are no covariates
 in the model besides the one being varied to get from \code{a} to \code{b}).
+
+That the the use of offsets to compute profile confidence intervals prevents
+this function from working with certain models that use offsets for other
+purposes, e.g., Poisson models with offsets to account for population size.
 }
 \usage{
 contrast(fit, \dots)
 \method{contrast}{rms}(fit, a, b, a2, b2, ycut=NULL, cnames=NULL,
          fun=NULL, funint=TRUE,
          type=c("individual", "average", "joint"),
-         conf.type=c("individual","simultaneous"), usebootcoef=TRUE,
+         conf.type=c("individual","simultaneous","profile"), usebootcoef=TRUE,
          boot.type=c("percentile","bca","basic"),
          posterior.summary=c('mean', 'median', 'mode'),
-         weights="equal", conf.int=0.95, tol=1e-7, expand=TRUE, \dots)
-
+         weights="equal", conf.int=0.95, tol=1e-7, expand=TRUE,
+         se_factor=4, plot_profile=FALSE, \dots)
 \method{print}{contrast.rms}(x, X=FALSE,
        fun=function(u)u, jointonly=FALSE, prob=0.95, \dots)
 }
@@ -127,7 +131,7 @@ compare \code{list(treat="drug", age=c(20,30))} with
 \code{list(treat="placebo"), age=c(40,50))}
 }
 \item{fun}{a function to evaluate on the linear predictor for each of
-	\code{a} and \code{b}.  Applies to Bayesian model fits.  Also, 
+	\code{a} and \code{b}.  Applies to Bayesian model fits.  Also,
 a function to transform the contrast, SE, and lower and upper
 confidence limits before printing.  For example, specify \code{fun=exp} to
 anti-log them for logistic models.}
@@ -169,12 +173,15 @@ interval probability for Bayesian analyses)
 }
 \item{tol}{tolerance for \code{qr} function for determining which
   contrasts are redundant, and for inverting the covariance matrix
-  involved in a joint test}
+  involved in a joint test.  This should be larger than the usual tolerance chosen
+  when just inverting a matrix.}
 \item{expand}{set to \code{FALSE} to have \code{gendata} not generate
   all possible combinations of predictor settings.  This is useful when
   getting contrasts over irregular predictor settings.}
+\item{se_factor}{multiplier for a contrast's standard error used for root finding of the profile likelihood confidence limits when \code{conf.type='profile'}. The search is over the maximum likelihood estimate plus or minus \code{se_factor} times the standard error.  This approach will fail when the Hauck-Donner effect is in play, because the standard error blows up when regression coefficients are estimating infinity.}
+\item{plot_profile}{when \code{conf.type='profile'} specify \code{plot_profile} to plot the change in deviance from the full model as a function of the contrast estimate, separately by each row of the contrast matrix.  The contrast estimate varies from the maximum likelihood estimate plus or minus \code{se_factor} times the standard error, with a regular grid of 50 points.}
 \item{\dots}{passed to \code{print} for main output.  A useful thing to
-	pass is \code{digits=4}.}
+	pass is \code{digits=4}.  Used also to pass convergence criteria arguments to fitting functions when \code{conf.type} is \code{"profile"}.}
 \item{x}{result of \code{contrast}}
 \item{X}{
 set \code{X=TRUE} to  print design matrix used in computing the contrasts (or
@@ -245,6 +252,29 @@ ggplot(k, aes(x=30:50, y=exp(Contrast))) + geom_line() +
                minor_breaks=c(seq(0.1, 1, by=.1), seq(1, 10, by=.5))) +
   xlab('Age') + ylab('OR against age 40')
 
+# For an ordinal model with 3 variables (x1 is quadratic, x2 & x3 linear)
+# Get a 1 d.f. likelihood ratio (LR) test for x1=1 vs x1=0.25
+# For the other variables get contrasts and LR tests that are the
+# ordinary ones for their original coefficients.
+# Get 0.95 profile likelihood confidence intervals for the x1 contrast
+# and for the x2 and x3 coefficients
+set.seed(7)
+x1 <- runif(50)
+x2 <- runif(50)
+x3 <- runif(50)
+dd <- datadist(x1, x2, x3); options(datadist='dd')
+y <- x1 + runif(50)   # need x=TRUE,y=TRUE for profile likelihood
+f <- orm(y ~ pol(x1, 2) + x2 + x3, x=TRUE, y=TRUE)
+a <- list(x1=c(   1,0,0), x2=c(0,1,0), x3=c(0,0,1))
+b <- list(x1=c(0.25,0,0), x2=c(0,0,0), x3=c(0,0,0))
+k <- contrast(f, a, b, expand=FALSE)      # Wald intervals and tests
+k; k$X[1,]
+summary(f, x1=c(.25, 1), x2=0:1, x3=0:1)  # Wald intervals
+anova(f, test='LR')                       # LR tests
+contrast(f, a, b, expand=FALSE, conf.type='profile', plot_profile=TRUE)
+options(datadist=NULL)
+
+
 # For a model containing two treatments, centers, and treatment
 # x center interaction, get 0.95 confidence intervals separately
 # by center
@@ -273,7 +303,7 @@ k <- contrast(f, list(treat='b', center=lc),
                  list(treat='a', center=lc),
               type='average', weights=table(center))
 print(k, X=TRUE)
-# Note: If other variables had interacted with either treat 
+# Note: If other variables had interacted with either treat
 # or center, we may want to list settings for these variables
 # inside the list()'s, so as to not use default settings
 
@@ -410,13 +440,19 @@ contrast(f, list(x1=0), list(x1=xs), type='joint')
 # All contrasts were redundant except for the first, because of
 # linearity assumption
 
-f <- lrm(y>0 ~ pol(x1,3) + x2)
+f <- lrm(y>0 ~ pol(x1,3) + x2, x=TRUE, y=TRUE)
 anova(f)
+anova(f, test='LR')   # discrepancy with Wald statistics points out a problem w/them
+
 contrast(f, list(x1=0), list(x1=xs), type='joint')
 print(contrast(f, list(x1=0), list(x1=xs), type='joint'), jointonly=TRUE)
 
 # All contrasts were redundant except for the first 3, because of
 # cubic regression assumption
+# These Wald tests and intervals are not very accurate.  Although joint
+# testing is not implemented in contrast(), individual profile likelihood
+# confidence intervals and associted likelihood ratio tests are helpful:
+# contrast(f, list(x1=0), list(x1=xs), conf.type='profile', plot_profile=TRUE)
 
 # Now do something that is difficult to do without cryptic contrast
 # matrix operations: Allow each of the three x2 groups to have a different

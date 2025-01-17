@@ -3,7 +3,7 @@ pentrace <-
 					 method=c('grid', 'optimize'),
 					 which=c('aic.c', 'aic', 'bic'), target.df=NULL,
            fitter, pr=FALSE,
-           tol=1e-13, keep.coef=FALSE, complex.more=TRUE,
+           tol=.Machine$double.eps, keep.coef=FALSE, complex.more=TRUE,
            verbose=FALSE, maxit=20, subset, noaddzero=FALSE, ...)
 {
   ## Need to check Strata for cph
@@ -29,14 +29,15 @@ pentrace <-
   clas <- class(fit)[1]
   isols <- clas=='ols'
 
-  if(!(isols || inherits(fit, 'lrm')))
+  if(!(isols || inherits(fit, 'lrm') || inherits(fit, 'orm')))
     stop("at present pentrace only works for lrm or ols")
 
   if(missing(fitter))
     fitter <- switch(clas,
                      ols=function(x, y, maxit, ...) lm.pfit(x, y, ...),
                      lrm=function(x, y, maxit=20, ...)
-                            lrm.fit(x, y, maxit=maxit, compvar = TRUE,  ...),
+                            lrm.fit(x, y, maxit=maxit, ...),
+                     orm=function(x, y, maxit=20, ...) orm.fit(x, y, maxit=maxit, ...),
                      cph=function(x, y, maxit=20, ...) coxphFit(x, y,
                                         strata=Strata, iter.max=maxit,
                                         eps=.0001, method="efron",
@@ -109,7 +110,7 @@ pentrace <-
         penfact <- Penalty.setup(atr, pen)$multiplier
       } else penfact <- pen
 
-      if(length(penfact)==1 || !islist) pm <- penfact*penalty.matrix
+      if(length(penfact)==1 || !islist) pm <- penfact * penalty.matrix
       else {
         a <- diag(sqrt(penfact))
         pm <- a %*% penalty.matrix %*% a
@@ -119,23 +120,24 @@ pentrace <-
         stop('fitter failed.  Try changing maxit or tol')
 
       if(isols) {
-        ## ols (from lm.pfit) already stored correct LR chisq and effective df
+        # ols (from lm.pfit) already stored correct LR chisq and effective df
         stats <- f$stats
-        df <- stats['d.f.']
-        lr <- stats['Model L.R.']
+        df  <- stats['d.f.']
+        lr  <- stats['Model L.R.']
         dag <- f$effective.df.diagonal
       }
       else  {
-        v <- f$var   #Later: vcov(f)
+        v <- f$var   #Later: vcov(f) ??
+        if(! length(v)) v <- infoMxop(f$info.matrix, invert=TRUE)
         f.nopenalty <- fitter(X, Y, initial=f$coef, maxit=1, tol=tol, ...)
         if(length(f.nopenalty$fail) && f.nopenalty$fail)
-          stop('fitter failed.  Try changing tol')
+          stop('fitter failed.  Try changing maxit or tol')
         info.matrix.unpenalized <-
           if(length(f.nopenalty$info.matrix))
-            f.nopenalty$info.matrix else
-        solvet(f.nopenalty$var, tol=tol) # -> vcov
-        dag <- diag(info.matrix.unpenalized %*% v)
-        df <- if(ns==0)sum(dag) else sum(dag[-(1:ns)])
+            infoMxop(f.nopenalty$info.matrix) else
+        Matrix::solve(f.nopenalty$var, tol=tol) # -> vcov
+        dag <- Matrix::diag(info.matrix.unpenalized %*% v)
+        df <- if(ns == 0) sum(dag) else sum(dag[- (1 : ns)])
         lr <- f.nopenalty$stats["Model L.R."]
       }
       obj <- switch(z$which,
@@ -209,14 +211,15 @@ pentrace <-
     }
     else {
       v <- f$var   #Later: vcov(f, regcoef.only=T)
+      if(! length(v)) v <- infoMxop(f$info.matrix, invert=TRUE)
       f.nopenalty <- fitter(X, Y, initial=f$coef, maxit=1, tol=tol, ...)
       if(length(f.nopenalty$fail) && f.nopenalty$fail)
-        stop('fitter failed.  Try changing tol')
+        stop('fitter failed.  Try changing maxit or tol')
       info.matrix.unpenalized <-
-        if(length(f.nopenalty$info.matrix)) f.nopenalty$info.matrix
+        if(length(f.nopenalty$info.matrix)) infoMxop(f.nopenalty$info.matrix)
         else
-          solvet(f.nopenalty$var, tol=tol) # -> vcov
-      dag <- diag(info.matrix.unpenalized %*% v)
+          Matrix::solve(f.nopenalty$var, tol=tol) # -> vcov
+      dag <- Matrix::diag(info.matrix.unpenalized %*% v)
       df[i] <- if(ns == 0)sum(dag) else sum(dag[- (1 : ns)])
       lr <- f.nopenalty$stats["Model L.R."]
       if(verbose) {
@@ -231,10 +234,11 @@ pentrace <-
 
     if(obj > obj.best) {
       pen.best <- pen
-      df.best <- df[i]
+      df.best  <- df[i]
       obj.best <- obj
-      f.best <- f
-      var.adj.best <- if(unpenalized || isols) f$var
+      f.best   <- f
+      var.adj.best <- if(unpenalized || isols)
+        if(length(f$var)) f$var else infoMxop(f$info.matrix, invert=TRUE)
       else
         v %*% info.matrix.unpenalized %*% v
       diag.best <- dag
