@@ -8,8 +8,10 @@
 #' function of the intercepts would form a straight line.
 #'
 #' @param fit an `orm` or `lrm` fit object, usually with a numeric dependent variable having many levels
+#' @param dots set to `TRUE` to show solid dots at the intecept values
+#' @param logt set to `TRUE` to use a log scale for the x-axis
 #'
-#' @returns nothing; only plots
+#' @returns `ggplot2` object
 #' @export
 #' @md
 #' @author Frank Harrell
@@ -19,18 +21,45 @@
 #' f <- orm(y ~ x1 + x2 + x3)
 #' plotIntercepts(f)
 #' }
-plotIntercepts <- function(fit) {
-  if(! inherits(fit, 'lrm') && ! inherits(fit, 'orm')) stop('fit must be from lrm or orm')
+plotIntercepts <- function(fit, dots=FALSE, logt=FALSE) {
+  if(! inherits(fit, c('lrm', 'orm'))) stop('fit must be from lrm or orm')
+  isorm <- inherits(fit, 'orm')
 
-  opar <- par(mar=c(4,4,2,3), mgp=c(3-.75,1-.5,0))
-  on.exit(par(opar))
+  # opar <- par(mar=c(4,4,2,3), mgp=c(3-.75,1-.5,0))
+  # on.exit(par(opar))
 
   ns     <- num.intercepts(fit)
   alpha  <- coef(fit)[1 : ns]
   y      <- fit$yunique[-1]
+  ylabel <- fit$ylabel
   yname  <- all.vars(fit$sformula)[1]
+  if(! length(ylabel) || ylabel == '') ylabel <- yname
+  if(isorm) ylabel <- fit$yplabel
+  
+  # plot(y, alpha, log=if(logt) 'x' else '',
+  #      xlab=ylabel, ylab='Intercept', pch=20, cex=if(dots) 0.7 else 0)
+  # segments(y[-ns], alpha[-ns], y[-1], alpha[-ns])                # horizontals
+  # segments(y[-1],  alpha[-ns], y[-1], alpha[-1], col='gray85')   # verticals
 
-  plot(y, alpha, xlab=yname, ylab='Intercept')
-  segments(y[-ns], alpha[-ns], y[-1], alpha[-ns])                # horizontals
-  segments(y[-1],  alpha[-ns], y[-1], alpha[-1], col='gray85')   # verticals
+  xtrans <- if(logt) 'log' else 'identity'
+  npretty <- 10
+  if(xtrans == 'identity') {
+    xbreaks <- pretty(y, npretty)
+    labels  <- format(xbreaks)
+  } else {
+    xbreaks <- pretty(y, 2 * npretty)
+    xbreaks <- xbreaks[xbreaks > 0]
+    if(xbreaks[1] >= 1) xbreaks <- c(0.1, 0.25, 0.5, 0.75, xbreaks)
+    if(xbreaks[1] > 0.5) xbreaks <- c(0.1, 0.25, 0.5, xbreaks)
+    if(xbreaks[1] > 0.1) xbreaks <- c(0.1, xbreaks)
+    lxb     <- log(xbreaks)
+    lxbr    <- rmClose(lxb, 0.06)
+    xbreaks <- xbreaks[lxb %in% lxbr]
+  }
+
+  g <- ggplot(mapping=aes(x=y, y=alpha)) + geom_step() +
+         scale_x_continuous(transform=xtrans, breaks=xbreaks) +
+         xlab(ylabel) + ylab(expression(alpha))
+  if(dots) g <- g + geom_point(size=0.5)
+  g
 }

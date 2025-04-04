@@ -28,11 +28,8 @@
 Design <- function(mf, formula=NULL, specials=NULL,
                    allow.offset=TRUE, intercept=1) {
 
-  debug <- getOption('rmsdebug', FALSE)
-  if(debug) {
-    cat('--------------------------------------------------\n')
-    prn(list(names(mf), formula, specials))
-    }
+  deb <- Fdebug('rmsdebug')
+  deb(llist(names(mf), formula, specials))
 
   if(length(formula)) {
     Terms <- terms(formula, specials=specials, data=mf)
@@ -53,15 +50,14 @@ Design <- function(mf, formula=NULL, specials=NULL,
 
   mmnames <- function(assume.code, rmstrans.names, term.label, iaspecial,
                       class) {
-    if(debug) {
-      prn(assume.code); prn(rmstrans.names); prn(term.label); prn(iaspecial); prn(class) }
+    deb(llist(assume.code, rmstrans.names, term.label, iaspecial, class))
     ## Don't let >=i be translated to >i:
     rmst <- gsub('>=', '>>', rmstrans.names)
     ## Don't let <=i be translated to <i:
     rmst <- gsub('<=', '<<', rmst)
     ## Don't let == be translated to blank
     rmst <- gsub('==', '@EQ@', rmst)
-    if(debug) {prn(class);prn(assume.code);prn(term.label)}
+    deb(llist(class, assume.code, term.label))
     w <- if(assume.code == 1)
            ifelse(class == 'logical', paste0(term.label, 'TRUE'),
                   term.label)
@@ -147,7 +143,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
   wts <- if(any(namx == '(weights)'))(1 : length(namx))[namx == '(weights)']
          else 0
 
-  if(debug) prn(llist(names(mf), ioffset, response.pres, wts))
+  deb(llist(names(mf), ioffset, response.pres, wts))
 
   coluse <- setdiff(1 : ncol(mf), c(ioffset, 1 * response.pres, wts))
 
@@ -246,7 +242,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
         mmcolnam[[i1]] <- mmn
         alt <- attr(mmn, 'alt')
         mmcolnamalt[[i1]] <- alt
-        if(debug) prn(c(mmn, alt))
+        deb(c(mmn, alt))
         if(za != 8 && length(colnam)) {
           name   <- c(name,   colnam  [[i1]])
           mmname <- c(mmname, mmcolnam[[i1]])
@@ -465,9 +461,10 @@ modelData <- function(data=environment(formula), formula, formula2=NULL,
                       dotexpand=TRUE, callenv=parent.frame(n=2)) {
 
   ## calibrate.cph etc. uses a matrix, even if only one column
+  ## Don't give an exception to Ocens (for orm) just as we don't give an exception for Surv
   ismat <- function(z) {
     cl <- class(z)
-    ('matrix' %in% cl) && ('rms' %nin% cl) ## && ncol(z) > 1
+    ('matrix' %in% cl) && ('rms' %nin% cl) && ('Ocens' %nin% cl)
     }
   
   ## Get a list of all variables in either formula
@@ -488,7 +485,7 @@ modelData <- function(data=environment(formula), formula, formula2=NULL,
     for(v in V) {
       xv <- env[[v]]
       if(is.factor(xv)) xv <- xv[, drop=TRUE]
-      ## Note: Surv() has class 'Surv' without class 'matrix'
+      ## Note: Surv() has class 'Surv' without class 'matrix', same for Ocens()
       ## This keeps columns together by calling as.data.frame.rms
       if(ismat(xv)) class(xv) <- unique(c('rms', class(xv)))
       data[[v]] <- xv
@@ -509,14 +506,15 @@ modelData <- function(data=environment(formula), formula, formula2=NULL,
   ## Can't do else data[V] here as formula may have e.g. Surv(time,event)
   ## and hasn't been evaluated yet, where data has time and event
   if(length(weights)) data$`(weights)` <- weights
-
   if(length(subset)) data <- data[subset, ]
 
   ## Make sure that the second formula doesn't create any NAs on
   ## observations that didn't already have an NA for variables in main formula
+  ## Note: complete.cases is a "data.frame" function but data may be a data.table
+
   if(length(formula2)) {
-    i <- ! complete.cases(data[intersect(names(data), v1)])
-    j <- ! complete.cases(data[intersect(names(data), v2)])
+    i <- ! complete.cases(as.data.frame(data)[intersect(names(data), v1)])
+    j <- ! complete.cases(as.data.frame(data)[intersect(names(data), v2)])
     ## Check: longer object length not mult of shorter:  ???
     if(any(j & ! i))
       stop('A variable in the second formula was missing on an observation that was not missing on any variable in main formula')
@@ -616,3 +614,4 @@ as.data.frame.rms <- function(x, row.names = NULL, optional = FALSE, ...) {
   if(! optional) names(value) <- deparse(substitute(x))[[1]]
   structure(value, row.names=row.names, class='data.frame')
 }
+

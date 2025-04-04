@@ -5,14 +5,16 @@ orm.fit <- function(x=NULL, y,
                     maxit=30L, eps=5e-4, gradtol=1e-3, abstol=1e10,
                     minstepsize=1e-2, tol=.Machine$double.eps, trace=FALSE,
                     penalty.matrix=NULL, weights=NULL, normwt=FALSE,
-                    scale=FALSE, inclpen=TRUE, y.precision = 7,
-                    compstats=TRUE)
+                    scale=FALSE, mscore=FALSE, inclpen=TRUE, y.precision = 7,
+                    compstats=TRUE, onlydata=FALSE, ...)
 {
   cal        <- match.call()
   family     <- match.arg(family)
   opt_method <- match.arg(opt_method)
 
-  n <- length(y)
+  debug2     <- getOption('orm.fit.debug2', FALSE)
+
+  n <- NROW(y)
   if(! length(x)) {
       p     <- 0
       xname <- NULL
@@ -52,7 +54,7 @@ orm.fit <- function(x=NULL, y,
   if(length(weights) != n) stop('length of weights must equal length of y')
   if(normwt) weights <- weights * n / sum(weights)
 
-  initial.there <- ! missing(initial)
+  initial.there <- ! missing(initial) && length(initial)
 
   if(p > 0 && scale) {
     x      <- scale(x)
@@ -66,21 +68,68 @@ orm.fit <- function(x=NULL, y,
     if(penpres) penmat <- t(trans[-1, -1]) %*% penmat %*% trans[-1, -1]
     }
 
-  # Prevent y levels from being created because of e.g. changes in the 7th decimal place
 
-  w           <- recode2integer(y, precision=y.precision)
-  y           <- w$y - 1
-  ylevels     <- w$ylevels
-  kmid        <- max(w$whichmedian - 1L, 1L)
-  numy        <- w$freq
-  mediany     <- w$median
+  # model.extract which calls model.response may not keep Ocens class
+  isOcens <- NCOL(y) == 2
+  yupper  <- NULL
+  npsurv  <- NULL
+  ctype   <- integer(n)
 
-  k <- length(ylevels) - 1L
+  if(isOcens) {
+    Y       <- y                # save original values before Ocens2ord
+    aY      <- attributes(Y)
+    y       <- Ocens2ord(Y)
+    a       <- attributes(y)
+    ylabel  <- aY$label
+    uni     <- aY$units
+    ylevels <- a$levels
+    yupper  <- a$upper
+    npsurv  <- a$npsurv
+    if(! initial.there && ! length(npsurv))
+      stop('npsurv must be present when not specifying initial to orm.fit')
+    Ncens1  <- a$Ncens1
+    Ncens2  <- a$Ncens2
+    k       <- length(ylevels) - 1
+    YO      <- extractCodedOcens(y, what=4, ivalues=TRUE)   # ivalues=TRUE -> a, b are [0, k]
+    ctype   <- YO$ctype
+    y       <- YO$a
+    y2      <- YO$b
+    # Ocens uses -Inf and Inf for left and right censoring; later we transform to integer codes -1, k+1
+    y2[ctype == 2] <- k + 1
+    y [ctype == 1] <- -1
+    numy    <- a$freq
+    mediany <- a$median
+    kmid    <- which.min(abs(ylevels[-1] - mediany))
+    anycens <- any(ctype > 0)
+    orange  <- a$range
+  } else {
+  ylabel    <- label(y)
+  uni       <- units(y)
+  orange    <- if(is.numeric(y)) range(y)
+  w         <- recode2integer(y, precision=y.precision)
+  y         <- w$y - 1
+  y2        <- y
+  ylevels   <- w$ylevels
+  k         <- length(ylevels) - 1
+  kmid      <- max(w$whichmedian - 1L, 1L)
+  numy      <- w$freq
+  mediany   <- w$median
+  Ncens1    <- Ncens2 <- c(left=0L, right=0L, interval=0L)
+  anycens   <- FALSE
+  }
+
+  intcens <- 1L * any(ctype == 3)
+
   if(k == 1) kmid <- 1
 
-  iname <- if(k == 1) "Intercept" else paste("y>=", ylevels[-1L], sep="")
+  ylev <- ylevels[-1L]
+  if(length(yupper)) ylev <- ifelse(yupper[-1] > ylev, paste(ylev, '-', yupper[-1]), ylev)
+  iname <- if(k == 1) "Intercept" else paste0("y>=", ylev)
   name  <- c(iname, xname)
-  
+
+  if(onlydata) return(
+    if(isOcens) list(Y=cbind(y, y2), Ncens1=Ncens1, Ncens2=Ncens2, k=k, iname=iname)
+    else list(y=y, k=k, iname=iname) )
 
   if(missing(offset) || ! length(offset) || (length(offset) == 1 && offset == 0.))
     offset <- rep(0., n)
@@ -91,37 +140,76 @@ orm.fit <- function(x=NULL, y,
 
   nv <- p + k
 
+  # These are used for initial intercept estimates when there is no censoring (OK)
+  # and also in R2 statistics
   sumwty <- tapply(weights, y, sum)
   sumwt  <- sum(sumwty)
-  if(! wtpres && any(numy != sumwty)) stop('program logic error 1')
-  sumw <- if(normwt) numy else as.integer(round(sumwty))
+  if(anycens) {
+    ess <- n - sum(Ncens1)
+    Nw  <- n
+  } else {
+    rfrq   <- sumwty / sumwt
+    ess    <- n * (1 - sum(rfrq ^ 3))
+    Nw     <- sumwt
+  }
 
-  if(missing(initial)) {
-    ncum    <- rev(cumsum(rev(sumwty)))[2 : (k + 1)]
-    pp      <- ncum / sumwt
-    initial <- fam$inverse(pp)
+  finverse <- eval(fam[2])
+
+  if(! initial.there) {
+    if(anycens) {
+      # If only censored values are right censored, then MLEs of intercepts are exactly
+      # the link function of Kaplan-Meier estimates.  We're ignoring weights.
+      # This should also work for only left censoring, and reasonable results
+      # are expected for interval and mixed censoring using a Turnbull-type estimator
+      # computed from icenReg::ic_np as stored in the npsurv object from Ocens.
+      # ic_np also handles non-interval censoring.
+      pp <- npsurv$surv[-1]
+    } else {
+      ncum   <- rev(cumsum(rev(sumwty)))[2 : (k + 1)]
+      pp     <- ncum / sumwt
+    }
+    initial <- finverse(pp)
     if(ofpres) initial <- initial - mean(offset)
     initial <- c(initial, rep(0., p))
+ } else if(is.list(initial) && length(initial) == 2) {
+   # initial is an npsurv object from a previous run, which is used when bootstrapping
+   # Use linear interpolation/extrapolation from the stored times to the current times
+   interp_initial <- approxExtrap(initial$time, initial$surv, xout=ylevels)$y
+   if(debug2) {
+     du <- cbind(time    = initial$time, surv       = initial$surv, 
+                 ylevels = ylevels,      interpsurv = interp_initial)
+     saveRDS(du, '/tmp/du.rds')
+     prn(du[1:min(20, length(ylevels)),], 'orm.fit')
+   }
+   initial <- finverse(interp_initial[-1])
+   if(ofpres) initial <- initial - mean(offset)
+   initial <- c(initial, rep(0., p))
  }
 
-  loglik <- -2 * sum(sumwty * log(sumwty / sum(sumwty)))
+  if(! anycens) loglik <- -2 * sum(sumwty * log(sumwty / sum(sumwty)))
 
-  if(p==0 & ! ofpres) {
-    z <- ormfit(NULL, y, k, initial=initial[1 : k],
+  if(anycens || (p==0 & ! ofpres)) {
+    z <- ormfit(NULL, y, y2, k, intcens, initial=initial[1 : k],
                 offset=offset, wt=weights,
                 penmat=penmat, opt_method=opt_method, maxit=maxit,
                 tolsolve=tol, objtol=eps, gradtol=gradtol, paramtol=abstol,
                 trace=trace, link=link, iname=iname, xname=xname)
     if(z$fail) return(structure(list(fail=TRUE), class="orm"))
     kof    <- z$coef
+    if(debug2) {
+      prn(intcens)
+      ww <- cbind(initial=initial[1 : k], kof)
+      print(utils::head(ww, 10)); print(utils::tail(ww, 10))
+    }
     loglik <- z$loglik
+    initial <- c(kof, rep(0., p))
     info   <- z$info
   }
 
   if(ofpres) {
     ## Fit model with only intercept(s) and offset
     ## Check that lrm.fit uses penmat in this context   ??
-    z <- ormfit(NULL, y, k, initial=initial[1 : k],
+    z <- ormfit(NULL, y, y2, k, intcens, initial=initial[1 : k],
                 offset=offset, wt=weights,
                 penmat=penmat, opt_method=opt_method, maxit=maxit,
                 tolsolve=tol, objtol=eps, gradtol=gradtol, paramtol=abstol,
@@ -132,13 +220,13 @@ orm.fit <- function(x=NULL, y,
     initial <- c(z$coef, rep(0., p))
     if(p == 0) info <- z$info
   }
-  
+
   if(p > 0) {
     # Fit model with intercept(s), offset, covariables
-    z <- ormfit(x, y, k, initial=initial, offset=offset, wt=weights,
+    z <- ormfit(x, y, y2, k, intcens, initial=initial, offset=offset, wt=weights,
                 penmat=penmat, opt_method=opt_method,
                 maxit=maxit, tolsolve=tol, objtol=eps,
-                gradtol=gradtol, paramtol=abstol,
+                gradtol=gradtol, paramtol=abstol, mscore=mscore,
                 trace=trace, link=link, iname=iname, xname=xname)
     if(z$fail) return(structure(list(fail=TRUE), class="orm"))
     loglik <- c(loglik, z$loglik)
@@ -185,27 +273,48 @@ orm.fit <- function(x=NULL, y,
       }
     }
 
-    r2     <- 1. - exp(- model.lr / sumwt)
-    r2.max <- 1. - exp(- llnull / sumwt)
+    # Effective sample size ess did not count censored observations
+    # They do contain some information, especially for interval-censored ones
+    # with small intervals.  Adjust ess for partial contributions.
+
+    if(anycens) {
+      nuncens <- ess   # based on original counts, not Ocens modifications
+      ll      <- -2e0 * log(z$lpe)
+      a       <- sum(ll[ctype == 0])   # ctype references censoring after Ocens adjustments ?? TODO
+      # Compute multiplier that makes ll for uncensored obs sum to the number uncensored
+      b       <- nuncens / sum(ll[ctype == 0])
+      # Compute this scaled contribution of censored obs
+      essc    <- b * sum(ll[ctype > 0])
+      ess     <- ess + essc
+    }
+
+    r2     <- 1. - exp(- model.lr / Nw)
+    r2.max <- 1. - exp(- llnull / Nw)
     r2     <- r2 / r2.max
-    r2m    <- R2Measures(model.lr, model.df, sumwt, sumwty)
+    r2m    <- R2Measures(model.lr, model.df, Nw, ess)
     if(k > 1L) attr(lp, 'intercepts') <- kmid
     g  <- GiniMd(lp)
     ## compute average |difference| between 0.5 and the condition
     ## probability of being >= marginal median
-    pdm <- mean(abs(fam$cumprob(lp) - 0.5))
-    rho <- if(p == 0) 0e0 else cor(rank(lp), rank(y))
+    cump <- eval(fam[1])
+    pdm <- mean(abs(cump(lp) - 0.5))
+    rho <- if(anycens) NA else if(p == 0 || diff(range(lp)) == 0e0) 0e0 else cor(rank(lp), rank(y))
     ## Somewhat faster:
     ## rho <- .Fortran('rcorr', cbind(lp, y), as.integer(n), 2L, 2L, r=double(4),
     ##                 integer(4), double(n), double(n), double(n), double(n),
     ##                 double(n), integer(n), PACKAGE='Hmisc')$r[2]
+    
+    cindex <- NA
+    if(! anycens || (Ncens1['left'] == 0 && Ncens1['interval'] == 0))
+      cindex <- suppressWarnings(concordancefit(if(anycens) Ocens2Surv(Y) else y, lp)$concordance)
+    Dxy    <- 2 * (cindex - .5)
 
-    stats <- c(n, length(numy), mediany, z$dmax, model.lr, model.df,
-              model.p, score, score.p, rho, r2, r2m, g, exp(g), pdm)
+    stats <- c(n, ess, length(numy), mediany, z$dmax, model.lr, model.df,
+              model.p, score, score.p, rho, Dxy, r2, r2m, g, exp(g), pdm)
 
-    nam <- c("Obs", "Distinct Y", "Median Y", "Max Deriv",
+    nam <- c("Obs", "ESS", "Distinct Y", "Median Y", "Max Deriv",
             "Model L.R.", "d.f.", "P", "Score", "Score P",
-            "rho", "R2", names(r2m), "g", "gr", "pdm")
+            "rho", "Dxy", "R2", names(r2m), "g", "gr", "pdm")
     names(stats) <- nam
     }
 
@@ -215,32 +324,49 @@ orm.fit <- function(x=NULL, y,
   retlist <- list(call              = cal,
                   freq              = numy,
                   yunique           = ylevels,
+                  yupper            = yupper,             # NULL if no censoring that produced yupper > ylevels
+                  ylabel            = ylabel,
+                  units             = uni,
+                  Ncens1            = if(isOcens) Ncens1,
+                  Ncens2            = if(isOcens) Ncens2,
+                  # n.risk          = if(any(ctype > 0)) n.risk,
+                  yrange            = orange,             # range attribute from Ocens
                   stats             = stats,
                   coefficients      = kof,
                   var               = NULL,
                   u                 = z$u,
+                  lpe               = z$lpe,
                   iter              = z$iter,
-                  family            = family, trans=fam,
+                  family            = family,
+                  famfunctions      = fam,
                   deviance          = loglik,
                   non.slopes        = k,
                   interceptRef      = kmid,
-                  linear.predictors = lp,
-                  penalty.matrix     = if(penpres) penalty.matrix,
-                  weights            = if(wtpres) weights,
-                  xbar               = if(p > 0 && scale) xbar,
-                  xsd                = if(p > 0 && scale) xsd,
-                  info.matrix        = info,
-                  fail               = FALSE)
+                  linear.predictors = structure(lp, intercepts=kmid),
+                  penalty.matrix    = if(penpres) penalty.matrix,
+                  weights           = if(wtpres) weights,
+                  xbar              = if(p > 0 && scale) xbar,
+                  xsd               = if(p > 0 && scale) xsd,
+                  info.matrix       = info,
+                  mscore            = z$mscore,
+                  fail              = FALSE)
 
   class(retlist) <- 'orm'
   retlist
 }
 
 ormfit <-
-  function(x, y, k, link, initial,
+  function(x, y, y2, k, intcens, link, initial,
            offset=rep(0., n), wt=rep(1., n), penmat=matrix(0., p, p), opt_method='NR',
            maxit=30L, objtol=5e-4, gradtol=1e-3, paramtol=1e10, tolsolve=.Machine$double.eps,
-           minstepsize=1e-2, trace=FALSE, iname, xname) {
+           minstepsize=1e-2, mscore=FALSE, trace=FALSE, iname, xname) {
+
+# y  =  -1 for left censored observation
+# y2 = k+1 for right censored observation
+# Uncensored observations have y = y2 = 0, 1, ..., k
+# intcens = 1 if there are any interval censored observations
+
+if(getOption('orm.fit.debug', FALSE)) try <- function(x) x
 
 n <- length(y)
 p <- length(initial) - k
@@ -250,7 +376,9 @@ if(k > 1 && any(diff(initial[1:k]) >= 0))
 
 storage.mode(x)       <- 'double'
 storage.mode(y)       <- 'integer'
+storage.mode(y2)      <- 'integer'
 storage.mode(k)       <- 'integer'
+storage.mode(intcens) <- 'integer'
 storage.mode(p)       <- 'integer'
 storage.mode(initial) <- 'double'
 storage.mode(offset)  <- 'double'
@@ -258,28 +386,59 @@ storage.mode(wt)      <- 'double'
 storage.mode(penmat)  <- 'double'
 storage.mode(link)    <- 'integer'
 
-rfort <- function(theta, what=3L, debug=0L) {
+if(getOption('rms.fit.debug', FALSE)) try <- function(x) x
+
+rfort <- function(theta, what=3L, mscore=FALSE, 
+                  debug=as.integer(getOption('orm.fit.debug', 0L)),
+                  debug2=getOption('orm.fit.debug2', FALSE)) {
   p <- as.integer(length(theta) - k)
+  nai <- as.integer(if(intcens) 1000000 else 0)
+  if(debug2) prn(c(k, length(theta), p), 'rfort')
   if(debug) {
-    a <- llist(n, k, p, y, link, what)
+    a <- llist(n, k, p, y, y2, link, intcens, nai, what, debug)
     s <- sapply(a, storage.mode)
     if(any(s != 'integer')) stop(s)
-    a <- llist(x, offset, wt, penmat, theta[1:k], theta[-(1:k)],
+    ac <- llist(x, offset, wt, penmat, theta[1:k], theta[-(1:k)],
                 logL=numeric(1))
-    s <- sapply(a, storage.mode)
-    if(any(s != 'double')) stop(s)
+    sc <- sapply(ac, storage.mode)
+    if(any(sc != 'double')) stop(s)
     g <- function(x) if(is.matrix(x)) paste(dim(x), collapse='x') else length(x)
-    print(sapply(a, g), quote=FALSE)
+    print(sapply(c(a, ac), g), quote=FALSE)
   }
-  w <- .Fortran(F_ormll, n, k, p, x, y, offset, wt, penmat,
+  nu <- if(mscore) n * (2L + p) else 0L
+  w <- .Fortran(F_ormll, n, k, p, x, y, y2, offset, wt, penmat,
                 link=link, theta[1:k], theta[-(1:k)],
-                logL=numeric(1), grad=numeric(k + p),
-                a=matrix(0e0, k, 2), b=matrix(0e0, p, p), ab=matrix(0e0, k, p),
+                logL=numeric(1), grad=numeric(k + p), lpe=numeric(n),
+                a=matrix(0e0, (1 - intcens) * k, 2), b=matrix(0e0, p, p), ab=matrix(0e0, k, p),
+                intcens, row=integer(nai), col=integer(nai), ai=numeric(nai), nai=nai, ne=integer(1),
+                urow=integer(nu), ucol=integer(nu), um=numeric(nu), nu=nu, nuu=integer(1),   
                 what=what, debug=as.integer(debug), 1L, salloc=integer(1))
+  if(debug) prn(w$salloc)
+
+  if(w$salloc == 999) {   # zero or negative probability in likelihood calculation
+    w$logL = Inf          # triggers step-halving in MLE updating loop
+    return(w)
+  }
+  if(w$salloc == 998)
+    stop('Censoring values encountered that are not handled')
+  if(w$salloc == 997)
+    stop('More than 1,000,000 elements needed in the intercepts part of the information matrix due\n',
+         'to the variety of interval censored observations')
+  if(w$salloc == 996)
+    stop('more than ', nu, ' elements needed in the score matrix')
   if(w$salloc != 0)
     stop('Failed dynamic array allocation in Fortran subroutine ormll: code ', w$salloc)
+  if(intcens && what == 3L) {
+    ne    <- w$ne
+    w$a   <- list(row = w$row[1 : ne], col = w$col[1 : ne], a = w$ai[1 : ne])
+    w$row <- w$col <- w$ai <- w$nai <- w$ne <- NULL
+    }
+  if(mscore) {
+    nuu      <- w$nuu
+    w$mscore <- Matrix::sparseMatrix(w$urow[1 : nuu], w$ucol[1 : nuu], x = w$um[1 : nuu], dims=c(n, k + p))
+  }
   w
-}
+  }
 
   if(missing(x) || ! length(x) || p == 0) {
     x <- 0.
@@ -296,20 +455,22 @@ m <- function(x) max(abs(x))
 if(maxit == 1) {
   w      <- rfort(initial)
   # Information matrix is negative Hessian on LL scale
-  info <- list(a =- w$a, b = - w$b, ab = - w$ab,
+  if(intcens) w$a$a <- - w$a$a else w$a <- - w$a
+  info <- list(a = w$a, b = - w$b, ab = - w$ab,
                iname=iname, xname=xname)
 
   res <- list(coefficients = initial,
               loglik       = w$logL,
               info         = info,
               u            = w$grad,
+              lpe          = w$lpe,
               dmax=m(w$grad), score=NA,
               iter=1, fail=FALSE, class='orm')
     return(res)
   }
 
   theta      <- initial # Initialize the parameter vector
-  oldobj     <- 1e10
+  oldobj     <- 1e12
   score.test <- NA
 
   gradtol <- gradtol * n / 1e3
@@ -321,7 +482,7 @@ if(maxit == 1) {
       if(iter == 1) objf <- w$logL
       gradient <- w$grad
       hess     <- infoMxop(w[c('a', 'b', 'ab')])
-    
+
       # Newton-Raphson step
 
       delta <- try(Matrix::solve(hess, gradient, tol=tolsolve))
@@ -332,7 +493,7 @@ if(maxit == 1) {
       }
 
       if(trace > 0)
-        cat('Iteration:', iter, '  -2LL:', format(objf, nsmall=4),
+        cat('NR iteration:', iter, '  -2LL:', format(objf, nsmall=4),
             '  Max |gradient|:', m(gradient),
             '  Max |change in parameters|:', m(delta), '\n', sep='')
 
@@ -345,10 +506,16 @@ if(maxit == 1) {
       # Step-halving loop
       while (TRUE) {
         new_theta <- theta - step_size * delta # Update parameter vector
-        objfnew   <- rfort(new_theta, what=1L)$logL
+        wd <- which(diff(new_theta[1 : k]) >= 0e0)
+        if(length(wd)) {
+          if(trace > 0) cat('new_theta out of order for intercepts',
+              paste(wd + 1, collapse=' '), 'forced step-halving\n')
+          objfnew <- Inf
+        }
+        else objfnew   <- rfort(new_theta, what=1L)$logL
         if(trace > 1)
           cat('Old, new, old - new -2 LL:', objf, objfnew, objf - objfnew, '\n')
-        if (! is.finite(objfnew) || objfnew > objf + 1e-6) {
+        if (! is.finite(objfnew) || objfnew > objf + objtol / 10.) {
           # Objective function failed to be reduced or is infinite
           step_size <- step_size / 2e0         # Reduce the step size
           if(trace > 0) cat('Step size reduced to', step_size, '\n')
@@ -368,18 +535,21 @@ if(maxit == 1) {
       }
 
       # Convergence check - must meet 3 criteria
-      if((objf <= oldobj + 1e-6 && (oldobj - objf < objtol)) &&
+      if((objf <= oldobj + objtol / 10. && (oldobj - objf < objtol)) &&
         (m(gradient) < gradtol) &&
         (m(delta)    < paramtol)) {
         # Compute final information matrix (in 3 parts) since not computed
         # since Newton-Raphson updating
-        w <- rfort(theta)
-        info <- list(a =- w$a, b = - w$b, ab = - w$ab,
+        w <- rfort(theta, mscore=mscore)
+        if(intcens) w$a$a <- - w$a$a else w$a <- - w$a
+        info <- list(a = w$a, b = - w$b, ab = - w$ab,
                     iname=iname, xname=xname)
 
         return(list(coef           = theta,
                     loglik         = w$logL,
                     u              = w$grad,
+                    mscore         = w$mscore,
+                    lpe            = w$lpe,
                     info           = info,
                     objchange      = oldobj - w$logL,
                     dmax           = m(w$grad),
@@ -399,12 +569,12 @@ if(maxit == 1) {
   } else {    # L-M
 
   lambda   <- 1e-3    # hard-wired for L-M
-  oldobj   <- 1e10
+  oldobj   <- 1e12
   objf     <- NA      # needed in case no H_damped is ever positive definite
   w        <- rfort(theta)
   gradient <- w$grad
   H        <- infoMxop(w[c('a', 'b', 'ab')])
-    
+
   for (iter in 1:maxit) {
     H_damped <- H + lambda * Matrix::Diagonal(x = Matrix::diag(H))
     delta    <- try(Matrix::solve(H_damped, gradient, tol=tolsolve))
@@ -417,14 +587,14 @@ if(maxit == 1) {
     theta_new <- theta - delta
     objf      <- rfort(theta_new, what=1L)$logL
     if(trace > 0)
-      cat('Iteration:', iter, '  -2LL:', format(objf, nsmall=4),
+      cat('LM iteration:', iter, '  -2LL:', format(objf, nsmall=4),
           '  Max |gradient|:', m(gradient),
           '  Max |change in parameters|:', m(delta), '\n', sep='')
     if(trace > 1)
       cat('Old, new, old - new -2 LL:', oldobj, objf, oldobj - objf, '\n')
 
     if(is.finite(objf) &&
-       (objf <= oldobj + 1e-6 && (oldobj - objf < objtol)) &&
+       (objf <= oldobj + objtol / 10. && (oldobj - objf < objtol)) &&
        (m(gradient) < gradtol) &&
        (m(delta)    < paramtol)) break
 
@@ -447,13 +617,16 @@ if(maxit == 1) {
     message(msg)
     return(list(fail=TRUE))
   }
-  w    <- rfort(theta)
-  info <- list(a =- w$a, b = - w$b, ab = - w$ab,
-               iname=iname, xname=xname)
+  w     <- rfort(theta, mscore=mscore)
+  if(intcens) w$a$a <- - w$a$a else w$a <- - w$a
+  info  <- list(a = w$a, b = - w$b, ab = - w$ab,
+                iname=iname, xname=xname)
 
   return(list(coef           = theta,
               loglik         = w$logL,
               u              = w$grad,
+              mscore         = w$mscore,
+              lpe            = w$lpe,
               info           = info,
               objchange      = objf - w$logL,
               dmax           = m(w$grad),
@@ -465,37 +638,48 @@ if(maxit == 1) {
 }
 
 ## Note: deriv and deriv2 below are no longer used as are hard-coded into ormll
+## Expressions are used because if using a function that calls plogis(),
+## the .C call for plogis will can result in R losing the environment
+## of the C code.  
+## The 5 expression elements are cumprob, inverse, deriv, deriv2, and 
+## deriv as a function only of x
 
 ## Extreme value type I dist = Gumbel maximum = exp(-exp(-x)) = MASS:::pgumbel
 ## Gumbel minimum = 1 - exp(-exp(x))
 probabilityFamilies <-
   list(logistic =
-         list(cumprob=plogis,
-              inverse=qlogis,
-              deriv  =function(x, f) f * (1 - f),
-              deriv2 =function(x, f, deriv) f * (1 - 3*f + 2*f*f) ),
+         expression(function(x) plogis(x),
+                    function(x) qlogis(x),
+                    function(x, f) f*(1-f),
+                    function(x, f, deriv) f*(1-3*f+2*f*f),
+                    function(x) {f <- plogis(x); f*(1-f)}),
        probit =
-         list(cumprob=pnorm,
-              inverse=qnorm,
-              deriv  =function(x, ...)      dnorm(x),
-              deriv2 =function(x, f, deriv) - deriv * x),
+         expression(function(x) pnorm(x),
+                    function(x) qnorm(x),
+                    function(x, f) dnorm(x),
+                    function(x, f, deriv) - deriv * x,
+                    function(x) dnorm(x)),
        loglog =
-         list(cumprob=function(x)      exp(-exp(-x)),
-              inverse=function(x)      -log(-log(x    )),
-              deriv  =function(x, ...) exp(-x - exp(-x)),
-              deriv2 =function(x, ...)
-                ifelse(abs(x) > 200, 0,
-                       exp(-x - exp(-x)) * (-1 + exp(-x)))),
+         expression(function(x) exp(-exp(-x)),
+                    function(x) -log(-log(x)),
+                    function(x, f) exp(-x-exp(-x)),
+                    function(x, f, deriv)
+                      ifelse(abs(x) > 200, 0,
+                             exp(-x - exp(-x)) * (-1 + exp(-x))),
+                    function(x) exp(-x-exp(-x))),
        cloglog =
-         list(cumprob=function(x)      1 - exp(-exp(x)),
-              inverse=function(x)      log(-log(1 - x)),
-              deriv  =function(x, ...) exp( x - exp( x)),
-              deriv2 =function(x, f, deriv)
-                ifelse(abs(x) > 200, 0, deriv * ( 1 - exp( x)))),
+         expression(function(x) 1-exp(-exp(x)),
+                    function(x) log(-log(1-x)),
+                    function(x, f) exp(x-exp(x)),
+                    function(x, f, deriv)
+                      ifelse(abs(x) > 200, 0, deriv * ( 1 - exp( x))) ,
+                    function(x) exp(x-exp(x))),
        cauchit =
-         list(cumprob=pcauchy, inverse=qcauchy,
-              deriv  =function(x, ...) dcauchy(x),
-              deriv2 =function(x, ...) -2 * x * ((1 + x*x)^(-2)) / pi)
+         expression(function(x) pcauchy(x),
+                    function(x) qcauchy(x),
+                    function(x, f) dcauchy(x), 
+                    function(x, f, deriv) -2 * x * ((1 + x*x)^(-2)) / pi,
+                    function(x) dcauchy(x))
   )
 
 ## Check:
@@ -505,3 +689,4 @@ probabilityFamilies <-
 ## plot(x, d(x), type='l')
 ## ad <- c(NA,diff(dlogis(x))/(x[2]-x[1]))
 ## lines(x, ad, col='red')
+

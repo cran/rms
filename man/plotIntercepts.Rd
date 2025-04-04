@@ -4,13 +4,17 @@
 \alias{plotIntercepts}
 \title{Plot Intercepts}
 \usage{
-plotIntercepts(fit)
+plotIntercepts(fit, dots = FALSE, logt = FALSE)
 }
 \arguments{
 \item{fit}{an \code{orm} or \code{lrm} fit object, usually with a numeric dependent variable having many levels}
+
+\item{dots}{set to \code{TRUE} to show solid dots at the intecept values}
+
+\item{logt}{set to \code{TRUE} to use a log scale for the x-axis}
 }
 \value{
-nothing; only plots
+\code{ggplot2} object
 }
 \description{
 Plots the step function corresponding to the intercepts in a \code{orm} or \code{lrm} model.  This can be thought

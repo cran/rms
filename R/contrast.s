@@ -36,8 +36,9 @@ contrast.rms <-
     betas <- coef(fit)
     iparm <- 1 : length(betas)
   }
-  fite  <- fit
-  if(inherits(fit, 'orm') || inherits(fit, 'lrm')) {
+  fite   <- fit
+  ordfit <- inherits(fit, 'orm') || inherits(fit, 'lrm')
+  if(ordfit) {
     nrp <- 1
     ## Note: is 1 for orm because vcov defaults to intercepts='mid' and
     ## we are overriding the default vcov uses for lrm
@@ -238,11 +239,13 @@ contrast.rms <-
       upper <- est + zcrit*se
     }
   } else {
-    # glht uses vcov(fite) which for lrm & orm are sparse Matrix objects
-    fite$non.slopes   <- 1L
-    fite$interceptRef <- 1L
-    if(! length(fite$var))
-      fite$var <- Matrix::as.matrix(infoMxop(fite$info.matrix, i=iparm))
+    if(ordfit) {
+      # glht uses vcov(fite) which for lrm & orm are sparse Matrix objects
+      fite$non.slopes   <- 1L
+      fite$interceptRef <- 1L
+     if(! length(fite$var))
+        fite$var <- Matrix::as.matrix(infoMxop(fite$info.matrix, i=iparm))
+    }
     u <- confint(multcomp::glht(fite, X,
                       df=if(length(idf)) idf else 0),
                  level=conf.int)$confint
@@ -257,7 +260,7 @@ contrast.rms <-
               Lower=lower, Upper=upper,
               Z=Z, Pvalue=P, PP=PP,
               var=v, df.residual=idf,
-              X=X, ycut=ycut, yname=if(length(ycut)) fit$yname,
+              X=X, ycut=ycut, yname=fit$yname,  # was =if(length(ycut)) fit$yname
               cnames=if(type=='average') NULL else cnames,
               nvary=length(vary),
               conf.type=conf.type, conf.int=conf.int,

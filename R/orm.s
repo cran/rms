@@ -2,7 +2,7 @@ orm <- function(formula, data=environment(formula),
         subset, na.action=na.delete,
 				method="orm.fit",
 				family=c("logistic", "probit", "loglog", "cloglog", "cauchit"),
-				model=FALSE, x=FALSE, y=FALSE,
+				model=FALSE, x=FALSE, y=FALSE, lpe=FALSE,
 				linear.predictors=TRUE, se.fit=FALSE,
 				penalty=0, penalty.matrix,
         var.penalty=c('simple','sandwich'),
@@ -22,7 +22,6 @@ orm <- function(formula, data=environment(formula),
     callenv <- parent.frame()   # don't delay these evaluations
     subset  <- if(! missing(subset )) eval(substitute(subset),  data, callenv)
     weights <- if(! missing(weights)) eval(substitute(weights), data, callenv)
-
     X <-
       modelData(data, formula, weights=weights,
                 subset = subset,
@@ -38,8 +37,10 @@ orm <- function(formula, data=environment(formula),
     atr        <- atrx$Design
     mmcolnames <- atr$mmcolnames
 
-    Y <- model.extract(X, 'response')
-    offs <- atrx$offset
+    Y     <- model.extract(X, 'response')
+    yname <- if(inherits(Y, 'Ocens')) attr(Y, 'name') else all.vars(formula)[1]
+
+    offs  <- atrx$offset
     if(!length(offs)) offs <- 0
     weights <- wt <- model.extract(X, 'weights')
     if(length(weights))
@@ -55,7 +56,6 @@ orm <- function(formula, data=environment(formula),
     xpres <- length(X) > 0
 
     p <- length(atr$colnames)
-    n <- length(Y)
 
     penpres <- !(missing(penalty) && missing(penalty.matrix))
     if(penpres && missing(var.penalty))
@@ -83,9 +83,9 @@ orm <- function(formula, data=environment(formula),
       offs <- model.offset(X)
       if(!length(offs)) offs <- 0
       Y <- model.extract(X, 'response')
-      Y <- Y[!is.na(Y)]
-      Terms <- X <- NULL
-      xpres <- FALSE
+      Y <- if(is.matrix(Y)) Y[! is.na(Y),, drop=FALSE] else Y[! is.na(Y)]
+      Terms   <- X <- NULL
+      xpres   <- FALSE
       penpres <- FALSE
       penalty.matrix <- NULL
     }  ##Model: y~. without data= -> no predictors
@@ -105,11 +105,19 @@ orm <- function(formula, data=environment(formula),
     return(f)
   }
 
-  f$call <- NULL
+  f$call     <- NULL
+  f$yname    <- yname
+  uni        <- f$units
+  ylab       <- f$ylabel
+  f$yplabel  <- if(uni == '' && ylab == '') yname
+  else if(ylab == '') labelPlotmath(upFirst(uni))
+  else labelPlotmath(ylab, paste0(uni, 's'))
+
   f$sformula <- sformula
   if(model) f$model <- m
-  if(x) f$x <- X
-  if(y) f$y <- Y
+  if(x)   f$x <- X
+  if(y)   f$y <- Y
+  if(! lpe) f$lpe <- NULL
   nrp  <- f$non.slopes
   info <- f$info.matrix
   if(penpres) {
@@ -150,10 +158,9 @@ orm <- function(formula, data=environment(formula),
       }
   }
   f <- c(f, list(call=call, Design=if(xpres)atr,
-                 scale.pred=if(f$family=='logistic')
-                  c("log odds","Odds Ratio") else
-                  if(f$family=='loglog') c("log hazard", "Hazard Ratio"),
-                 terms=Terms, assign=ass, na.action=nact))
+                 scale.pred=if(f$family=='logistic') c("log odds", "Odds Ratio") else
+                   if(f$family=='loglog') c("log hazard", "Hazard Ratio"),
+                 terms=Terms, assign=ass, na.action=nact) )
   class(f) <- c("orm","rms")
   f
 }
@@ -231,7 +238,37 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
     x$freq
     }
 
+  Ncens <- x$Ncens1
+  if(! length(Ncens)) {ce <- ced <- NULL}
+  else {
+    if(sum(Ncens > 0) == 1) {   # only one type of censoring; be concise
+    cthere   <- which(Ncens > 0)
+    censtype <- c('L', 'R', 'I')[cthere]
+    ce       <- paste0(censtype, '=', Ncens[cthere])
+    ced      <- NULL
+    } else {
+      L     <- if(Ncens[1] > 0) paste0('L=', Ncens[1])
+      R     <- if(Ncens[2] > 0) paste0('R=', Ncens[2])
+      int   <- if(Ncens[3] > 0) paste0('I=', Ncens[3])
+      ce    <- if(sum(Ncens) > 0) sum(Ncens)
+      ced   <- if(sum(Ncens) > 0)
+                 paste0(paste(c(L, R, int), collapse=', '))
+    }
+  }
+
+  if(! length(stats)) {
+    r2m <- R2Measures(NA, NA, 2, 2)
+    statsnam <- c("Obs", "ESS", "Distinct Y", "Median Y", "Max Deriv",
+            "Model L.R.", "d.f.", "P", "Score", "Score P",
+            "rho", "Dxy", "R2", names(r2m), "g", "gr", "pdm")
+    stats <- rep(NA, length(statsnam))
+    names(stats) <- statsnam
+    } 
+
   misc <- reListclean(Obs           = stats['Obs'],
+                      ESS           = round(stats['ESS'], 1),
+                      Censored      = ce,
+                      ' '           = ced,
                       'Distinct Y'    = stats['Distinct Y'],
                       'Cluster on'  = ci$name,
                       Clusters      = ci$n,
@@ -242,6 +279,7 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
                            names(x$freq), sep='')
     misc <- c(misc[1], x$freq, misc[-1])
   }
+
   lr   <- reListclean('LR chi2'    = stats['Model L.R.'],
                    'd.f.'       = round(stats['d.f.'],3),
                    'Pr(> chi2)' = stats['P'],
@@ -258,16 +296,19 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
                       dec       = 3)
   if(any(newr2)) names(disc)[names(disc) == 'R2m'] <- names(stats[newr2])
 
-  discr <-reListclean(rho=stats['rho'], dec=3)
+  discr <-reListclean(rho = stats['rho'],
+                      Dxy = stats['Dxy'],
+                      dec = 3)
 
   headings <- c('',
                 'Model Likelihood\nRatio Test',
                 'Discrimination\n Indexes',
-                'Rank Discrim.\nIndexes')
-  data <- list(misc, lr, disc, discr)
+                if(length(discr)) 'Rank Discrim.\nIndexes')
+  # discr is empty if rho is NA (when there is censoring)
+  data <- if(length(discr)) list(misc, lr, disc, discr) else list(misc, lr, disc)
   k <- k + 1
   z[[k]] <- list(type='stats', list(headings=headings, data=data))
-
+  
   if(coefs) {
     k <- k + 1
     if(!intercepts) {
@@ -281,7 +322,6 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
                         aux=if(length(pm)) penalty.scale,
                         auxname='Penalty Scale'))
   }
-
   prModFit(x, title=title, z, digits=digits,
            coefs=coefs, ...)
 }
@@ -297,7 +337,7 @@ Quantile.orm <- function(object, codes=FALSE, ...)
   if(codes) vals <- 1:length(object$freq)
   else {
     vals <- object$yunique
-    if(!length(vals)) vals <- names(object$freq)
+    if(! length(vals)) vals <- names(object$freq)
     vals <- as.numeric(vals)
     if(any(is.na(vals)))
       stop('values of response levels must be numeric for codes=FALSE')
@@ -308,9 +348,11 @@ Quantile.orm <- function(object, codes=FALSE, ...)
                 interceptRef=integer(0), trans=trans, conf.int=0,
                 method=c('interpolated', 'discrete'))
   {
-    inverse <- trans$inverse
-    cumprob <- trans$cumprob
-    deriv   <- trans$deriv
+    inverse <- eval(trans[2])
+    cumprob <- eval(trans[1])
+    deriv   <- eval(trans[5])
+    ## Uses the first derivative that doesn't need the f argument
+  
     ns <- length(intercepts)
     method <- match.arg(method)
     lp <- if(length(lp)) lp - intercepts[interceptRef] else matxv(X, slopes)
@@ -369,12 +411,10 @@ Quantile.orm <- function(object, codes=FALSE, ...)
     }
     z
   }
-  ## Re-write first derivative so that it doesn't need the f argument
-  if(object$family == "logistic")
-    object$trans$deriv <- function(x) {p <- plogis(x); p * (1. - p)}
-  trans <- object$trans
-  if(! length(trans)) trans <- probabilityFamilies$logistic
-  ir <- object$interceptRef
+  # Pass expressions instead of functions because sometimes R loses the stats:: environment for things such as
+  # the C function called by plogis or qlogis
+  trans <- object$famfunctions
+  ir    <- object$interceptRef
   if(! length(ir)) ir <- 1
   formals(f) <- list(q=numeric(0), lp=numeric(0), X=numeric(0),
                      intercepts=object$coef[1:ns],
@@ -384,9 +424,6 @@ Quantile.orm <- function(object, codes=FALSE, ...)
                      conf.int=0, method=c('interpolated', 'discrete'))
   f
 }
-
-
-
 
 ExProb <- function(object, ...) UseMethod("ExProb")
 
@@ -402,10 +439,10 @@ ExProb.orm <- function(object, codes=FALSE, ...)
   f <- function(lp=numeric(0), X=numeric(0), y=NULL,
                 intercepts=numeric(0), slopes=numeric(0),
                 info=numeric(0), values=numeric(0),
-                interceptRef=integer(0), trans=trans, yname=NULL,
+                interceptRef=integer(0), cumprob=NULL, yname=NULL,
                 conf.int=0)
   {
-    cumprob <- trans$cumprob
+    cumprob <- eval(cumprob)
     lp <- if(length(lp)) lp - intercepts[interceptRef] else matxv(X, slopes)
     prob <- cumprob(sapply(c(1e30, intercepts), '+', lp))
     dim(prob) <- c(length(lp), length(values))
@@ -458,18 +495,18 @@ ExProb.orm <- function(object, codes=FALSE, ...)
     }
     result
   }
-  trans <- object$trans
+
   formals(f) <- list(lp=numeric(0), X=numeric(0), y=NULL,
                      intercepts=object$coef[1:ns],
                      slopes=object$coef[-(1 : ns)],
                      info=object$info.matrix, values=vals,
                      interceptRef=object$interceptRef,
-                     trans=trans, yname=all.vars(object$terms)[1],
+                     cumprob=object$famfunctions[1],
+                     yname=all.vars(object$terms)[1],
                      conf.int=0)
 
   f
 }
-
 
 plot.ExProb <- function(x, ..., data=NULL,
                         xlim=NULL, xlab=x$yname, ylab=expression(Prob(Y>=y)),

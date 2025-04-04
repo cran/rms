@@ -118,8 +118,8 @@ the transformed parameters such as means.}
   }
   \item{np}{
 	the number of equally-spaced points computed for continuous
-	predictors that vary, i.e., when the specified value is \code{.}
-	or \code{NA}
+	predictors that vary, i.e., when the specified value is omitted (with the 
+  variable name appearing without an equals sign) or is \code{NA}
   }
   \item{conf.int}{
 	confidence level (highest posterior density interval probability for
@@ -153,6 +153,7 @@ the transformed parameters such as means.}
 	yields \code{y=0}.  This is done before applying function \code{fun}.
 	This is especially useful for Cox models to make the hazard ratio be
 	1.0 at reference values, and the confidence interval have width zero.
+  To set the reference value, either (a) set the reference value by editing the \code{datadist} object prior to fitting the model, or (b) if the model is already fit, edit the \code{datadist} object and then run the update command.
   }
   \item{kint}{
 	This is only useful in a multiple intercept model such as the ordinal
