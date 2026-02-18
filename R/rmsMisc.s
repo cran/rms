@@ -39,7 +39,7 @@ vcov.psm <- function(object, regcoef.only=TRUE, ...)
 vcov.orm <- function(object, regcoef.only=TRUE, intercepts='mid', ...) {
   np   <- length(object$coefficients)
   ns   <- num.intercepts(object)
-  v    <- object$var
+  v    <- object[['var']]
   info <- object$info.matrix
   override <- object$override_vcov_intercept
   if(length(override)) intercepts <- override
@@ -63,6 +63,11 @@ vcov.orm <- function(object, regcoef.only=TRUE, intercepts='mid', ...) {
     if(intercepts == 'all' && type == 'full') return(v)
     if(intercepts == 'none') return(if(type == 'mid') v[-1, -1, drop=FALSE]
                                     else v[-(1 : ns), -(1 : ns), drop=FALSE])
+    if(is.numeric(intercepts) && type == 'full') {
+      # See https://github.com/harrelfe/rms/issues/167
+      i <- c(intercepts, if(np > ns) (ns + 1) : np)
+      return(v[i, i, drop=FALSE])
+    }
     stop('intercepts=', intercepts, ' requested for an orm fit wth $var.\n',
          'orm only stored intercept components of the variance-covariance matrix ',
          'for the middle intercept.')
@@ -479,7 +484,10 @@ lrtest <- function(fit1, fit2)
     # glm back-calculates logLik from AIC
   }
 
-  np <- function(f) f$rank - (any(names(coef(f)) == '(Intercept)'))
+  np <- function(f) {
+    s <- f$stats
+    if(length(s)) s['d.f.'] else f$rank - (any(names(coef(f)) == '(Intercept)'))
+  }
     
   dof <- abs(np(fit2) - np(fit1))
   if(dof == 0) stop('models are not nested')
@@ -887,35 +895,35 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
       } else {
         R <- c(R,  skipt(preskip))
       }
-      R <- c(R,
-             if(type == 'html.naprint.delete')
-               do.call(type, obj)
-             else
-               if(type == 'latex.naprint.delete')
-                 capture.output(do.call(type,
-                                        c(obj, list(file=''))))
-             else
-               if(type == 'print')
-                 c(bverb(),
-                   capture.output(do.call(type,
-                                          c(obj, list(quote=FALSE)))), everb())
-             else
-               do.call(type, obj),
+    
+      w <- switch(type, 
+                  html.naprint.delete = do.call(type, obj),
+                  latex.naprint.delete = 
+                    capture.output(do.call(type,
+                                           c(obj, list(file='')))),
+                   print =  
+                     c(bverb(),
+                       capture.output(do.call(type, obj)),
+                       everb()),
+                   do.call(type, obj)
+                   )
+                   
+      R <- c(R, w,
              ## unlike do.call, eval(call(...)) dispatches on class of ...
-             if(tex) '\\end{center}' else ''
-      )
+             if(tex) '\\end{center}' else '' )
     }
   }
   if(length(footer))
     R <- c(R, paste(specs$smallskip, transl(footer)))
-
+    
   if(debug)
     cat(R, sep='\n', append=TRUE, file='/tmp/rmsdebug.txt')
-
+    
   switch(lang,
          html  = rendHTML(R),
          latex = cat(R, sep='\n'),
-         plain = cat(R, sep='\n'))
+         plain = cat(R, sep='\n')
+         )
 }
 
 latex.naprint.delete <- function(object, file='', append=TRUE, ...) {
