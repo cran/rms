@@ -15,7 +15,7 @@ Ocens(a, b = a)
 a numeric matrix of class \code{Ocens}
 }
 \description{
-Combines two variables \verb{a, b} into a 2-column matrix, preserving \code{label} and \code{units} attributes and converting character or factor variables into integers and added a \code{levels} attribute.  This is used to combine censoring points with regular points.  If both variables are already factors, their levels are distinctly combined starting with the levels for \code{a}.  Character variables are converted to factors.
+Combines two variables \verb{a, b} into a 2-column matrix, preserving \code{label} and \code{units} attributes and converting character or factor variables into integers and adding a \code{levels} attribute.  This is used to combine censoring points with regular points.  If both variables are already factors, their levels are distinctly combined starting with the levels for \code{a}.  Character variables are converted to factors.
 }
 \details{
 Left censored values will have \code{-Inf} for \code{a} and right-censored values will have \code{Inf} for \code{b}.  Interval-censored observations will have \code{b} > \code{a} and both finite.  For factor or character variables it only makes sense to have interval censoring.

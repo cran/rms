@@ -25,10 +25,29 @@ s <- Survival(f)
 s()
 
 nignore <- 0
-set.seed(21)
 pr  <- function(...) {}
-chk <- function(a, b, msg) if(! isTRUE(all.equal(a, b))) stop(msg)
+chk <- function(a, b, msg) if(! isTRUE(all.equal(a, b))) stop(msg, ' i=', i)
 
+# Example from iteration 3 where use of times= gave a different result
+# from survfit:
+
+y <- c(4L, 8L, 6L, 2L, 2L, 4L, 8L, 1L, 2L, 1L, 10L, 9L)
+e <- c(1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1)
+Y    <- Ocens(y, ifelse(e == 1, y, Inf))
+S    <- Surv(y, e)
+f    <- orm.fit(y=Y, family='loglog')
+s    <- Survival(f)
+g    <- survfit(S ~ 1, conf.type='log-log')
+u    <- summary(g)
+ts   <- seq(0, max(y) + 2, by=0.5)
+s1   <- s(times=ts, conf.int=0.95)
+s1   <- s1$surv
+s2   <- summary(g, times=ts, extend=TRUE)$surv
+cbind(ts, s1, s2)
+
+
+set.seed(21)
+bad <- 0
 for(i in 1: 2500) {
   pr('i=', i, '')
   n    <- sample(10:40, 1)
@@ -53,10 +72,11 @@ for(i in 1: 2500) {
   low1 <- s1$lower
   up1  <- s1$upper
   s1   <- s1$surv
-  g   <- survfit(S ~ 1, conf.type='log-log')
-  u   <- summary(g)
-  t2  <- u$time
-  s2  <- u$surv
+  if(i == bad) {prn(S); dput(y); dput(e); prn(cbind(t1, s1, low1, up1))}
+  g    <- survfit(S ~ 1, conf.type='log-log')
+  u    <- summary(g)
+  t2   <- u$time
+  s2   <- u$surv
   low2 <- u$lower
   up2  <- u$upper
   stopifnot(all(is.na(low2) == is.na(up2)))
@@ -75,7 +95,7 @@ for(i in 1: 2500) {
   low1 <- s1$lower
   up1  <- s1$upper
   s1   <- s1$surv
-  s2 <- summary(g, times=ts, extend=TRUE)
+  s2   <- summary(g, times=ts, extend=TRUE)
 
   low2 <- s2$lower
   up2  <- s2$upper
@@ -91,6 +111,7 @@ for(i in 1: 2500) {
     low2[ts > maxc] <- NA
     up2 [ts > maxc] <- NA
   }
+  if(i == bad) prn(cbind(ts, s1, s2))
   chk(s1,     s2, 'unequal survival probs at requested times')
   chk(low1, low2, 'unequal lower CLs at requested times')
   chk(up1,  up2,  'unequal upper CLs at requested times')
@@ -98,4 +119,59 @@ for(i in 1: 2500) {
 
 cat(nignore, 'iterations ignored\n')
 
+# Modified from Eric Kawaguchi  ekawaguc@usc.edu
+
+y1 <- c(0.20114, 0.20111, 0.20000, 0.20112,
+        0.20113, 0.20115, 0.21000)
+
+for (u in y1) {
+  cat('u=', u, '\n')
+  y <- c(u, 0.28449, 0.41395, 0.44128, 1.41887)
+  max(abs(y - round(y * 1e7)/1e7))
+  Y <- Ocens(y)
+  Y[1] - u
+  v <- round(u * 1e7) / 1e7
+  u - v
+  Y <- Ocens2ord(Y)
+  a <- attributes(Y)
+  a$levels[1] - u
+  a$ranges$y[1] - u
+  a$ranges$u[1] - u
+  f <- orm.fit(y = y)
+  f$ranges$y[1] - u
+  val <- f$yunique
+  prn(plogis(coef(f)))
+  S <- Survival(f)
+  w <- formals(S)
+  identical(f$ranges, w$ranges)
+  z <- w$values
+  z[1] - u
+
+  r <- w$ranges
+  r$y[1] - u
+  r$u[1] - u
+  prn(S())
+  prn(S(times=c(0, y)))
+  prn(with(survfit(Surv(y) ~ 1), data.frame(time, surv)))
+  }
+
+# Modified from Zhihong Yu 2026-07-14
+w <- readRDS('yu.rds')
+target_t <- c(1.05, 2.88, 6.93, 13.86, 23.03)
+for(i in 1:4) {
+  cat('\n\nDataset', i, '\n\n')
+  dat <- w[[i]]
+  km_mdl <- survfit(Surv(time, status) ~ 1, data = dat, conf.type = "log-log")
+  sp_survfit <- summary(km_mdl, times = target_t, data.frame = TRUE, extend=TRUE)
+  cat('KM from survfit\n\n')
+  print(sp_survfit[.q(time, surv, lower, upper)])
+  orm_mdl <- orm(Ocens(time, R) ~ 1, family = "loglog", data = dat)
+  s_fun <- Survival(orm_mdl)
+  sp_orm <- s_fun(times = target_t, conf.int = 0.95)
+  cat('\norm Survival\n\n')
+  print(sp_orm)
+  with(dat,
+    if(status[time == max(time)] == 0)
+      cat('Last observation was censored at', max(time), '; estimates beyond that should be NA\n') )
+}
 

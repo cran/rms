@@ -27,8 +27,11 @@ quickRefit <-
            strata         = object[['strata'        ]],
            penalty.matrix = object[['penalty.matrix']],
            weights        = object[[if(k == 'Glm')'oweights' else 'weights']],
+           cluster        = if(k == 'orm') object$clusterInfo$cluster,
+           mre            = if(k == 'orm') object$clusterInfo$mix_re,
            compstats      = FALSE,
            gradtol        = 0.001,
+           trace          = 0,
            ytarget        = NULL,
            what           = c('chisq', 'deviance', 'fit', 'fitter'),
            compvar        = FALSE,
@@ -66,11 +69,15 @@ g <-
                    penalty.matrix=penalty.matrix, weights=weights[subset], opt_method=opt_method, ...),
          orm = function()
            orm.fit(as.matrix(X)[subset,,drop=FALSE], if(is.matrix(y)) y[subset,,drop=FALSE] else y[subset],
-                        family=family, compstats=compstats, gradtol=gradtol, offset=offset[subset], initial=initial,
+                        cluster=cluster[subset], mre=mre[subset],
+                        family=family, compstats=compstats, gradtol=gradtol, trace=trace, 
+                        offset=offset[subset], initial=initial,
                         penalty.matrix=penalty.matrix, weights=weights[subset], opt_method=opt_method), #, ...),
          ormt= function() {
            f <- orm.fit(as.matrix(X)[subset,,drop=FALSE], if(is.matrix(y)) y[subset,,drop=FALSE] else y[subset],
-                        family=family, compstats=compstats, gradtol=gradtol, offset=offset[subset], initial=initial,
+                        cluster=cluster[subset], mre=mre[subset],
+                        family=family, compstats=compstats, gradtol=gradtol, 
+                        trace=trace, offset=offset[subset], initial=initial,
                         penalty.matrix=penalty.matrix, weights=weights[subset], opt_method=opt_method) # $, ...)
            ns  <- f$non.slopes
            cof <- f$coefficients
@@ -128,7 +135,10 @@ formals(g) <- c(fm, alist(subset=TRUE, ytarget=, opt_method=, ...=))
 if(k %in% c('lrm', 'orm', 'ormt')) {
                            formals(g)$compstats <- compstats
                            formals(g)$opt_method <- 'NR'
-                           if(k != 'lrm') formals(g)$gradtol <- gradtol
+                           if(k != 'lrm') {
+                             formals(g)$gradtol <- gradtol
+                             formals(g)$trace   <- trace
+                            }
 }
 if(k %in% c('orm', 'ormt')) {
                            fm <- list(initial=initial)

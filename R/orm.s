@@ -17,7 +17,7 @@ orm <- function(formula, data=environment(formula),
   tform <- terms(formula, data=data)
   if(! missing(data) || (
 						length(atl <- attr(tform,"term.labels")) &&
-						any(atl!=".")))	{ ##X's present
+						any(atl!=".")))	{ # X's present
 
     callenv <- parent.frame()   # don't delay these evaluations
     subset  <- if(! missing(subset )) eval(substitute(subset),  data, callenv)
@@ -26,8 +26,15 @@ orm <- function(formula, data=environment(formula),
       modelData(data, formula, weights=weights,
                 subset = subset,
                 na.action=na.action, callenv=callenv)
+    # Design handles cluster(), mix_re()
+    X           <- Design(X, formula=formula, specials=c("cluster", "mix_re"))
+    cluster     <- attr(X, 'cluster')
+    clustername <- attr(X, 'clustername')
+    mix_re      <- attr(X, 'mix_re')
+    mix_rename  <- attr(X, 'mix_rename')
+    if(length(mix_re) && (length(mix_re) != length(cluster)))
+      stop('mix_re and cluster must have the same length')
 
-    X          <- Design(X, formula=formula)
     atrx       <- attributes(X)
     sformula   <- atrx$sformula
     nact       <- atrx$na.action
@@ -76,11 +83,13 @@ orm <- function(formula, data=environment(formula),
           penalty.matrix <- a %*% penalty.matrix %*% a
         }
     }
-  }
+  }  # end X's present
   else
     {
-      X <- eval.parent(m)
+      stop('orm requires predictors.  Use orm.fit for the no-predictor case.')
+      X <- eval.parent(m)   # but m is not defined
       offs <- model.offset(X)
+
       if(!length(offs)) offs <- 0
       Y <- model.extract(X, 'response')
       Y <- if(is.matrix(Y)) Y[! is.na(Y),, drop=FALSE] else Y[! is.na(Y)]
@@ -94,7 +103,7 @@ orm <- function(formula, data=environment(formula),
 
   if(existsFunction(method)) {
       fitter <- getFunction(method)
-      f <- fitter(X, Y, family=family, offset=offs,
+      f <- fitter(X, Y, family=family, offset=offs, cluster=cluster, mre=mix_re,
                   penalty.matrix=penalty.matrix,
                   scale=scale, maxit=maxit, weights=weights, normwt=normwt, ...)
     }
@@ -124,10 +133,12 @@ orm <- function(formula, data=environment(formula),
     f$penalty <- penalty
     ## Get improved covariance matrix
     v <- infoMxop(info, invert=TRUE)
- 
+
     if(var.penalty == 'sandwich') f$var.from.info.matrix <- v
     f.nopenalty <-
-        fitter(X, Y, family=family, offset=offs, initial=f$coef, maxit=1,
+        fitter(X, Y, family=family, offset=offs, 
+               cluster=cluster, mre=mix_re,
+               initial=f$coef, maxit=1,
                weights=weights, normwt=normwt)
     ##  info.matrix.unpenalized <- solvet(f.nopenalty$var, tol=tol)
     info.matrix.unpenalized <- infoMxop(f.nopenalty$info.matrix)
@@ -157,7 +168,11 @@ orm <- function(formula, data=environment(formula),
         f$se.fit <- se
       }
   }
-  f <- c(f, list(call=call, Design=if(xpres)atr,
+  clusterInfo <- if(length(cluster))
+                   list(cluster = if(x) cluster, n=f$ncluster,
+                        name=clustername, mix_re = if(x) mix_re, mix_rename=mix_rename)
+  f$ncluster <- NULL
+  f <- c(f, list(call=call, Design=if(xpres)atr, clusterInfo=clusterInfo,
                  scale.pred=if(f$family=='logistic') c("log odds", "Odds Ratio") else
                    if(f$family=='loglog') c("log hazard", "Hazard Ratio"),
                  terms=Terms, assign=ass, na.action=nact) )
@@ -169,6 +184,11 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
                       intercepts=x$non.slopes < 10,
                       title, ...) {
 
+  if(length(x$fail) && x$fail) {
+    cat('\nFit failed\n\n')
+    return(invisible())
+  }
+  
   if(missing(title)) {
     title <- switch(x$family,
                     logistic = 'Logistic (Proportional Odds)',
@@ -180,24 +200,17 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
   }
 
   z <- list()
-  k <- 0
 
   lf <- length(x$freq)
-  if(lf > 3 && lf <= 20) {
-    k <- k + 1
-    z[[k]] <- list(type='print', list(x$freq),
-                   title='Frequencies of Responses')
-  }
-  if(length(x$nmiss)) {  ## for backward compatibility
-    k <- k + 1
-    z[[k]] <- list(type='print', list(x$nmiss),
-                   title='Frequencies of Missing Values Due to Each Variable')
-  }
-  else if(length(x$na.action)) {
-    k <- k + 1
-    z[[k]] <- list(type=paste('naprint', class(x$na.action), sep='.'),
-                   list(x$na.action))
-  }
+  if(lf > 3 && lf <= 20)
+    z <- c(z, list(prModItem('print', list(x$freq),
+                             title='Frequencies of Responses')))
+  if(length(x$nmiss))   ## for backward compatibility
+    z <- c(z, list(prModItem('print', list(x$nmiss),
+                             title='Frequencies of Missing Values Due to Each Variable')))
+  else if(length(x$na.action))
+    z <- c(z, list(prModItem(paste('naprint', class(x$na.action), sep='.'),
+                             list(x$na.action))))
 
   ns <- x$non.slopes
   ## coefficient intercepts kept: (fit.mult.impute)
@@ -216,9 +229,8 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
     penalty.scale <- c(rep(0, ns), psc)
     cof <- matrix(x$coef[-(1 : ns)], ncol=1)
     ## This logic does not handle fit.mult.impute objects
-    k <- k + 1
-    z[[k]] <- list(type='print', list(as.data.frame(x$penalty, row.names='')),
-                   title='Penalty factors')
+    z <- c(z, list(prModItem('print', list(as.data.frame(x$penalty, row.names='')),
+                             title='Penalty factors')))
     penaltyFactor <- as.vector(t(cof) %*% pm %*% cof)
   }
   vv <- Matrix::diag(vcov(x, intercepts=if(intercepts) 'all' else 'none'))
@@ -233,10 +245,40 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
   stats <- x$stats
 
   maxd <- stats['Max Deriv']
-  ci <- x$clusterInfo
-  frq <- if(length(x$freq) < 4) {
-    x$freq
+  ci   <- x$clusterInfo
+  xnm  <- x$info.matrix$xname
+  # clusterInfo also defined by robcov with after-fit clustering
+  sigmathere <- length(ci) && length(xnm) && any(xnm == 'log(sigma)')
+  sigma2there <- sigmathere && any(xnm == 'sigma2')
+
+  sigmafmt <- function(sigma, se, log=TRUE) {
+    if(is.na(se)) return(formatNP(signif(sigma, 4), lang=prType()))
+    z <- qnorm(0.975)
+    if(log) {
+      mmoe  <- exp(z * se)
+      sig <- c(sigma, sigma / mmoe, sigma * mmoe)
+    } else {
+      moe <- z * se
+      sig <- c(sigma, sigma - moe, sigma + moe)
     }
+    r <- if(sigma > 0.001) round(sig, 4) else formatNP(signif(sig, 4), lang=prType())
+    paste0(r[1], " [", r[2], ", ", r[3], "]")
+    }
+
+  re_cov <- if(sigmathere) infoMxop(x$info.matrix, i='sigma_parameters')
+  sigmasum <- if(sigmathere) {
+    sigma  <- if(sigma2there) x$sigma1 else x$sigma
+    se     <- if(sigma2there) sqrt(re_cov[1,1]) else sqrt(re_cov)
+    sigmafmt(sigma, se)   # retrieves x$sigma1 if sigma not there
+    }
+  sigma1sum <- if(sigma2there) sigmasum
+  if(sigma2there) sigmasum <- NULL
+  sigma2sum <- if(sigma2there) {
+    se     <- sqrt(re_cov[2,2])
+    sigmafmt(x$sigma2, se, log=FALSE)
+    }
+
+  frq  <- if(length(x$freq) < 4) x$freq
 
   Ncens <- x$Ncens1
   if(! length(Ncens)) {ce <- ced <- NULL}
@@ -263,7 +305,7 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
             "rho", "Dxy", "R2", names(r2m), "g", "gr", "pdm")
     stats <- rep(NA, length(statsnam))
     names(stats) <- statsnam
-    } 
+    }
 
   misc <- reListclean(Obs           = stats['Obs'],
                       ESS           = round(stats['ESS'], 1),
@@ -272,6 +314,9 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
                       'Distinct Y'    = stats['Distinct Y'],
                       'Cluster on'  = ci$name,
                       Clusters      = ci$n,
+                      'sigma gamma' = sigmasum,
+                      sigma1        = sigma1sum,
+                      sigma2        = sigma2sum,
                       'Median Y'    = stats['Median Y'],
                       'max |deriv|' = maxd)
   if(length(x$freq) < 4) {
@@ -282,9 +327,9 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
 
   lr   <- reListclean('LR chi2'    = stats['Model L.R.'],
                    'd.f.'       = round(stats['d.f.'],3),
-                   'Pr(> chi2)' = stats['P'],
+                   'P(> chi2)' = stats['P'],
                    'Score chi2' = stats['Score'],
-                   'Pr(> chi2)' = stats['Score P'],
+                   'P(> chi2)' = stats['Score P'],
                    Penalty      = penaltyFactor,
                    dec          = c(2,NA,-4,2,-4,2))
   newr2 <- grepl('R2\\(', names(stats))
@@ -292,7 +337,7 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
                       namesFrom = if(any(newr2)) stats[newr2][setdiff(r2, 0)],
                       g         = if(pg) stats['g'],
                       gr        = if(pg) stats['gr'],
-                      '|Pr(Y>=median)-0.5|' = stats['pdm'],
+                      '|P(Y>=median)-0.5|' = stats['pdm'],
                       dec       = 3)
   if(any(newr2)) names(disc)[names(disc) == 'R2m'] <- names(stats[newr2])
 
@@ -306,21 +351,19 @@ print.orm <- function(x, digits=4, r2=c(0,2,4), coefs=TRUE, pg=FALSE,
                 if(length(discr)) 'Rank Discrim.\nIndexes')
   # discr is empty if rho is NA (when there is censoring)
   data <- if(length(discr)) list(misc, lr, disc, discr) else list(misc, lr, disc)
-  k <- k + 1
-  z[[k]] <- list(type='stats', list(headings=headings, data=data))
-  
+  z <- c(z, list(prModItem('stats', list(headings=headings, data=data))))
+
   if(coefs) {
-    k <- k + 1
     if(!intercepts) {
       j   <- - ints.to.delete
       cof <- cof[j]
       vv  <- vv[j]
       if(length(pm)) penalty.scale <- penalty.scale[j]
     }
-    z[[k]] <- list(type='coefmatrix',
-                   list(coef=cof, se=sqrt(vv),
-                        aux=if(length(pm)) penalty.scale,
-                        auxname='Penalty Scale'))
+    z <- c(z, list(prModItem('coefmatrix',
+                             list(coef=cof, se=sqrt(vv),
+                                  aux=if(length(pm)) penalty.scale,
+                                  auxname='Penalty Scale'))))
   }
   prModFit(x, title=title, z, digits=digits,
            coefs=coefs, ...)
@@ -352,7 +395,7 @@ Quantile.orm <- function(object, codes=FALSE, ...)
     cumprob <- eval(trans[1])
     deriv   <- eval(trans[5])
     ## Uses the first derivative that doesn't need the f argument
-  
+
     ns <- length(intercepts)
     method <- match.arg(method)
     lp <- if(length(lp)) lp - intercepts[interceptRef] else matxv(X, slopes)
@@ -563,3 +606,25 @@ plot.ExProb <- function(x, ..., data=NULL,
                   col=1:i, xlim=xlim, grid=FALSE)
     invisible()
   }
+
+## -----------------------------------------------------------------------
+## print.orm was rewritten to use prModItem() (rmsMisc.s) instead of
+## hand-built z[[k]] <- list(type=..., ...) items with a manually
+## tracked k <- k + 1 counter -- part of a broader, explicitly requested
+## refactor across every print.* method that calls prModFit(). No bugs
+## were found in print.orm itself during this pass. Every original
+## comment within print.orm (the fit.mult.impute notes, the censoring-
+## type comment, the discr/rho comment) is preserved unchanged in place.
+##
+## Deliberately NOT changed here, matching the same item already flagged
+## in print.lrm: `names(x$freq) <- paste(if(prType() == 'latex') '~~'
+## else ' ', ...)` -- a two-way latex/else spacing check missing a
+## dedicated typst case. Cosmetic, not broken output, so not treated as
+## one of the "errors" this pass was scoped to fix -- flagged here for a
+## possible separate, explicit decision alongside print.lrm's identical
+## pattern.
+##
+## Mean.orm, Quantile.orm, ExProb/ExProb.orm, and plot.ExProb, all
+## later in this file, are unrelated and were not touched -- none of
+## them are print.* methods calling prModFit().
+## -----------------------------------------------------------------------

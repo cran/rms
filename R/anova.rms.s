@@ -593,6 +593,138 @@ print.anova.rms <- function(x, which=c('none','subscripts',
   invisible()
 }
 
+## rms_tiny_table: renders d (a data.frame whose rownames are the
+## desired row labels) as a table for the current output language, with
+## an optional bold centered caption above it. Used by anova.rms,
+## summary.rms, and validate.ols. Row labels become an explicit
+## left-justified first column; data columns right-justified; header
+## centered; rows striped.
+##
+## Structured as one format-agnostic core builder plus a separate,
+## named finalize/caption function per language, so each format's
+## handling is self-contained and can be extended independently. See
+## end of file for the detailed reasoning behind each format's specific
+## choices.
+## show_rownames=FALSE: omits the row-label column entirely, for tables
+## with no meaningful row names (validate.ols's marker/frequency
+## tables). linebreak="\n" (unconditional): multi-line column headers,
+## harmless for headers without embedded newlines. align_data/
+## bold_header/header_rule/vertical_borders/width: new, all defaulting
+## to prior behavior exactly (right-aligned data, plain non-bold header,
+## no rule, no borders, no explicit width) -- added to absorb
+## prStats/stats_tiny_table's styling needs, previously a separate,
+## partially-duplicated implementation. See note [6] at end of file.
+rms_tiny_table_core <- function(d, lang, fontsize = NULL,
+                                show_rownames = TRUE, align_data = 'r',
+                                bold_header = FALSE, header_rule = FALSE,
+                                vertical_borders = FALSE, width = NULL) {
+  dd <- if(show_rownames) {
+    rowlab <- rownames(d)
+    tmp <- data.frame(Var = rowlab, unclass(d), check.names = FALSE)
+    colnames(tmp) <- c('', colnames(d))
+    tmp
+  } else if(is.data.frame(d)) d
+    else as.data.frame(unclass(d), check.names = FALSE)
+  ## is.data.frame(d) check added -- see end-of-file note on the
+  ## stats_tiny_table regression this fixed: the unclass()/as.data.frame()
+  ## round-trip was new (the original stats_tiny_table called tt()
+  ## directly on its data.frame, no conversion step), and produced
+  ## corrupted output specifically for stats_tiny_table's multi-line,
+  ## marked-up column headers -- confirmed from a real compile error.
+  ## Every current caller already passes a proper data.frame here, so
+  ## skipping the round-trip when one is already given sidesteps the
+  ## issue without depending on fully diagnosing the exact interaction.
+  nc <- ncol(dd)
+  nr <- nrow(dd)
+  jdata <- if(show_rownames) 2:nc else 1:nc
+
+  x <- if(length(width)) tinytable::tt(dd, output = lang, width = width)
+       else tinytable::tt(dd, output = lang)
+  x <- tinytable::format_tt(x, j = 1:nc, escape = FALSE)
+  x <- tinytable::format_tt(x, i = 0,    escape = FALSE, linebreak = "\n")
+  if(show_rownames) x <- tinytable::style_tt(x, j = 1, align = 'l')
+  ## align_data as a vector: applied one column at a time rather than
+  ## passing the vector directly to a single style_tt(j=jdata, align=)
+  ## call, since element-wise recycling of align across j hasn't been
+  ## confirmed for tinytable's style_tt() -- looping is the safe,
+  ## already-proven pattern used everywhere else in this file (e.g. the
+  ## j=1/jdata split just above). A scalar align_data (the prior,
+  ## default behavior) is unaffected -- single style_tt() call, same as
+  ## before.
+  if(length(align_data) > 1)
+    for(jj in seq_along(jdata))
+      x <- tinytable::style_tt(x, j = jdata[jj], align = align_data[jj])
+  else
+    x <- tinytable::style_tt(x, j = jdata, align = align_data)
+  x <- tinytable::style_tt(x, i = 0,     align = 'c', bold = bold_header)
+  if(header_rule) x <- tinytable::style_tt(x, i = 0, j = 1:nc, line = "b")
+  if(vertical_borders) {
+    x <- tinytable::style_tt(x, i = 0:nr, j = 1:nc, line = "l")
+    x <- tinytable::style_tt(x, i = 0:nr, j = nc,   line = "r")
+  }
+  x <- tinytable::theme_striped(x)
+  if(length(fontsize) && fontsize != 1)
+    x <- tinytable::style_tt(x, fontsize = fontsize)
+  x
+}
+
+## inner=: optional raw tabularray inner options (e.g. colsep/rowsep
+## tuning), new, defaulting to NULL (prior behavior: no inner= passed).
+rms_tiny_table_finalize_latex <- function(x, inner = NULL) {
+  x <- if(length(inner))
+         tinytable::theme_latex(x, environment_table = FALSE, inner = inner)
+       else
+         tinytable::theme_latex(x, environment_table = FALSE)
+  result <- tinytable::save_tt(x, 'latex')
+  paste0('\\begin{center}\n', result, '\n\\end{center}')
+}
+
+rms_tiny_table_finalize_html <- function(x) tinytable::save_tt(x, 'html')
+
+rms_tiny_table_finalize_typst <- function(x) {
+  result <- tinytable::save_tt(x, 'typst')
+  typstFence <- function(s) paste0("````{=typst}\n", s, "\n````\n")
+  typstFence(paste0('#block(width: 100%)[#align(center)[\n', result, '\n]]'))
+}
+
+rms_tiny_table_caption_latex <- function(caption)
+  paste0('\\begin{center}\\textbf{', caption, '}\\end{center}\n')
+
+rms_tiny_table_caption_html <- function(caption)
+  paste0('<p style="text-align:center"><strong>', caption, '</strong></p>\n')
+
+rms_tiny_table_caption_typst <- function(caption) {
+  typstFence <- function(s) paste0("````{=typst}\n", s, "\n````\n")
+  typstFence(paste0('#block(width: 100%)[#align(center)[#strong[',
+                    caption, ']]]'))
+}
+
+rms_tiny_table <- function(d, lang, caption = NULL, fontsize = NULL,
+                           show_rownames = TRUE, align_data = 'r',
+                           bold_header = FALSE, header_rule = FALSE,
+                           vertical_borders = FALSE, width = NULL,
+                           latex_inner = NULL) {
+  x <- rms_tiny_table_core(d, lang, fontsize = fontsize,
+                           show_rownames = show_rownames,
+                           align_data = align_data,
+                           bold_header = bold_header,
+                           header_rule = header_rule,
+                           vertical_borders = vertical_borders,
+                           width = width)
+  result <- switch(lang,
+                   latex = rms_tiny_table_finalize_latex(x, inner = latex_inner),
+                   html  = rms_tiny_table_finalize_html(x),
+                   typst = rms_tiny_table_finalize_typst(x))
+  if(length(caption)) {
+    capMarkup <- switch(lang,
+                        latex = rms_tiny_table_caption_latex(caption),
+                        html  = rms_tiny_table_caption_html(caption),
+                        typst = rms_tiny_table_caption_typst(caption))
+    result <- c(capMarkup, result)
+  }
+  result
+}
+
 latex.anova.rms <-
   function(object,
            title=paste('anova', attr(object, 'obj.name'), sep='.'),
@@ -611,7 +743,9 @@ latex.anova.rms <-
     rowl <- rownames(object)
     if(any(sn=='MS')) rowl[rowl=='TOTAL'] <- 'REGRESSION'
 
-    if(! html) rowl <- latexTranslate(rowl)
+    ## extended to typst -- see note [1] at end of file
+    rowl <- switch(lang, latex = latexTranslate(rowl),
+                   typst = typstTranslate(rowl), rowl)
 
     specs <- markupSpecs[[lang]]
     bold  <- specs$bold
@@ -619,7 +753,9 @@ latex.anova.rms <-
 
     ## Translate interaction symbol (*) to times symbol
     ## rowl <- gsub('\\*', specs$times, rowl)   # changed * to $times$
-    rowl <- gsub('*', specs$times, rowl, fixed=TRUE)
+    ## extended to typst -- see note [2] at end of file
+    pat <- if(lang == 'typst') '\\*' else '*'
+    rowl <- gsub(pat, specs$times, rowl, fixed=TRUE)
 
     ## Put TOTAL rows in boldface
     rowl <- ifelse(substring(rowl, 1, 5) %in% c("REGRE", "ERROR", "TOTAL"),
@@ -639,12 +775,21 @@ latex.anova.rms <-
                 REV=dec.REV, Lower=dec.REV, Upper=dec.REV)
 
     dig <- digits[sn]
-    sn[sn=='Chi-Square'] <- specs$chisq(add='')
-    names(dstats) <- ifelse(sn %nin% c('d.f.','MS','Partial SS'),
-                            math(sn), sn)
+    ## column names double-processed for the chi-square entry -- see
+    ## note [4] at end of file. specs$chisq()'s own $-wrapping is
+    ## format-inconsistent (see note [5]), checked directly below rather
+    ## than assumed.
+    nms <- ifelse(sn %nin% c('d.f.','MS','Partial SS','Chi-Square'),
+                  math(sn), sn)
+    chi2lab <- specs$chisq(add='')
+    nms[sn == 'Chi-Square'] <-
+      if(substring(chi2lab, 1, 1) == '$') chi2lab else math(chi2lab)
+    names(dstats) <- nms
 
     resp <- as.character(attr(object, 'formula')[2])
-    if(! html) resp <- latexTranslate(resp)
+    ## extended to typst -- see note [1] at end of file
+    resp <- switch(lang, latex = latexTranslate(resp),
+                    typst = typstTranslate(resp), resp)
 
     test <- attr(object, 'test')
     if(! length(test))  test <- 'Chisq'   # for legacy fit objects
@@ -680,24 +825,10 @@ latex.anova.rms <-
       sn <- c(sn, 'Tested')
     }
 
-    if(html) {
-      al <- rep('r', length(sn))
-      fshead <- rep(paste0('font-size:', fontsize, 'em;'), ncol(dstats))
-      fscell <- rep('padding-left:2ex;',                   ncol(dstats))
-      w <- htmlTable::htmlTable(dstats, caption=caption,
-                                css.table=fshead,
-                                css.cell =fscell,
-                                align=al, align.header=al,
-                                rowlabel='', escape.html=FALSE)
-      rendHTML(w)
-    }
-    else {
-        latex(dstats, title=title,
-              caption    = if(table.env) caption else NULL,
-              insert.top = if(length(caption) && ! table.env)
-                             paste0('\\Needspace{2in}\n', caption),
-              rowlabel="", col.just=rep('r',length(sn)), table.env=table.env, ...)
-      }
+    ## table-making via tinytable, modular across latex/html/typst --
+    ## see rms_tiny_table() above; see note [3] at end of file
+    w <- rms_tiny_table(dstats, lang, caption = caption, fontsize = fontsize)
+    if(lang == 'html') rendHTML(w) else rendHTML(w, html = FALSE)
   }
 
 
@@ -911,3 +1042,177 @@ plot.anova.rms <-
     }
     if(isbase) invisible(w) else p
   }
+
+## -----------------------------------------------------------------------
+## Detailed notes on extending latex.anova.rms() to typst, referenced by
+## the short [N] tags inline above. Most of this is simply building out
+## Typst coverage for the first time -- part of this project's goal from
+## the start, not corrections to anything broken.
+##
+## [1] rowl/resp translation: previously `if(! html) rowl <-
+##     latexTranslate(rowl)` applied LaTeX-specific escaping to any
+##     non-html language, since typst wasn't part of the original
+##     design. Now lang-aware: latexTranslate() for latex,
+##     typstTranslate() for typst, untouched for html/plain. Without
+##     this, LaTeX escape sequences (e.g. "\%", "\_") would appear
+##     literally in Typst output rather than being escaped correctly for
+##     Typst's own syntax. Same extension applied to resp (the response
+##     variable name used in the caption).
+##
+## [2] Interaction symbol (*) substitution: extending this to typst
+##     needs the search pattern to match what typstTranslate() has
+##     already produced by that point, not a bare '*'. typstTranslate()
+##     escapes bare * to \* unconditionally (needed in general, since *
+##     is Typst's bold/emphasis shorthand) -- so with a bare '*' pattern,
+##     fixed=TRUE would match the * inside \*, leaving the escaping
+##     backslash orphaned and producing a broken token like "\$times$".
+##     Same construct already handled this way in prModFit's coefficient
+##     table row-name handling, kept consistent here. latex/html's
+##     translators never touch *, so they still use the bare pattern.
+##
+## [3] Table-making, rms_tiny_table(): replaces the previous
+##     htmlTable::htmlTable()/Hmisc::latex() split, which had no typst
+##     handling at all. Structured as one format-agnostic core builder
+##     (rms_tiny_table_core) plus a separate, named finalize and caption
+##     function per language (rms_tiny_table_finalize_latex/html/typst,
+##     rms_tiny_table_caption_latex/html/typst), so each format's
+##     handling is self-contained and can be extended independently
+##     without touching the others -- this is also intended to be
+##     reused by summary.rms and validate.ols, which produce
+##     structurally similar tables.
+##
+##     table.env's former role (choosing between a numbered/captioned
+##     LaTeX float vs. a plain caption) is no longer used --
+##     environment_table=FALSE is applied unconditionally, matching the
+##     approach used throughout this project to avoid LaTeX's
+##     auto-numbered "Table N:" captioning; the caption is always
+##     emitted as a plain bold, centered heading instead via
+##     rms_tiny_table_caption_latex/html/typst.
+##
+##     specs$lspace (used in the leading-blank-preservation logic,
+##     unchanged from the original) is confirmed defined in
+##     markupSpecs$typst as "#h(0.5em)".
+##
+## [4] Chi-square column name: `sn[sn=='Chi-Square'] <- specs$chisq(add='')`
+##     followed by `ifelse(sn %nin% c(...), math(sn), sn)` applied math()
+##     a second time to the same entry -- by the time the second line's
+##     %nin% check ran, sn no longer held "Chi-Square" for that column
+##     (it had already been overwritten with the chisq()-formatted
+##     value), so the check couldn't exclude it and math() ran again.
+##     Under typst this double-wrapped already-$-wrapped content,
+##     surfacing as literal unrendered text. See note [5]: the original
+##     double-application turned out to be load-bearing for latex,
+##     where it was the only thing providing $ wrapping at all -- fixed
+##     properly there, not just removed.
+##
+## [5] specs$chisq()'s $-wrapping turns out to be format-inconsistent:
+##     typst's version already returns fully-wrapped math ("$chi^2$"),
+##     while latex's returns bare, unwrapped "\chi^{2}", relying on
+##     something downstream to add the $ delimiters -- which, before
+##     note [4]'s fix, was exactly the "double" math() application being
+##     removed there. Removing it without accounting for this asymmetry
+##     fixed typst but broke latex outright: bare \chi (a math-mode-only
+##     command) outside $ $ produces "Missing $ inserted" at LaTeX
+##     compile time, confirmed directly from a real compile error.
+##     Fixed by checking the actual returned value rather than assuming
+##     either format's behavior: if specs$chisq()'s output already
+##     starts with "$", use it as-is; otherwise wrap it with math().
+##     This is format-agnostic -- it adapts to whatever each language's
+##     chisq() actually returns rather than hard-coding an assumption
+##     per format, so it should hold even if a given format's wrapping
+##     convention isn't fully known or changes later.
+##
+## [6] rms_tiny_table_core/rms_tiny_table extended with several new,
+##     backward-compatible optional parameters (defaults preserve prior
+##     behavior exactly, so anova.rms's and summary.rms's existing calls
+##     are unaffected): show_rownames=FALSE omits the row-label column
+##     entirely, needed by validate.ols for its marker/frequency tables,
+##     which have no meaningful row names (the original code used
+##     rowname=NULL/rnames=FALSE for these). format_tt(linebreak="\n")
+##     is now applied unconditionally to headers, enabling multi-line
+##     column headers (e.g. "Original\nSample") -- harmless for headers
+##     without embedded newlines, and reusing the exact mechanism
+##     already confirmed working for prStats' multi-line headers.
+##
+## [7] Refactoring pass across prModFit/prStats (rmsMisc.s), prompted by
+##     a review specifically looking for redundancy across the model-fit
+##     print/latex methods and prModFit, once all of anova.rms/
+##     summary.rms/validate.ols/prModFit/prStats existed side by side:
+##
+##     coef_tiny_table (rmsMisc.s, prModFit's coefficient table) was
+##     deleted entirely -- comparing it directly against
+##     rms_tiny_table_core, it was a strict subset (same data.frame/
+##     escape/alignment/centering/striping construction, built before
+##     rms_tiny_table existed and never reconciled with it afterward).
+##     Its one genuinely new contribution, the discovery that cph/Gls/
+##     psm's real output wraps prModFit's content in an outer #block[ of
+##     unknown origin with no definite width (breaking simple
+##     #align(center) alone), was already independently incorporated
+##     into rms_tiny_table_finalize_typst's #block(width:100%) wrap, so
+##     nothing was lost by removing it. prModFit's one call site now
+##     calls rms_tiny_table(U, lang) directly.
+##
+##     stats_tiny_table (rmsMisc.s, prStats' final table) was NOT a
+##     simple subset -- it has real, hard-won features rms_tiny_table
+##     didn't: no row-label column at all (every column holds
+##     dual-justified "label #h(1fr) value" content via hfill, not a
+##     separate label + right-aligned value column), a bold header with
+##     a bottom rule, vertical column borders, column-count-scaled
+##     width, and format-specific spacing tuning (LaTeX colsep/rowsep,
+##     Typst fontsize reduction) -- each added after a real bug surfaced
+##     during testing. Extended rms_tiny_table's parameters (align_data,
+##     bold_header, header_rule, vertical_borders, width, latex_inner --
+##     see note [6] immediately above) to cover all of these, all
+##     defaulting to prior behavior exactly. stats_tiny_table itself is
+##     now a thin wrapper: applies its own no-hyphenation header wrapping
+##     (genuinely specific to this table, kept local) and computes its
+##     format-specific width/fontsize/inner values, then makes one call
+##     to rms_tiny_table() with those as overrides.
+##
+## [8] Real regression, caught immediately via a real LaTeX compile
+##     error ("Missing $ inserted") on the very next test after note
+##     [7]'s refactor: rms_tiny_table_core's show_rownames=FALSE branch
+##     added an unclass(d)/as.data.frame(..., check.names=FALSE)
+##     round-trip that the original stats_tiny_table() never had --
+##     it called tt() directly on its already-built data.frame, no
+##     conversion step at all. validate.ols's varin/tkept tables also
+##     go through this same show_rownames=FALSE branch and were already
+##     confirmed working, so the round-trip itself isn't universally
+##     broken; the difference is that stats_tiny_table's column headers
+##     are multi-line and carry embedded Typst/LaTeX markup (built via
+##     colnames(d) <- labels), unlike validate.ols's simple column
+##     names, and something about that combination interacting with the
+##     round-trip corrupted the output -- confirmed directly from the
+##     generated .tex file, which showed an entire column's data
+##     collapsed into one cell as literal, deparsed R vector syntax
+##     (c("Obs~\\hfill 960", ...)) rather than being used as actual
+##     per-row values. Rather than fully diagnose the exact
+##     unclass()/as.data.frame() interaction, fixed by skipping the
+##     round-trip entirely when d is already a data.frame -- true for
+##     every current caller, so this sidesteps the issue without
+##     depending on understanding it completely.
+##
+## [9] align_data extended to accept a per-column vector, not just a
+##     single value applied uniformly (the prior, still-default
+##     behavior). Prompted by a real crash in processMI.r's prmiInfo():
+##     it had been converting a "Test" label column into data.frame
+##     rownames (rownames(m) <- m$Test) to get that column
+##     left-aligned via show_rownames=TRUE, but data.frame rownames must
+##     be unique, and prmiInfo's Test labels legitimately are not --
+##     multiple different predictors can each have their own
+##     "Nonlinear"/"All Interactions" sub-test row, sharing the same
+##     display text for the test type while representing genuinely
+##     different predictors. This was a real, confirmed regression: the
+##     original prmiInfo (before being unified with this shared helper)
+##     called htmlTable::htmlTable(m, ..., rnames=FALSE) specifically to
+##     avoid this exact constraint, keeping Test as an ordinary data
+##     column rather than rownames. Fixed at the source in prmiInfo
+##     (kept as an ordinary column, show_rownames=FALSE now), and this
+##     align_data extension lets it still get the same per-column
+##     layout as the original (Test left-aligned, the three numeric
+##     columns right-aligned) without needing rownames at all. A vector
+##     align_data loops style_tt() once per column rather than trusting
+##     element-wise recycling of align across a vector j (unconfirmed
+##     for tinytable's style_tt()) -- the same safe, already-proven
+##     per-column style_tt() pattern used elsewhere in this function.
+## -----------------------------------------------------------------------

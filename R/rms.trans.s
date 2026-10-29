@@ -27,7 +27,7 @@
 #	value.chk
 #		Check a given list of values for a factor for validity,
 #		or if list is NA, return list of possible values
-#	
+#
 # Default label is attr(x,"label") or argument name if label= omitted.
 # First argument can be as follows, using asis as an example:
 #	asis(x, ...)		name="x", label=attr(x,"label") or "x"
@@ -54,7 +54,7 @@
 # (e.g. dummy variable for category -> F).  For matrx, all are linear.
 #
 # System options used: nknots for default number of knots in restr. cubic spline
-# and poly.degree, default degree of polynomials 
+# and poly.degree, default degree of polynomials
 # Second argument to routines is the parameters (parms) of the
 # transformation (except for asis), defined as follows:
 #
@@ -74,8 +74,8 @@
 # may be named or positional, in the following order: label, name.
 # For matrx, parms are not allowed.
 #
-# Function to return list with elements name, parms, label. 
-# corresponding to arguments in call to asis, etc.  parms=NULL if 
+# Function to return list with elements name, parms, label.
+# corresponding to arguments in call to asis, etc.  parms=NULL if
 # parms.allowed=F.  Reason for going to this trouble is that first arg to
 # asis, etc. is allowed to be a named argument to set a new name for it.
 # With ordinary argument fetching, remaining arguments would have to be
@@ -101,7 +101,7 @@ des.args <- function(x, parms.allowed, call.args) {
 	k <- charmatch(arg.name, nm, 0)	#k>0 : named arg found
     ## Added karg <= length(x) 9Apr02 for R; R doesn't return NULL
     ## like S+
-	if(k > 0) x[[k]] else 
+	if(k > 0) x[[k]] else
 	if(length(nm) < karg || nm[karg] != "") NULL else
      if(karg <= length(x)) x[[karg]] else NULL
   }
@@ -110,7 +110,7 @@ des.args <- function(x, parms.allowed, call.args) {
 	if(charmatch("parms", nam, 0) > 0)
       stop(paste("parms not allowed for", as.character(call.args[1])))
   }
- 
+
   nm <- argu(x, 5, "name", pa, nam)
   if(length(nm)) name <- nm
   if(length(.Options$Design.attr)) {
@@ -128,7 +128,7 @@ des.args <- function(x, parms.allowed, call.args) {
   if(! length(label)) label <- name
 
   list(name=name, parms=parms, label=label, units=atx$units)  #9Jun99
-  
+
 }
 
 ## Function to list all attributes of new sub-design matrix
@@ -138,17 +138,17 @@ set.atr <- function(xd, x, z, colnames, assume, code, parms, nonlinear,
   w <- if(is.matrix(xd))
     list(dim=dim(xd),dimnames=list(NULL,colnames),class="rms",
          name=z$name, label=z$label, assume=assume, assume.code=code,
-         parms=parms, 
+         parms=parms,
          nonlinear=nonlinear,colnames=colnames,units=z$units)
   else list(dim=dim(xd), class="rms",
             name=z$name, label=z$label, assume=assume, assume.code=code,
-            parms=parms, 
+            parms=parms,
             nonlinear=nonlinear,colnames=colnames,units=z$units)
   if(length(tex)) w$tex <- tex
   w
 }
 
-## asis transformation - no transformation	
+## asis transformation - no transformation
 asis <- function(...) {
   cal <- sys.call()
   xx <- list(...)
@@ -160,7 +160,7 @@ asis <- function(...) {
   if(! (is.numeric(xd) | is.logical(xd))) {
     stop(paste(z$name,"is not numeric"))
   }
-  
+
   attributes(xd) <- set.atr(xd,xd,z,z$name,"asis",1,NULL,FALSE)
   xd
 }
@@ -265,7 +265,7 @@ lsp <- function(...) {
 
 ## Restricted cubic spline expansion
 rcs <- function(...) {
-  
+
   cal <- sys.call()
   xx  <- list(...)
   z   <- des.args(xx, TRUE, cal)
@@ -292,11 +292,11 @@ rcs <- function(...) {
     nknots <- length(parms)
     knots <- parms
   }
-  
+
   pc <- length(.Options$rcspc) && .Options$rcspc
   fractied <- .Options$fractied
   if(! length(fractied)) fractied <- 0.05
-  
+
   if(! length(knots)) {
     xd <- rcspline.eval(x, nk=nknots, inclx=TRUE, pc=pc, fractied=fractied)
     knots <- attr(xd,"knots")
@@ -336,7 +336,7 @@ catg <- function(...) {
       parms <- as.character(sort(unique(y[! is.na(y)])))
     }
   }
-  
+
   if(! is.factor(y)) {
     x <- factor(y, levels=parms)
   } else {
@@ -443,11 +443,12 @@ gTrans <- function(...) {
 
   tex <- attr(xd, 'tex')
   if(length(tex)) tex <- deparse(tex)
-  
+
   for(j in 1 : nc) {
     if(name[j] == '') name[j] <- paste0(nam, suffix)
     suffix  <- paste0(suffix, "'")
   }
+  if(getOption('gTrans_basename', FALSE)) name <- paste0(nam, name)
   colnames(xd) <- name
   # model.matrix will put TRUE after a term name if logical
   # convert to 0/1
@@ -537,7 +538,7 @@ value.chk <- function(f, i, x, n, limval, type.range="plot")
     if(! length(limval) || match(name, dimnames(limval$limits)[[2]], 0)==0 ||
        is.na(limval$limits["Adjust to",name]))
       stop(paste("variable",name,"does not have limits defined by datadist"))
-    
+
     limits <- limval$limits[,name]
     lim    <- if(type.range=="full") limits[6:7] else limits[4:5]
   }
@@ -563,7 +564,7 @@ value.chk <- function(f, i, x, n, limval, type.range="plot")
             stop(paste("illegal values for categorical variable:",
                        paste(x[j==0],collapse=" "),"\nPossible levels:",
                        paste(values,collapse=" ")))
-        }	
+        }
       }
     } else if(as == 5 | as == 8) {
       if(isna) x <- parms
@@ -590,7 +591,7 @@ value.chk <- function(f, i, x, n, limval, type.range="plot")
         }
       }
     }
-  
+
   invisible(x)
 }
 
@@ -619,7 +620,7 @@ value.chk <- function(f, i, x, n, limval, type.range="plot")
     at <- attributes(x)
     ass <- at$assume.code
     nam <- at$name
-    
+
     if(ass == 5) {
       colnames <- at$colnames
       len      <- length(at$parms) - 1
@@ -640,7 +641,7 @@ value.chk <- function(f, i, x, n, limval, type.range="plot")
         len <- ncol(x)
       }
     }
-    
+
     attr(x, "colnames") <- colnames
     attr(x, "len")      <- len
     if(ass == 8) attr(x, "nonlinear") <- rep(FALSE, len)
@@ -649,7 +650,7 @@ value.chk <- function(f, i, x, n, limval, type.range="plot")
 
   x1  <- redo(x1, nam[1])
   x2  <- redo(x2, nam[2])
-  
+
   a1  <- attributes(x1)
   a2  <- attributes(x2)
   n1  <- a1$colnames
@@ -692,22 +693,22 @@ value.chk <- function(f, i, x, n, limval, type.range="plot")
   for(i in 1 : l1) {
     if(as1 == 5 | as1 == 8) x1i <- unclass(x1) == i + 1
     else x1i <- x1[, i]
-    
+
     for(j in 1 : l2) {
       ## Remove doubly nonlinear terms
       if(nl1[i] & nl2[j]) break
-      
+
       k <- k + 1
       if(as2 == 5 | as2 == 8) x2j <- unclass(x2) == j + 1
       else x2j <- x2[, j]
-      
+
       x[,k]          <- x1i * x2j
       name[k]        <- paste(n1[i], "*", n2[j])
       parms[, k + 1] <- c(nl1[i], nl2[j])
       nonlinear[k]   <- nl1[i] | nl2[j]
     }
   }
-  
+
   dimnames(x) <- list(NULL, name)
   attr(x, "ia") <- c(a1$name, a2$name)
   attr(x, "parms") <- parms

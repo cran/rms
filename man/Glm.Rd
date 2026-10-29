@@ -42,7 +42,7 @@ and other fits.  No \code{validate} or \code{calibrate} methods exist for
 \details{
 For the \code{print} method, format of output is controlled by the user
 previously running \code{options(prType="lang")} where \code{lang} is
-\code{"plain"} (the default), \code{"latex"}, or \code{"html"}.
+\code{"plain"} (the default), \code{"latex"}, \code{"html"}, or \code{"typst"}.
 }
 \examples{
 
@@ -62,7 +62,7 @@ summary(f, outcome=c('1','2','3'), treatment=c('1','2','3'))
 
 }
 \seealso{
-\code{\link[stats:glm]{stats::glm()}},\code{\link[Hmisc:GiniMd]{Hmisc::GiniMd()}}, \code{\link[=prModFit]{prModFit()}}, \link[stats:glm.summaries]{stats::residuals.glm}
+\code{\link[stats:glm]{stats::glm()}},\code{\link[Hmisc:GiniMd]{Hmisc::GiniMd()}}, \code{\link[=prModFit]{prModFit()}}, \link[stats:residuals.glm]{stats::residuals.glm}
 }
 \keyword{models}
 \keyword{regression}

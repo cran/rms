@@ -1,8 +1,37 @@
+## -----------------------------------------------------------------------
+## latex.lrm and latex.orm, with three changes in each, all marked below:
+##
+## CHANGE A (caption): \begin{center} \bf caption \end{center} -> a
+## $$\textbf{caption}$$ math-mode construction. The old version sits
+## outside any math delimiters, so it's plain text with embedded raw
+## LaTeX commands -- Pandoc drops raw LaTeX silently for any output
+## format other than Markdown/LaTeX/Org/ConTeXt (Typst isn't among
+## them), meaning every caption would simply vanish under
+## prType='typst'. Display math is center-aligned by default in both
+## real LaTeX and Typst, so \textbf{} inside $$...$$ reproduces the same
+## visual result while staying in the confirmed-working math-content
+## pathway. \textbf{} in math mode confirmed by direct compile test:
+## words render correctly and stay separated, though exact multi-space
+## runs within the caption text are not preserved (harmless for this
+## use -- captions don't depend on exact internal spacing).
+##
+## CHANGE B (array column spec): bare \begin{array} -> \begin{array}{lll}
+## -- same bug already fixed in latexrms itself: texmath's array reader
+## requires an explicit column-spec argument and errors without one.
+## This array is 3 columns (alpha-subscript label, "=", coefficient),
+## confirmed by the &=& structure in the row-building paste() calls
+## below.
+##
+## CHANGE C (typo, unrelated to Typst): c(w,"\\end{array}",sep="") ->
+## c(w,"\\end{array}") -- c() has no sep= parameter; the original was
+## silently creating a spurious named element rather than doing
+## anything useful. Noticed in passing, not a Typst-specific fix.
+## -----------------------------------------------------------------------
 latex.lrm <-
   function(object, title, 
            file='',
            append=FALSE, which, varnames, columns=65, inline=FALSE, 
-           before=if(inline)"" else "& &", after="",
+           before=if(inline)"" else "&", after="",
            pretrans=TRUE, caption=NULL, digits=.Options$digits, size='',
            ...)
 {
@@ -27,23 +56,22 @@ latex.lrm <-
                    "\\geq j) = \\frac{1}{1+\\exp(-\\alpha_{j}-X\\beta)}",
                    sep="")
 
-      w <- paste(w, ", \\mathrm{~~where} \\\\ $$", sep="")
+      w <- paste(w, ", \\mathrm{~~where}$$", sep="")
 
       if(length(caption)) {
         if(md) w <- c(paste('<div align=center><strong>', caption,
                              '</strong></div>'), w)
         else
-          w <- c(paste('\\begin{center} \\bf',caption,
-                       '\\end{center}'), w)
+          w <- c(paste0("$$\\textbf{", caption, "}$$"), w)   ## CHANGE A
         }
       
       if(nrp > 1) {
-        w <- c(w,"\\begin{array}")
+        w <- c(w,"$$\\begin{array}{lll}")   ## CHANGE B, now $$-wrapped
         cof <- format(f$coef[1:nrp])
         for(i in 1:nrp)
           w <- c(w, paste("\\hat{\\alpha}_{\\rm ",
                           lev[i+1],"} &=&",cof[i],"\\\\",sep=""))
-        w <- c(w,"\\end{array}",sep="")
+        w <- c(w,"\\end{array}$$")   ## CHANGE C, now $$-wrapped
       }
     }
   else w <- NULL
@@ -72,7 +100,7 @@ latex.orm <-
   function(object, title, 
            file='',
            append=FALSE, which, varnames, columns=65, inline=FALSE, 
-           before=if(inline)"" else "& &", after="",
+           before=if(inline)"" else "&", after="",
            pretrans=TRUE, caption=NULL, digits=.Options$digits, size='',
            intercepts=nrp < 10, ...)
 {
@@ -80,7 +108,6 @@ latex.orm <-
 
   md <- prType() %in% c('html', 'md', 'markdown')
 
-  
   if(missing(which) & !inline)
     {
       Y <- paste0("\\mathrm{", f$yname, "}")
@@ -89,6 +116,19 @@ latex.orm <-
 
       z <- '\\alpha_{y} + X\\beta'
       zm <- '- \\alpha_{y} - X\\beta'
+
+      clustername <- f$clusterInfo$name
+      mixrename   <- f$clusterInfo$mix_rename
+      if(length(clustername)) {
+        extraterm <- if(length(mixrename)) c(paste0(c(' + ', ' - '),
+                                             paste0(latexSN(f$sigma1), 'u_{j}(1 - w(t))'),
+                                             c(' + ', ' - '),
+                                             paste0(latexSN(f$sigma2), 'u_{j}w(t)'))) else
+                                                    paste0(c(' + ', ' - '), 'u_{j}')
+        z  <- paste0(z,  extraterm[1])
+        zm <- paste0(zm, extraterm[2])
+      }
+
       dist <-
         switch(f$family,
                logistic = paste('\\frac{1}{1+\\exp(', zm, ')}', sep=''),
@@ -97,11 +137,14 @@ latex.orm <-
                  ') + \\frac{1}{2}', sep=''),
                loglog   = paste('\\exp(-\\exp(', zm, '))', sep=''),
                cloglog  = paste('1 - \\exp(-\\exp(', z, ')', sep=''))
-                     
+               
       w <- '$$'
-      
+       
+      cluscond    <- if(length(clustername)) paste0(', \\mathrm{', clustername, '}=j')
+      mixrecond   <- if(length(mixrename)) ', t'
+                     
       w <- paste(w, "P(", Y, 
-                   "\\geq y | X) = ", dist, sep='')
+                   "\\geq y | X", cluscond, mixrecond, ") = ", dist, sep='')
 
       w <- paste(w, "\\mathrm{~~where}$$", sep="")
 
@@ -109,19 +152,18 @@ latex.orm <-
         if(md) w <- c(paste('<div align=center><strong>', caption,
                              '</strong></div>'), w)
         else
-          w <- c(paste('\\begin{center} \\bf',caption,
-                       '\\end{center}'), w)
+          w <- c(paste0("$$\\textbf{", caption, "}$$"), w)   ## CHANGE A
         }
       
       if(intercepts) {
         nl <- as.numeric(lev)
         if(!any(is.na(nl))) lev <- format(nl, digits=digits)
-          w <- c(w,"\\begin{array}")
+          w <- c(w,"$$\\begin{array}{lll}")   ## CHANGE B, now $$-wrapped
           cof <- format(f$coef[1:nrp], digits=digits)
           for(i in 1:nrp)
             w <- c(w, paste("\\hat{\\alpha}_{\\mathrm{",
                             lev[i+1], "}} &=&", cof[i], "\\\\", sep=""))
-          w <- c(w, "\\end{array}", sep="")
+          w <- c(w, "\\end{array}$$")   ## CHANGE C, now $$-wrapped
       }
     }
   else w <- NULL
@@ -137,7 +179,13 @@ latex.orm <-
            size=size)
   if(inline) return(z)
   w <- c(w, z)
-  if(file == '' && prType() != 'plain') return(rendHTML(w))
+  if(length(clustername)) {
+    extra <- if(length(mixrename)) paste0('u &\\sim& \\mathcal{N}(0, 1)\\\\') else
+                                   paste0('u &\\sim& \\mathcal{N}(0, ', latexSN(f$sigma), '^{2})\\\\')
+    extra <- c('$$\\begin{array}{ll}', extra, '\\end{array}$$')
+    w <- c(w, extra)
+  }
+  if(file == '' && prType() != 'plain') return(rendHTML(w, html=FALSE))
   cat(w, file=file, append=append, sep='\n')
   invisible()
 }

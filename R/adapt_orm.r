@@ -18,26 +18,32 @@
 #' f$family          # print optimum link found
 #' }
 adapt_orm <- function(x, y, maxk=6, ...) {
-  envi <- .GlobalEnv
-  ki   <- min(4, maxk)
-  assign('.ki.', ki, envir=envi)
-  fi   <- if(ki == 0) orm(y ~ x,            x=TRUE, y=TRUE, ...)
-  else                orm(y ~ rcs(x, .ki.), x=TRUE, y=TRUE, ...)
+  ki <- min(4, maxk)
+
+  ## Formulas are constructed with bquote() directly in adapt_orm's body so
+  ## that their enclosing environment is adapt_orm's execution frame, where
+  ## the formal arguments x and y live.  This is required for modelData to
+  ## find x and y when data= defaults to environment(formula).
+  ##
+  ## bquote(.(nk)) splices the *integer value* of ki/k into the formula,
+  ## producing e.g. y ~ rcs(x, 4) rather than y ~ rcs(x, ki).  This makes
+  ## the stored fit$sformula self-contained: predictrms can later call
+  ## model.frame() on newdata without needing to resolve 'ki' or 'k' in
+  ## any (possibly dead) environment.
+  ## Cannot create a formula outside the orm() call or wrong environment (mkform) is saved.
+  form <- if(ki == 0) y ~ x else eval(bquote(y ~ rcs(x, .(ki))))
+  fi <- orm(form, x=TRUE, y=TRUE, ...)
   w    <- Olinks(fi)
   best <- which.min(w[, 'deviance'])
   link <- w[best, 'link']
-  if(link != 'logistic')
-    fi <- if(ki == 0) orm(y ~ x,            family=link, ...)
-      else            orm(y ~ rcs(x, .ki.), family=link, ...)
+  if(link != 'logistic') fi <- orm(form, family=link, ...)
   fits <- list()
   # Use the best link in finding best # knots
   i  <- 0
   ks <- if(maxk < 3) 0 else c(0, 3 : maxk)
   for(k in ks) {
-    assign('.k.', k, envir=envi)   # trick to make modelData work
     f <- if(k == ki) fi
-    else if(k == 0) orm(y ~ x,           family=link, ...)
-    else            orm(y ~ rcs(x, .k.), family=link, ...)
+         else            orm(if(k == 0) y ~ x else eval(bquote(y ~ rcs(x, .(k)))), family=link, ...)
     if(! f$fail) {
       i <- i + 1
       fits[[i]] <- f

@@ -1,7 +1,7 @@
 # Design  FEH 1Aug90, re-written 21Oct91
 #
 # Augments S formula language to include:
-# 
+#
 #	name	- name[i] = name of ith original variable in x
 #	label	- label[i] = label of ith original variable (=name if none)
 #	assume	- assume(original x)
@@ -20,11 +20,11 @@
 #		  vector of values.  NULL otherwise.
 #	interactions - 3 x k matrix of factor numbers
 #
-# Cannot have interactions between two stratification factors. 
+# Cannot have interactions between two stratification factors.
 #
 #
 
-  
+
 Design <- function(mf, formula=NULL, specials=NULL,
                    allow.offset=TRUE, intercept=1) {
 
@@ -94,23 +94,38 @@ Design <- function(mf, formula=NULL, specials=NULL,
                  substring(Term.labels, 1, 8) == 'cluster('  else FALSE
   istime <- if(length(Term.labels))
               substring(Term.labels, 1, 6) == 'aTime('  else FALSE
+  ismixre <- if(length(Term.labels))
+                 substring(Term.labels, 1, 7) == 'mix_re('  else FALSE
 
-  ## Handle cluster() and aTime()
-  ## Save right hand side of formula less cluster() and time() terms
+  ## Handle cluster(), aTime(), mix_re
+  ## Save right hand side of formula less cluster(), time(), mix_re() terms
   sformula <- formula(Terms)
   if(any(iscluster)) sformula <- removeFormulaTerms(sformula, 'cluster')
   if(any(istime))    sformula <- removeFormulaTerms(sformula, 'aTime')
+  if(any(ismixre))   sformula <- removeFormulaTerms(sformula, 'mix_re')
 
   if(any(iscluster)) {
     clustername <- Term.labels[iscluster]
     cluster     <- mf[[clustername]]
+    # mre         <- attr(cluster, 'mre')
+    # if(length(mre)) attr(cluster, 'mre') <- NULL
     mf[[clustername]] <- NULL
     Terms       <- Terms[! iscluster]
     Term.labels <- Term.labels[! iscluster]
     if(any(istime)) istime <- if(length(Term.labels))
      substring(Term.labels, 1, 6) == 'aTime('  else FALSE
+    ismixre <- ismixre[! iscluster]
   }
   else {cluster <- clustername <- NULL}
+  
+  if(any(ismixre)) {
+    mixrename <- Term.labels[ismixre]
+    mixre     <- mf[[mixrename]]
+    mf[[mixrename]] <- NULL
+    Terms       <- Terms[! ismixre]
+    Term.labels <- Term.labels[! ismixre]
+  }
+  else {mixre <- mixrename <- NULL}
 
   if(any(istime)) {
     timename <- Term.labels[istime]
@@ -120,7 +135,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
     Term.labels <- Term.labels[! istime]
   }
   else {time <- timename <- NULL}
-  
+
 
   ioffset <- integer(0)
   if(length(offs)) {
@@ -151,7 +166,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
   ## Handles case where a function has two arguments that are names,
   ## e.g. rcs(x,knots) -> want x only
   ## Note: these exclude interaction terms and %ia% terms
-  
+
   factors <- attr(Terms, "factors")
   if(length(factors) && response.pres) factors <- factors[-1, , drop=FALSE]
 
@@ -162,8 +177,8 @@ Design <- function(mf, formula=NULL, specials=NULL,
   ##         Used for later keeping only those columns that don't pertain
   ##         to strat main effects or to strat interactions involving
   ##         non-reference categories
-  
-  fname <- flabel <- name <- mmname <- strt <- asm <- len <- 
+
+  fname <- flabel <- name <- mmname <- strt <- asm <- len <-
     fname.incl.dup <- ia <- funits <- NULL
   parm <- nonlinear <- tex <- limits <- values <- list()
 
@@ -183,7 +198,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
     Limits   <- datadist$limits
     Limnames <- dimnames(Limits)[[2]]
   }
-  
+
   nc <- 0
 
   options(Design.attr=NULL, TEMPORARY=FALSE)
@@ -270,7 +285,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
             }
           }
         }
-        
+
         if(length(nonl <- z$nonlinear)) nonlinear[[zname]] <- nonl
 
         if(length(tx <- z$tex))         tex[[zname]]       <- tx
@@ -288,14 +303,14 @@ Design <- function(mf, formula=NULL, specials=NULL,
       nrows <- if(is.matrix(xi)) nrow(xi) else length(xi)
     }
   }
-  
+
   ##Save list of which factors where %ia% interactions
   ## (before adding automatic ias)
 
   which.ia <- (1 : length(asm))[asm == 9]
 
   ##Add automatically created interaction terms
-  
+
   if(anyfactors) {
     nrf <- if(! length(factors)) 0 else nrow(factors)
 
@@ -353,7 +368,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
         mmnalt1 <- mmnnalt[[1]]
         mmnalt2 <- mmnnalt[[2]]
         mmnalt3 <- mmnnalt[[3]]
-        
+
         ## model.matrix makes auto-products move first variable fastest, etc.
         for(j3 in 1 : length(n3)) {
           for(j2 in 1 : length(n2)) {
@@ -373,7 +388,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
             }
           }
         }
-        
+
         ## If was 2-way interaction and one of the factors was restricted %ia%,
         ## adjust indicators
         k <- match(jf, which.ia, 0)
@@ -386,16 +401,16 @@ Design <- function(mf, formula=NULL, specials=NULL,
           jf <- parms[, 1]
           nonlin <- apply(parms, 2, any)[-1]
         }
-        
+
         if(length(jf) == 2) {jf <- c(jf, 0); parms[3, ] <- 0}
         ia <- cbind(ia, jf)
         if(length(parms)) parm[[ialab]] <- parms
         if(length(nonlin)) nonlinear[[ialab]] <- nonlin
-        
+
       }
     }
   }
-  
+
   if(anyfactors) {
     if(length(XDATADIST))
       limits <- structure(limits,
@@ -405,7 +420,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
                             "Low", "High"),
                           class="data.frame")
     ##data.frame converts variables always NA to factor!
-    
+
     if(length(funits) != sum(asm != 9)) warning('program logic warning 1')
     else names(funits) <- fname[asm != 9]
 
@@ -422,7 +437,7 @@ Design <- function(mf, formula=NULL, specials=NULL,
                 assume.code=as.integer(asm), parms=parm, limits=limits,
                 values=values, nonlinear=nonlinear, tex=tex,
                 interactions=if(length(ia)) structure(ia, dimnames=NULL))
-    
+
     nact <- attr(mf, 'na.action')
     if(length(nact) && length(nmiss <- nact$nmiss)) {
       jia <- grep('%ia%', names(nmiss),  fixed=TRUE)
@@ -431,15 +446,16 @@ Design <- function(mf, formula=NULL, specials=NULL,
                     ! grepl('offset\\(',  names(nmiss)) &
                     names(nmiss) != '(offset)' &
                     ! grepl('cluster\\(', names(nmiss)) &
+                    ! grepl('mix_re\\(',  names(nmiss)) &
                     ! grepl('aTime\\(',   names(nmiss)))
       if(response.pres) jz <- jz[jz > 1]
       names(nmiss)[jz] <- fname[asm != 9]
       attr(mf, 'na.action')$nmiss <- nmiss
     }
   }
-  
+
   else atr <- list(name=NULL, assume=NULL, assume.code=NULL, parms=NULL)
-  
+
   attr(mf, 'Design')     <- atr
   attr(mf, 'terms')      <- Terms
   attr(mf, 'sformula') <- sformula
@@ -447,18 +463,22 @@ Design <- function(mf, formula=NULL, specials=NULL,
     attr(mf, 'cluster') <- cluster
     attr(mf, 'clustername') <- var.inner(as.formula(paste0('~', clustername)))
   }
+  if(length(mixre)) {
+    attr(mf, 'mix_re')     <- mixre
+    attr(mf, 'mix_rename') <- var.inner(as.formula(paste0('~', mixrename)))
+  }
   if(length(time)) {
     attr(mf, 'time') <- time
     attr(mf, 'timename') <- var.inner(as.formula(paste0('~', timename)))
   }
-  
+
   if(length(offs))    attr(mf, 'offset')  <- offs
   mf
 }
 
 modelData <- function(data=environment(formula), formula, formula2=NULL,
                       weights=NULL, subset=NULL, na.action=na.delete,
-                      dotexpand=TRUE, callenv=parent.frame(n=2)) {
+                      dotexpand=TRUE, callenv=parent.frame()) {
 
   ## calibrate.cph etc. uses a matrix, even if only one column
   ## Don't give an exception to Ocens (for orm) just as we don't give an exception for Surv
@@ -466,7 +486,7 @@ modelData <- function(data=environment(formula), formula, formula2=NULL,
     cl <- class(z)
     ('matrix' %in% cl) && ('rms' %nin% cl) && ('Ocens' %nin% cl)
     }
-  
+
   ## Get a list of all variables in either formula
   ## This is for innermost variables, e.g. Surv(a,b) will produce a,b
   v1 <- all.vars(formula)
@@ -522,8 +542,38 @@ modelData <- function(data=environment(formula), formula, formula2=NULL,
 
   noexpand <- rhsdot & ! dotexpand
   deparse2 <- function(x)   # from stats
-    paste(deparse(x, width.cutoff = 500L, backtick = !is.symbol(x) && 
+    paste(deparse(x, width.cutoff = 500L, backtick = !is.symbol(x) &&
                   is.language(x)), collapse = " ")
+
+  ## Build an enclosing environment for eval() that replicates the lookup
+  ## order base R's model.frame uses: data frame first, then the caller's
+  ## frame (callenv), then the formula's own closure.  This ensures that
+  ## variables captured in a formula's environment (e.g. knot vectors
+  ## in programmatically constructed formulas) are found without requiring
+  ## callers to assign them into .GlobalEnv.  Only needed for the
+  ## data-frame path; the edata path uses env directly.
+  enclos <- if(edata) env
+            else {
+              fe <- environment(formula)
+              if(is.null(fe) || identical(fe, callenv) ||
+                 identical(fe, .GlobalEnv))
+                callenv
+              else {
+                ## callenv bindings placed in a child of formula's environment
+                ## so callenv takes priority but formula's closure is the fallback.
+                ## Use tryCatch around get() to skip unresolved promise bindings
+                ## (formal arguments that were declared but not supplied by the
+                ## caller, e.g. 'cluster' in lrm).  Those exist as pending
+                ## promises in the fitter's frame and cannot be forced here.
+                e <- new.env(parent = fe)
+                for(nm in ls(callenv, all.names = TRUE))
+                  tryCatch(
+                    assign(nm, get(nm, envir = callenv, inherits = FALSE),
+                           envir = e),
+                    error = function(cond) NULL)
+                e
+              }
+            }
 
   processdata <- function(formula, data) {
     if(noexpand) {   # no RHS variables to be used
@@ -544,9 +594,7 @@ modelData <- function(data=environment(formula), formula, formula2=NULL,
     }
     varnames <- vapply(predvars, deparse2, " ")[-1L]
     rnames <- rownames(data)     # 2023-01-25
-    data <- if(edata) eval(predvars, data, env)
-            else
-              eval(predvars, data, callenv)
+    data <- eval(predvars, data, enclos)
 
     if(is.matrix(data)) data <- data.frame(data)  # e.g. Surv() object
     names(data) <- varnames
@@ -614,4 +662,3 @@ as.data.frame.rms <- function(x, row.names = NULL, optional = FALSE, ...) {
   if(! optional) names(value) <- deparse(substitute(x))[[1]]
   structure(value, row.names=row.names, class='data.frame')
 }
-

@@ -55,7 +55,7 @@ vcov.orm <- function(object, regcoef.only=TRUE, intercepts='mid', ...) {
     # Old orm stored var for mid intercept only, but robcov, fit.mult.impute, bootcov
     # stored whole matrix
     type <- if(ncol(v) == np) 'full'
-      else if(ncol(v) == (np - ns + 1)) 'mid' 
+      else if(ncol(v) == (np - ns + 1)) 'mid'
       else stop('variance-covariance matrix stored in object$var has # intercepts ',
                 'that is not 1 or all ', ns)
     if(intercepts == 'mid' && type == 'mid') return(v)
@@ -488,7 +488,7 @@ lrtest <- function(fit1, fit2)
     s <- f$stats
     if(length(s)) s['d.f.'] else f$rank - (any(names(coef(f)) == '(Intercept)'))
   }
-    
+
   dof <- abs(np(fit2) - np(fit1))
   if(dof == 0) stop('models are not nested')
 
@@ -649,8 +649,33 @@ rmsArgs <- function(.object, envir=parent.frame(2))
     .res
   }
 
-## General function to print model fit objects using latex, html, or regular
-## print (the default)
+## General function to print model fit objects using latex, html, typst,
+## or regular print (the default)
+
+## coef_tiny_table was removed -- it was a strict subset of
+## rms_tiny_table (anova_rms.s), built before that shared helper
+## existed. See note [5] at end of file.
+
+## prModItem: constructs one item of the w list that print.* methods
+## (print.lrm, print.cph, print.ols, etc.) build up and pass to
+## prModFit(). type is a string naming either one of prModFit's
+## special-cased item kinds ('stats', 'coefmatrix', 'cat', the
+## naprint.*/latex.naprint.delete/etc. family) or, generically, the name
+## of any function to be called via do.call(type, payload) (e.g.
+## 'print', 'latexVector'). payload's own shape depends on type -- a
+## do.call()-style argument list for the generic-dispatch types, a
+## type-specific named list for 'stats'/'coefmatrix', or a bare
+## character string for 'cat'. title/tex/preskip are optional, matching
+## prModFit's existing z$title/z$tex/z$preskip fields. See the
+## "prModItem (new) / prModFit" section at end of file for the full
+## reasoning behind this constructor.
+prModItem <- function(type, payload, title=NULL, tex=NULL, preskip=NULL) {
+  z <- list(type=type, payload=payload)
+  if(length(title))   z$title   <- title
+  if(length(tex))      z$tex     <- tex
+  if(length(preskip))  z$preskip <- preskip
+  z
+}
 
 prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
                      lines.page=40, long=TRUE, needspace, subtitle=NULL, ...) {
@@ -661,6 +686,7 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
   transl <- switch(lang,
                    latex = latexTranslate,
                    html  = htmlTranslate,
+                   typst = typstTranslate,
                    plain = function(x) x)
 
 #  cca  <- htmlSpecial('combiningcircumflexaccent')
@@ -684,6 +710,27 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
            html  = '</pre>',
            latex = '\\end{verbatim}',
            plain = NULL)
+
+  ## Shared helper for verbatim/raw content under typst -- bverb()/
+  ## everb() don't map cleanly here (they return separate before/after
+  ## markers, but #raw() needs its content as one string argument), so
+  ## call sites needing typst verbatim output use this directly instead.
+  ## block: false on the #raw() element itself avoids the gray-fill
+  ## show-rule Quarto's template applies to block:true raw content -- the
+  ## same fix already proven for typst_verbatim() in desc.r and
+  ## typst.naprint.delete's rawBlock(). But block:false is also
+  ## literally inline, with no line break forced after it (same issue
+  ## just fixed for catl()'s bold/center case, #strong[]/#align()[]
+  ## being inline too) -- confirmed directly: content after this was
+  ## running together on one line. The outer #block[...] wrapper below
+  ## restores block-level separation without changing block:false on
+  ## the #raw() element itself, so the gray-fill fix still holds.
+  typstRaw <- function(txt) {
+    txt <- gsub('\\', '\\\\', txt, fixed = TRUE)
+    txt <- gsub('"', '\\"', txt, fixed = TRUE)
+    raw <- paste0('#block[#raw("', txt, '", block: false)]')
+    paste0("````{=typst}\n", raw, "\n````\n")
+  }
 
   skipt  <- function(n=1) {
     if(n==0) return(character(0))
@@ -723,6 +770,22 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
                  if(bold) '</strong>',
                  if(center) '</div>' else '</p>'),
           skipt(skip))
+    } else if(lang == 'typst') {
+      if(verb)
+        c(skipt(pre), typstRaw(paste(x, collapse = '\n')), skipt(skip))
+      else if(bold || center) {
+        inner <- paste(x, collapse = '\n')
+        if(bold)   inner <- paste0('#strong[', inner, ']')
+        if(center) inner <- paste0('#align(center)[', inner, ']')
+        ## Wrapped in #block[...] -- #strong[]/#align()[] alone are
+        ## inline constructs with no inherent line break after them, so
+        ## whatever content followed was continuing on the same visual
+        ## line regardless of blank-line separation elsewhere in the R
+        ## vector. #block[] forces this to be its own distinct block.
+        body <- paste0('#block[', inner, ']')
+        c(skipt(pre), paste0("````{=typst}\n", body, "\n````\n"), skipt(skip))
+      } else
+        c(paste0(skipt(pre), x), skipt(skip))
     }
     else c(paste0(skipt(pre), x), skipt(skip))
   }
@@ -747,22 +810,48 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
     for(i in lsub) R <- c(R, catl(subtitle[i], bold=FALSE, pre=1))
 
   if(long) {
-    R <- c(R, bverb(), deparse(x$call), everb(), '')
+    if(lang == 'typst')
+      R <- c(R, typstRaw(paste(deparse(x$call), collapse = '\n')), '')
+    else
+      R <- c(R, bverb(), deparse(x$call), everb(), '')
     ## dput(x$call) didn't work with rmarkdown because dput has no append=
   }
 
   for(z in w) {
     type <- z$type
-    obj  <- z[[2]]
+    ## Prefers the named $payload field (set by prModItem(), the new
+    ## constructor below) over positional z[[2]] access -- kept as a
+    ## fallback for full backward compatibility with any caller not yet
+    ## using prModItem(). See prModItem's own comment for the rest of
+    ## the reasoning.
+    obj  <- if(! is.null(z$payload)) z$payload else z[[2]]
     titl <- z$title
     tex  <- z$tex
     if(! length(tex)) tex <- FALSE
     if(type == 'naprint.delete') {
-      if(lang == 'latex') {
-        type <- 'latex.naprint.delete'
-        tex <- TRUE
-      }
+      if(lang == 'latex') type <- 'latex.naprint.delete'
       if(lang == 'html') type <- 'html.naprint.delete'
+      if(lang == 'typst') type <- 'typst.naprint.delete'
+      ## tex is NOT set here for any language -- it previously was set
+      ## TRUE for latex, wrapping this whole naprint.delete output
+      ## (title text AND chart together) in \begin{center}...\end{center},
+      ## which centered the title along with the chart -- confirmed as
+      ## an unwanted side effect (title should stay left-justified,
+      ## matching html/typst). Centering now happens inside
+      ## latex.naprint.delete() itself, around just the chart, matching
+      ## typst.naprint.delete's existing pattern.
+      ##
+      ## Worth watching for one side effect: with tex no longer TRUE
+      ## here, `if(! tex && length(titl))` below will now emit a
+      ## catl(titl, ...) title for latex if z$title happens to be set
+      ## for this entry -- previously suppressed by tex=TRUE. Not
+      ## something I can fully verify without seeing how the w list gets
+      ## built upstream; worth confirming no unexpected extra title
+      ## appears.
+      ##
+      ## Typst-specific note: \begin{center}/\end{center} is LaTeX-specific
+      ## syntax that would break if inserted literally into a Typst
+      ## document -- another reason tex must not be set TRUE for typst.
     }
 
     preskip <- z$preskip
@@ -776,11 +865,13 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
           switch(lang,
                  latex = paste0('~', x, '~'),
                  html  = paste0(nbsp, x),
+                 typst = x,
                  plain  = x)
         betan <- switch(lang,
                         plain = 'Beta',
                         html  = htmlGreek('beta'),
-                        latex = '$\\hat{\\beta}$')
+                        latex = '$\\hat{\\beta}$',
+                        typst = '$hat(beta)$')
 
         B   <- obj$bayes
         if(length(B)) {
@@ -789,9 +880,11 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
             dig <- if(colnames(B)[i] == 'Symmetry') 2 else digits
             U[, i] <- pad(formatNP(B[, i], dig, lang=lang))
           }
-          pn <- switch(lang, plain='Pr(Beta>0)',
-                       html = paste0('Pr(', betan, transl('>'), '0)'),
-                       latex = 'Pr$(\\beta>0)$')
+          ## P(...) with P in math font, matching the rest of the table
+          pn <- switch(lang, plain='P(Beta>0)',
+                       html = paste0('<i>P</i>(', betan, transl('>'), '0)'),
+                       latex = '$P(\\beta>0)$',
+                       typst = '$P(beta>0)$')
           coltrans <- c(Mean     = paste('Mean', betan),
                         Median   = paste('Median', betan),
                         Mode     = paste('Mode', betan),
@@ -820,23 +913,26 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
                         pad(formatNP(se,   digits, lang=lang)),
                       'Wald Z'  =
                         formatNP(Z,    2, lang=lang),
-                      'Pr(>|Z|)' =
+                      'P(>|Z|)' =
                         formatNP(P, 4, lang=lang, pvalue=TRUE))
         if(lang == 'latex')
           colnames(U) <- c('$\\hat{\\beta}$', 'S.E.', 'Wald $Z$',
-                           'Pr$(>|Z|)$')
-        else
-          if(lang == 'html')
+                           '$P(>|Z|)$')
+        else if(lang == 'html')
             colnames(U) <- c(htmlGreek('beta'),   # did have cca
                              'S.E.', 'Wald <i>Z</i>',
-                             paste0('Pr(', gt, vbar, '<i>Z</i>', vbar, ')'))
+                             paste0('<i>P</i>(', gt, vbar, '<i>Z</i>', vbar, ')'))
+        else if(lang == 'typst')
+            colnames(U) <- c('$hat(beta)$', 'S.E.', 'Wald $Z$',
+                             '$P(>|Z|)$')
         if(length(errordf))
           colnames(U)[3:4] <-
             switch(lang,
-                   latex = c('$t$', 'Pr$(>|t|)$'),
-                   html  = c('<i>t</i>', paste0('Pr(', gt, vbar, '<i>t</i>',
+                   latex = c('$t$', '$P(>|t|)$'),
+                   html  = c('<i>t</i>', paste0('<i>P</i>(', gt, vbar, '<i>t</i>',
                                                 vbar, ')')),
-                   plain = c('t',   'Pr(>|t|)') )
+                   typst = c('$t$', '$P(>|t|)$'),
+                   plain = c('t',   'P(>|t|)') )
 
         rownames(U) <- betanames
 
@@ -845,39 +941,38 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
           colnames(U)[ncol(U)] <- obj$auxname
         }
         }
-        if(lang %in% c('latex', 'html')) {
+        if(lang %in% c('latex', 'html', 'typst')) {
           R <- c(R, skipt(1))
           rownames(U) <- transl(betanames)
 
           if(is.numeric(coefs)) {
             U <- U[1:coefs,,drop=FALSE]
             U <- rbind(U, rep('', ncol(U)))
-            rownames(U)[nrow(U)] <- if(lang == 'html') '&hellip;' else '\\dots'
+            rownames(U)[nrow(U)] <-
+              switch(lang, html = '&hellip;', latex = '\\dots', typst = '\u2026')
           }
-          ## Translate interaction symbol (*) to times symbol
-          rownames(U) <- gsub('*', specs$times, rownames(U), fixed=TRUE)
+          ## Translate interaction symbol (*) to times symbol -- must
+          ## run AFTER transl(), not before, so the rest of the term
+          ## name gets properly escaped by transl() first. But the
+          ## search pattern has to be format-aware: under typst,
+          ## transl() (typstTranslate) has already escaped bare * to \*
+          ## by this point (needed in general, since * is Typst's
+          ## bold/emphasis shorthand), so the pattern must match the
+          ## escaped form or the substitution leaves an orphaned
+          ## backslash. Substituting before transl() instead (tried
+          ## first) doesn't work either: typstTranslate() escapes EVERY
+          ## $ it sees unconditionally, with no way to tell "deliberate
+          ## math delimiter" from "literal text needing escaping", so a
+          ## pre-inserted $times$ gets both its $ signs escaped to
+          ## \$times\$. latex/html's transl() functions never touch *
+          ## at all, so they still need the bare pattern.
+          pat <- if(lang == 'typst') '\\*' else '*'
+          rownames(U) <- gsub(pat, specs$times, rownames(U), fixed=TRUE)
 
           if(! missing(needspace) && lang == 'latex')
             R <- c(R, paste0('\\Needspace{', needspace, '}'))
 
-          if(lang == 'latex')
-            R <- c(R,   # was capture.output(latex())
-                   capture.output(latex(U, file='',
-                                        first.hline.double=FALSE,
-                                        table=FALSE, longtable=TRUE,
-                                        lines.page=lines.page,
-                                        col.just=rep('r',ncol(U)), rowlabel='',
-                                        already.math.col.names=TRUE,
-                                        append=TRUE)))
-          else {
-            al <- paste(rep('r', ncol(U)), collapse='')
-            R <- c(R, as.character(
-                        htmlTable::htmlTable(U,
-                                             css.cell = 'min-width: 7em;',
-                                             align=al, align.header=al,
-                                             # rowlabel='',
-                                             escape.html=FALSE)))
-            }
+          R <- c(R, rms_tiny_table(U, lang))
         } else {
           if(is.numeric(coefs)) {
             U <- U[1:coefs,,drop=FALSE]
@@ -895,19 +990,34 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
       } else {
         R <- c(R,  skipt(preskip))
       }
-    
-      w <- switch(type, 
+
+      w <- switch(type,
                   html.naprint.delete = do.call(type, obj),
-                  latex.naprint.delete = 
+                  typst.naprint.delete = do.call(type, obj),
+                  latex.naprint.delete =
                     capture.output(do.call(type,
                                            c(obj, list(file='')))),
-                   print =  
-                     c(bverb(),
-                       capture.output(do.call(type, obj)),
-                       everb()),
+                   print =
+                     if(lang == 'typst')
+                       ## bverb()/everb() have no typst case (return
+                       ## NULL), so this content was previously reaching
+                       ## Pandoc completely bare -- multi-line print()
+                       ## output collapsed into one run-on line
+                       ## (markdown's soft-newline handling) with a
+                       ## stray gray background on some lines
+                       ## (Pandoc's own indented-line-as-code-block
+                       ## auto-detection firing inconsistently).
+                       ## typstRaw() (#raw(block:false), fenced)
+                       ## sidesteps both.
+                       typstRaw(paste(capture.output(do.call(type, obj)),
+                                     collapse = '\n'))
+                     else
+                       c(bverb(),
+                         capture.output(do.call(type, obj)),
+                         everb()),
                    do.call(type, obj)
                    )
-                   
+
       R <- c(R, w,
              ## unlike do.call, eval(call(...)) dispatches on class of ...
              if(tex) '\\end{center}' else '' )
@@ -915,13 +1025,14 @@ prModFit <- function(x, title, w, digits=4, coefs=TRUE, footer=NULL,
   }
   if(length(footer))
     R <- c(R, paste(specs$smallskip, transl(footer)))
-    
+
   if(debug)
     cat(R, sep='\n', append=TRUE, file='/tmp/rmsdebug.txt')
-    
+
   switch(lang,
          html  = rendHTML(R),
-         latex = cat(R, sep='\n'),
+         latex = rendHTML(R, html=FALSE),
+         typst = rendHTML(R, html=FALSE),
          plain = cat(R, sep='\n')
          )
 }
@@ -939,9 +1050,17 @@ latex.naprint.delete <- function(object, file='', append=TRUE, ...) {
       maxlen <- max(nchar(names(g)))
       est <- function(X, Y, x) approx(X, Y, xout=x, rule=2)$y
       z <- latexDotchart(g, names(g), auxdata=g, auxtitle='N',
-                         w = 1 + est(c(2, 60), c(.5, 6), maxlen),
-                         h = min(max(2.5*lg/20, 1), 8))
+                         w = 1.25 * (1 + est(c(2, 60), c(.5, 6), maxlen)),
+                         h = 1.25 * min(max(2.5*lg/20, 1), 8))
+      ## Centering moved here, around just the chart -- not the title
+      ## text above (cat() call a few lines up), which should stay
+      ## left-justified. Previously the whole naprint.delete output was
+      ## centered from outside, via prModFit's tex=TRUE dispatch flag,
+      ## which centered the title along with the chart -- confirmed as
+      ## an unwanted side effect.
+      cat('\\begin{center}\n')
       cat(z, sep='\n')
+      cat('\\end{center}\n')
     }
     cat("\n")
   }
@@ -993,6 +1112,51 @@ html.naprint.delete <- function(object, ...) {
   R
 }
 
+## Typst analog of latex.naprint.delete/html.naprint.delete. Uses
+## typstDotchart (native vector markup, like latexDotchart) rather than
+## html.naprint.delete's PNG-embedding approach, since Typst has no need
+## for a raster fallback here. Returns a plain character vector, same
+## shape as html.naprint.delete -- called directly via do.call(), not
+## writing to a file the way latex.naprint.delete does via sink().
+typst.naprint.delete <- function(object, ...) {
+  lg <- length(g <- object$nmiss)
+  R <- character(0)
+  typstFence <- function(x) paste0("````{=typst}\n", x, "\n````\n")
+  rawBlock <- function(txt) {
+    txt <- gsub('\\', '\\\\', txt, fixed = TRUE)
+    txt <- gsub('"', '\\"', txt, fixed = TRUE)
+    ## #block[...] wrapper: block:false on #raw() itself avoids the
+    ## gray-fill show-rule, but is also literally inline with no line
+    ## break forced after it -- same fix as prModFit's typstRaw().
+    typstFence(paste0('#block[#raw("', txt, '", block: false)]'))
+  }
+
+  if(lg) {
+    R <- c(R, 'Frequencies of Missing Values Due to Each Variable', '')
+    if(sum(g > 0) < 4)
+      R <- c(R, rawBlock(paste(capture.output(print(g)), collapse = '\n')))
+    else {
+      maxlen <- max(nchar(names(g)))
+      est <- function(X, Y, x) approx(X, Y, xout = x, rule = 2)$y
+      z <- typstDotchart(g, names(g), auxdata = g, auxtitle = 'N',
+                         w = 1.25 * (1 + est(c(2, 60), c(.5, 6), maxlen)),
+                         h = 1.25 * min(max(2.5 * lg / 20, 1), 8))
+      ## Centered via the same #block(width:100%)[#align(center)[...]]
+      ## pattern used for the tinytable-based tables (rms_tiny_table
+      ## etc.) -- typstDotchart's own #box(...) output has no centering
+      ## of its own, and align(center) alone needs a definite-width
+      ## container to center within.
+      R <- c(R, typstFence(paste0('#block(width: 100%)[#align(center)[\n',
+                                  z, '\n]]')))
+    }
+  }
+
+  if(length(g <- object$na.detail.response))
+    R <- c(R, '', 'Statistics on Response by Missing/Non-Missing Status of Predictors', '',
+           rawBlock(paste(capture.output(print(unclass(g))), collapse = '\n')))
+  R
+}
+
 ## Function to print model fit statistics
 ## Example:
 #prStats(list('Observations', c('Log','Likelihood'),
@@ -1009,7 +1173,47 @@ html.naprint.delete <- function(object, ...) {
 ## format without nsmall and without rounding (useful for integers and for
 ## scientific notation)
 
-prStats <- function(labels, w, lang=c('plain', 'latex', 'html')) {
+## Thin wrapper over rms_tiny_table (anova_rms.s), extended (see its
+## own note [6]/[7]) to support this table's needs: no row-label column
+## (every column holds dual-justified "label #h(1fr) value" content via
+## hfill), bold header with a rule, vertical borders, column-count-
+## scaled width, format-specific spacing tuning. No-hyphenation header
+## wrapping stays local -- genuinely specific to this table's headers,
+## not something rms_tiny_table's other callers need.
+stats_tiny_table <- function(z, labels, lang) {
+  noHyphen <- function(s) {
+    parts <- strsplit(s, '\n', fixed = TRUE)[[1]]
+    wrapped <- vapply(parts, function(part) {
+      words <- strsplit(part, ' ', fixed = TRUE)[[1]]
+      w <- if(lang == 'latex') paste0('\\mbox{', words, '}')
+           else if(lang == 'typst')
+             paste0('#text(hyphenate: false)[', words, ']')
+           else words
+      paste(w, collapse = ' ')
+    }, character(1))
+    paste(wrapped, collapse = '\n')
+  }
+  labels <- vapply(labels, noHyphen, character(1))
+
+  d <- as.data.frame(z, stringsAsFactors = FALSE)
+  colnames(d) <- labels
+  nc <- ncol(z)
+
+  ## width scales with column count -- fixed values were tuned for a
+  ## 3-column example and cramped a 4-column one
+  width <- if(lang == 'latex') min(0.95, 0.21 * nc)
+           else if(lang == 'typst') min(0.95, 0.233 * nc)
+           else NULL
+  fontsize    <- if(lang == 'typst') 0.9 else NULL
+  latex_inner <- if(lang == 'latex') "colsep=8.8pt,rowsep=1pt" else NULL
+
+  rms_tiny_table(d, lang, show_rownames = FALSE, align_data = 'l',
+                bold_header = TRUE, header_rule = TRUE,
+                vertical_borders = TRUE, width = width,
+                fontsize = fontsize, latex_inner = latex_inner)
+}
+
+prStats <- function(labels, w, lang=c('plain', 'latex', 'html', 'typst')) {
   lang  <- match.arg(lang)
   lorh  <- lang != 'plain'
   specs <- markupSpecs[[lang]]
@@ -1035,6 +1239,7 @@ prStats <- function(labels, w, lang=c('plain', 'latex', 'html')) {
   trans <- switch(lang,
                   latex = latexTranslate,
                   html  = htmlTranslate,
+                  typst = typstTranslate,
                   plain = function(x) x )
   ## Find maximum width used for each column
   if(debug) {prn(labels); prn(length(labels))}
@@ -1076,56 +1281,86 @@ for(i in 1:p) {
   if(lorh) {
     maxl <- max(sapply(w, length))
     z <- matrix('', nrow=maxl, ncol=p)
-    fil <- if(lang == 'latex') '~\\hfill ' else htmlSpecial('emsp')
+    fil <- switch(lang,
+                 latex = '~\\hfill ',
+                 typst = paste0(' ', specs$hfill, ' '),
+                 htmlSpecial('emsp'))
 
     chisq <- specs$chisq()
 
-    trans <- rbind(
+    trans_tbl <- rbind(
       'Dxy'        = c(latex = '$D_{xy}$',
-                       html  = '<i>D</i><sub>xy</sub>'),
+                       html  = '<i>D</i><sub>xy</sub>',
+                       typst = '$D_("xy")$'),
       'LR chi2'    = c(latex = paste0('LR ', chisq),
-                       html  = paste0('LR ', chisq)),
+                       html  = paste0('LR ', chisq),
+                       typst = paste0('LR ', chisq)),
       'Score chi2' = c(latex = paste0('Score ', chisq),
-                       html  = paste0('Score ', chisq)),
-      'Pr(> chi2)' = c(latex = 'Pr$(>\\chi^{2})$',
-                       html  = paste0('Pr(', htmlTranslate('>'), chisq, ')')),
+                       html  = paste0('Score ', chisq),
+                       typst = paste0('Score ', chisq)),
+      'P(> chi2)' = c(latex = '$P(>\\chi^{2})$',
+                       html  = paste0('<i>P</i>(', htmlTranslate('>'), chisq, ')'),
+                       typst = '$P(>chi^2)$'),
       'tau-a'      = c(latex = '$\\tau_{a}$',
-                       html  = paste0(htmlGreek('tau'), '<sub>a</sub>')),
+                       html  = paste0(htmlGreek('tau'), '<sub>a</sub>'),
+                       typst = '$tau_(a)$'),
       'sigma gamma'= c(latex = '$\\sigma_{\\gamma}$',
-                       html  = '&sigma;<sub>&gamma;</sub>'),
+                       html  = '&sigma;<sub>&gamma;</sub>',
+                       typst = '$sigma_(gamma)$'),
+      'sigma1'     = c(latex = '$\\sigma_{1}$',
+                          html  = '&sigma;<sub>1</sub>',
+                          typst = '$sigma_1$'),
+      'sigma2'     = c(latex = '$\\sigma_{2}$',
+                          html  = '&sigma;<sub>2</sub>',
+                          typst = '$sigma_2$'),
       'sigma w'    = c(latex = '$\\sigma_{w}$',
-                       html  = '&sigma;<sub>w</sub>'),
+                       html  = '&sigma;<sub>w</sub>',
+                       typst = '$sigma_(w)$'),
       'gamma'      = c(latex = '$\\gamma$',
-                       html  = htmlGreek('gamma')),
+                       html  = htmlGreek('gamma'),
+                       typst = '$gamma$'),
       'R2'         = c(latex = '$R^{2}$',
-                       html  = '<i>R</i><sup>2</sup>'),
+                       html  = '<i>R</i><sup>2</sup>',
+                       typst = '$R^(2)$'),
       'R2 adj'     = c(latex = '$R^{2}_{\\textrm{adj}}$',
-                       html  = paste0('<i>R</i>', specs$subsup('adj', '2'))),
+                       html  = paste0('<i>R</i>', specs$subsup('adj', '2')),
+                       typst = '$R^(2)_("adj")$'),
       'C'          = c(latex = '$C$',
-                       html  = '<i>C</i>'),
+                       html  = '<i>C</i>',
+                       typst = '$C$'),
       'g'          = c(latex = '$g$',
-                       html  = '<i>g</i>'),
+                       html  = '<i>g</i>',
+                       typst = '$g$'),
       'gp'         = c(latex = '$g_{p}$',
-                       html  = '<i>g</i><sub>p</sub>'),
+                       html  = '<i>g</i><sub>p</sub>',
+                       typst = '$g_(p)$'),
       'gr'         = c(latex = '$g_{r}$',
-                       html  = '<i>g</i><sub>r</sub>'),
+                       html  = '<i>g</i><sub>r</sub>',
+                       typst = '$g_(r)$'),
       'max |deriv|'   = c(latex = '$\\max|\\frac{\\partial\\log L}{\\partial \\beta}|$',
                           html  = paste0('max ', vbar, partial,
                                          'log <i>L</i>/', partial,
-                                         beta, vbar)),
+                                         beta, vbar),
+                          typst = 'max $|(partial log L)/(partial beta)|$'),
       'mean |Y-Yhat|' = c(latex = 'mean $|Y-\\hat{Y}|$',
-                          html  = paste0('mean ', vbar, '<i>Y - Y</i>',
-                                         cca, vbar)),
+                          ## Precomposed character (&Ycirc;, U+0176) used
+                          ## instead of cca -- see end-of-file notes
+                          html  = paste0('mean ', vbar, '<i>Y - &Ycirc;</i>',
+                                         vbar),
+                          typst = 'mean $|Y-hat(Y)|$'),
       'Distinct Y'   = c(latex = 'Distinct $Y$',
-                       html  = 'Distinct <i>Y</i>'),
+                       html  = 'Distinct <i>Y</i>',
+                       typst = 'Distinct $Y$'),
       'Median Y'   = c(latex = '$Y_{0.5}$',
-                       html  = '<i>Y</i><sub>0.5</sub>'),
-      '|Pr(Y>=median)-0.5|'  =
-        c(latex = '$|\\overline{\\mathrm{Pr}(Y\\geq Y_{0.5})-\\frac{1}{2}}|$',
+                       html  = '<i>Y</i><sub>0.5</sub>',
+                       typst = '$Y_(0.5)$'),
+      '|P(Y>=median)-0.5|'  =
+        c(latex = '$|\\overline{P(Y\\geq Y_{0.5})-\\frac{1}{2}}|$',
           html  = paste0('<span style="text-decoration: overline">', vbar,
-                         'Pr(<i>Y</i> ', geq, ' median)-',
+                         'P(<i>Y</i> ', geq, ' median)-',
                        htmlSpecial('half'), vbar,
-                         '</span>'))
+                         '</span>'),
+          typst = '$|overline("P"(Y >= Y_(0.5)) - 1/2)|$')
 
     )
 
@@ -1133,37 +1368,42 @@ for(i in 1:p) {
       k <- names(w[[i]])
       for(j in seq_len(length(k))) {
         u <- k[j]
-        k[j] <- if(u %in% rownames(trans)) trans[u, lang]
+        k[j] <- if(u %in% rownames(trans_tbl)) trans_tbl[u, lang]
         else if(grepl('R2\\(', u))   # handle R2(p,n) from R2Measures
           switch(lang,
                  plain = u,
                  latex = sub('R2\\((.*)\\)', '$R^{2}_{\\1}$', u),
                  html  = sub('R2\\((.*)\\)',
                              paste0('<i>R</i>',
-                                    specs$subsup('\\1', '2')),u))
+                                    specs$subsup('\\1', '2')),u),
+                 typst = sub('R2\\((.*)\\)',
+                             '$R^(2)_("\\1")$', u))
         else
           switch(lang,
                  plain = u,
                  latex = latexTranslate(u, greek=TRUE),
-                 html  = htmlTranslate (u, greek=TRUE) )
+                 html  = htmlTranslate (u, greek=TRUE),
+                 typst = typstTranslate(u, greek=TRUE) )
       }
-      z[seq_len(length(k)), i] <- paste0(k, fil, w[[i]])
+      if(lang == 'html')
+        ## HTML has no text-level equivalent to \hfill/#h(1fr) -- a
+        ## plain em-space (the previous fil value) never actually
+        ## right-justified the value. Needs a real flex container
+        ## wrapping label and value together (open AND close tags),
+        ## which doesn't fit the simple insert-a-separator-string
+        ## pattern used for latex/typst -- built directly here instead
+        ## of via fil.
+        z[seq_len(length(k)), i] <-
+          paste0('<span style="display:flex;justify-content:space-between">',
+                '<span>', k, '</span><span>', w[[i]], '</span></span>')
+      else
+        z[seq_len(length(k)), i] <- paste0(k, fil, w[[i]])
     }
 
-    al <- paste0('|', paste(rep('c|', p), collapse=''))
-    if(lang == 'latex')
-      w <- latexTabular(z, headings=labels, align=al, halign=al,
-                        translate=FALSE, hline=2, center=TRUE)
-    else {
-      labels <- gsub('\n', '<br>', labels)
-      w <- htmlTable::htmlTable(z,
-                                header=labels,
-                                css.cell = 'min-width: 9em;',
-                                align=al, align.header=al,
-                                escape.html=FALSE)
-      w <- htmltools::HTML(paste0(w, '\n'))
-    }
-    return(w)
+    if(lang %in% c('latex', 'html', 'typst'))
+      return(stats_tiny_table(z, labels, lang))
+
+    return(z)
   }
   z <- labs <- character(0)
   for(i in seq_len(p)) {
@@ -1239,8 +1479,16 @@ reListclean <- function(..., dec=NULL, na.rm=TRUE) {
 
 
 
+## typstSN: Typst analog of latexSN/htmlSN, for scientific-notation
+## coefficients formatted by formatNP() below.
+typstSN <- function(x) {
+  x <- format(x)
+  sedit(x, c("e+00", "e-0*", "e-*", "e+0*", "e+*"),
+        c("", "times 10^(-*)", "times 10^(-*)", "times 10^(*)", "times 10^(*)"))
+}
+
 formatNP <- function(x, digits=NULL, pvalue=FALSE,
-                     lang=c('plain', 'latex', 'html')) {
+                     lang=c('plain', 'latex', 'html', 'typst')) {
   lang <- match.arg(lang)
   if(! is.numeric(x)) return(x)
   digits <- as.numeric(digits)  # Needed but can't figure out why
@@ -1251,8 +1499,8 @@ formatNP <- function(x, digits=NULL, pvalue=FALSE,
   sci <- grep('e', f)
   if(length(sci)) {
     if(lang == 'latex') f[sci] <- paste0('$', latexSN(f[sci]), '$')
-    else
-      if(lang == 'html') f[sci] <- htmlSN(f[sci])
+    else if(lang == 'html') f[sci] <- htmlSN(f[sci])
+    else if(lang == 'typst') f[sci] <- paste0('$', typstSN(f[sci]), '$')
   }
   f <- ifelse(is.na(x), '', f)
 
@@ -1265,6 +1513,7 @@ formatNP <- function(x, digits=NULL, pvalue=FALSE,
     f[s] <- switch(lang,
                    latex = paste0('\\textless ', w),
                    html  = paste0(htmlTranslate('<'), w),
+                   typst = paste0(typstTranslate('<'), w),
                    plain = paste0('<', w))
   }
   f
@@ -1382,3 +1631,233 @@ removeFormulaTerms <- function(form, which=NULL, delete.response=FALSE) {
   te <- drop.terms(te, s - ypresent, keep.response= ! delete.response)
   formula(te)   # don't allow other attributes to be there
 }
+
+## -----------------------------------------------------------------------
+## Consolidated notes on functions revised in this file for Typst output
+## support (prModFit, stats_tiny_table, prStats, typstSN, formatNP).
+## Two different kinds of change are mixed together below, worth telling
+## apart. Most of what follows is simply building out Typst coverage for
+## the first time -- part of this project's goal from the start, not
+## corrections to anything broken. A few items are genuine, unrelated
+## bug fixes, marked as such explicitly.
+##
+## prModFit
+## ---------------------------------
+## - Coefficient table rendering: previously a dedicated helper,
+##   coef_tiny_table(), defined in this file. Removed -- a later review
+##   specifically looking for redundancy across the model-fit print/
+##   latex methods and prModFit found it to be a strict subset of
+##   rms_tiny_table (anova_rms.s, shared with anova.rms/summary.rms/
+##   validate.ols), built before that shared helper existed and never
+##   reconciled with it. prModFit's one call site now calls
+##   rms_tiny_table(U, lang) directly. See anova_rms.s's own notes for
+##   the implementation history this carries forward unchanged (why
+##   environment_table=FALSE is explicit rather than relied on as
+##   automatic, why multipage=TRUE/rowhead=1 were tried and dropped,
+##   etc.) -- nothing about the table's actual rendering behavior
+##   changed, only where the code that produces it lives.
+## - transl, pad(), and betan (implementing typst support): previously
+##   handled only latex/html/plain; each gains a 'typst' case. These
+##   were bare switch() calls with no default, so an unhandled language
+##   would have silently returned NULL rather than erred -- worth
+##   knowing for future additions of this kind.
+## - Final emission switch(lang, ...) (implementing typst support):
+##   gains typst = rendHTML(R, html=FALSE). Separately, a genuine bug
+##   fix unrelated to typst: the latex case was previously
+##   cat(R, sep='\n') rather than rendHTML(R, html=FALSE) -- this was
+##   the actual root cause of needing results='asis' in chunks that
+##   mixed prModFit-based printing with other latex() calls; corrected
+##   here alongside the typst addition.
+## - Pr(...) notation changed to P(...), with P set in math font,
+##   consistently across latex/html/typst (was plain-text "Pr" followed
+##   by math-mode parenthetical content in the latex/html cases).
+## - bverb()/everb() themselves are unchanged and still return NULL for
+##   typst (their before/after-marker design doesn't map cleanly onto
+##   #raw() needing its content as one argument, not separate pieces) --
+##   but this is no longer a gap in practice. Flagged as not yet
+##   extended when this note was first written; resolved in a later
+##   pass (while addressing typst.naprint.delete and the inline-vs-block
+##   Typst fixes) by routing every actual call site around bverb()/
+##   everb() for typst instead: the deparsed-call block (if(long)),
+##   the generic 'print' type branch, and catl()'s verb=TRUE path all
+##   now use the shared typstRaw() helper (defined alongside bverb()/
+##   everb(), just above) when lang=='typst', so typst never actually
+##   reaches bverb()/everb() at all. This resolution happened in a later
+##   turn than when this note was first written and was never explicitly
+##   confirmed as closing the gap until this note was corrected.
+##
+## typst.naprint.delete (new)
+## ---------------------------------
+## - New function, Typst analog of latex.naprint.delete/
+##   html.naprint.delete, added to prModFit's naprint.delete dispatch
+##   (type <- 'typst.naprint.delete' when lang=='typst', tex stays FALSE
+##   -- \begin{center}/\end{center}, what tex=TRUE triggers, is
+##   LaTeX-specific and would break in a Typst document) and to the
+##   switch(type, ...) call site (do.call(type, obj) directly, same
+##   shape as html.naprint.delete). Uses typstDotchart for the
+##   >=4-variable missing-data chart -- native vector markup, like
+##   latexDotchart, rather than html.naprint.delete's PNG-embedding
+##   approach. Verbatim print() output (the <4-variable case, and the
+##   na.detail.response section) uses #raw(block:false), fenced, the
+##   same pattern established for prModFit's 'print' type branch.
+##
+## stats_tiny_table (new) / prStats
+## ---------------------------------
+## - Refactored to a thin wrapper over rms_tiny_table (anova_rms.s),
+##   prompted by a later review specifically looking for redundancy
+##   across the model-fit print/latex methods and prModFit/prStats.
+##   Unlike coef_tiny_table (removed entirely, see prModFit's notes
+##   above), this table has genuinely extra needs rms_tiny_table didn't
+##   originally support -- rms_tiny_table was extended with new,
+##   backward-compatible parameters to cover them (see its own notes
+##   [6]/[7] in anova_rms.s). Everything below describes styling
+##   decisions and bug fixes that are still accurate as of that
+##   refactor -- nothing about the table's actual rendered behavior
+##   changed, only where the code producing it lives (now split between
+##   this thin wrapper, which keeps only what's genuinely specific to
+##   this table -- no-hyphenation header wrapping, format-specific
+##   width/fontsize/inner values -- and rms_tiny_table itself).
+## - New helper stats_tiny_table() renders prStats' final table via
+##   tinytable for lang %in% c('latex','html','typst'), replacing
+##   latexTabular()/htmlTable::htmlTable(). This also removed a stray
+##   Helvetica-font-wrapping artifact that had been latexTabular()'s
+##   default behavior.
+## - match.arg(lang), the trans switch, and two generic
+##   label-translation switches (implementing typst support): each
+##   gains a 'typst' case, previously latex/html/plain only.
+## - Every row of the internal trans_tbl translation matrix
+##   (implementing typst support) gains a typst entry -- previously
+##   latex/html only, and since trans_tbl[u, lang] indexes by column
+##   name, an unhandled row would have errored outright rather than
+##   returned something usable. FIRST DRAFT, not individually
+##   compile-tested the way most of this effort has been -- one entry
+##   has since been confirmed and corrected by testing: 'max |deriv|'
+##   originally used 'diff' as the Typst symbol name for the
+##   partial-derivative sign, which does not exist; 'partial' is
+##   correct and is now in place. The remaining highest-risk entry is
+##   the overline-wrapped median-deviation row (a long expression inside
+##   overline(), not yet exercised).
+## - fil (implementing typst support, confirmed via dedicated compile
+##   testing at this exact multi-column table shape): gains a typst
+##   case using specs$hfill ('#h(1fr)'), the Typst analog of LaTeX's
+##   \hfill, requiring format_tt(escape=FALSE) and an explicit tt(width=)
+##   to have any visible effect -- confirmed empirically, not assumed.
+## - P(> chi2) row specifically: Pr(...) -> P(...), math font, across
+##   latex/html/typst, matching the same change in prModFit. The
+##   trans_tbl row key itself was also corrected from 'Pr(> chi2)' to
+##   'P(> chi2)' -- the actual runtime stat name cph.s builds (renamed
+##   from 'Score P' before calling prStats) has no "r", so the original
+##   key (present unchanged since the first uploaded version of this
+##   file) never actually matched, silently falling through to the
+##   generic typstTranslate(u, greek=TRUE)/equivalent path for every
+##   language, not just typst -- confirmed by comparing real output
+##   against a working row ('Score chi2') using the same lookup
+##   mechanism.
+## - Several rounds of styling refinement, applied via tinytable's
+##   documented style_tt()/theme_*() API rather than hand-built
+##   per-format markup: header row centered, bold, with a bottom rule
+##   (style_tt(i=0, ...)); data rows left-aligned (each cell already
+##   handles its own internal left/right split via fil/hfill); vertical
+##   column borders via style_tt(line="l"/"r") (theme_grid(), tried
+##   first, added unwanted interior row lines instead of just a header
+##   rule); row striping via theme_striped(); reduced row spacing via
+##   tabularray's rowsep option for LaTeX, and an approximate fontsize
+##   reduction for Typst (no confirmed direct row-spacing parameter
+##   exists there); no-hyphenation in headers via per-WORD
+##   \mbox{}/#text(hyphenate:false) wrapping (wrapping whole multi-word
+##   segments was tried first, but that blocks ordinary word-wrap too,
+##   which caused long headers to overflow into neighboring columns
+##   instead of wrapping to a second line); table width scaled by
+##   column count rather than a single fixed value, since the fixed
+##   value was tuned only for a 3-column example and cramped a 4-column
+##   one.
+## - 'mean |Y-Yhat|' row, html entry: a genuine bug, not a typst gap --
+##   the combining circumflex accent (cca, htmlSpecial(
+##   'combiningcircumflexaccent')) was placed after the closing </i> tag
+##   rather than adjacent to the second Y it's meant to modify, which
+##   was the first diagnosis tried: moving cca inside <i>, directly next
+##   to the Y. That did NOT fix it -- confirmed directly from the real
+##   generated HTML, which still showed a separate, visible caret next
+##   to the Y even with cca correctly adjacent. This means the earlier
+##   diagnosis (a tag-boundary adjacency problem) was wrong; the more
+##   likely explanation is that htmlSpecial('combiningcircumflexaccent')
+##   itself isn't producing a genuine Unicode *combining* character that
+##   the browser will visually merge with a preceding base character,
+##   regardless of adjacency. Rather than continue guessing at why,
+##   fixed by sidestepping the whole combining-character mechanism:
+##   "&Ycirc;" (U+0176, the precomposed Latin Capital Y with Circumflex)
+##   is a single codepoint, not two characters that need to visually
+##   merge, so it has no adjacency or combining-character rendering
+##   dependency at all. cca itself is left defined but is now unused
+##   within prStats -- not removed, since doing so wasn't necessary for
+##   this fix and goes beyond what was asked.
+##
+## typstSN (new) / formatNP
+## ---------------------------------
+## - New helper typstSN(), the Typst analog of latexSN()/htmlSN(), for
+##   scientific-notation coefficients.
+## - match.arg(lang) and the scientific-notation branch (implementing
+##   typst support): gain a 'typst' case, using typstSN().
+## - pvalue branch (implementing typst support): gains a typst case
+##   using typstTranslate('<'), mirroring how the html case already
+##   uses htmlTranslate('<') -- needed because Typst reads a bare '<' as
+##   the start of label-reference syntax.
+## -----------------------------------------------------------------------
+
+## prModItem (new) / prModFit
+## ---------------------------------
+## - New constructor prModItem(type, payload, title=NULL, tex=NULL,
+##   preskip=NULL), prompted by a review of print.lrm/print.cph/
+##   print.ols specifically looking for a more elegant way to build the
+##   w list these (and other model-fit print.* methods) pass to
+##   prModFit(). Two separate things were found worth addressing, and
+##   this constructor addresses only the generic, model-fit-agnostic
+##   one -- the print.* methods themselves are unchanged this pass.
+## - The repeated `k <- k + 1; z[[k]] <- list(...)` counter pattern seen
+##   many times across each print.* method is pure boilerplate -- R's
+##   c() already grows a list without a manually tracked index
+##   (z <- c(z, list(prModItem(...)))), so this removes the counter
+##   variable and every increment line at each call site once the
+##   print.* methods themselves are updated (a separate, later pass, not
+##   done here).
+## - The second, more substantive issue: prModFit read each item's
+##   payload via positional access, obj <- z[[2]] -- whatever the second
+##   list element happened to be, regardless of name, becomes the
+##   payload. This is a fragile, implicit contract: a reader can't tell
+##   what z[[2]] actually is without cross-referencing z$type to know
+##   which shape to expect, and nothing enforces that callers build each
+##   z with the payload specifically in that position.
+## - The payload's own shape genuinely varies by type, confirmed by
+##   examining print.lrm/print.cph/print.ols directly rather than
+##   assumed: a do.call()-style argument list for types that are
+##   generically dispatched via do.call(type, payload) (e.g. 'print',
+##   'latexVector', the latter a small helper defined inside prModFit
+##   itself); a type-specific named list for 'stats'
+##   (list(headings=,data=)) and 'coefmatrix' (list(coef=,se=,...), the
+##   exact field set varying by caller -- print.lrm adds aux/auxname,
+##   print.ols adds errordf); and a bare character string, not a list at
+##   all, for 'cat'. Because of this real polymorphism, the constructor
+##   does not attempt to enforce or validate a specific payload shape --
+##   it only provides a consistent, named way to attach whatever shape a
+##   given type needs, matching what prModFit's own type-dispatch logic
+##   already knows how to interpret. The parameter is named `payload`
+##   rather than `args`, since `args` would be accurate only for the
+##   do.call()-dispatched types and misleading for 'stats'/'coefmatrix'/
+##   'cat'.
+## - prModFit's own reading line was updated to prefer the named
+##   z$payload field when present, falling back to positional z[[2]]
+##   otherwise -- not a breaking change for any caller not yet using
+##   prModItem(), since list(type=type, payload=payload) still has the
+##   payload in position 2 regardless of the name attached to it; the
+##   fallback exists for full safety with any caller not shown during
+##   this review, given prModFit's callers (the print.* methods
+##   themselves) live in files not reviewed as part of this specific
+##   change.
+## - Deliberately not done in this pass, per explicit instruction: no
+##   print.* method (print.lrm, print.cph, print.ols, or any other
+##   model-fit print method) was modified here. This section covers only
+##   the generic, model-fit-agnostic side of the change -- prModItem()
+##   itself and prModFit's small, corresponding read-side update. The
+##   print.* methods are intended to be updated together in a later,
+##   separate pass once this generic groundwork is in place.
+## -----------------------------------------------------------------------

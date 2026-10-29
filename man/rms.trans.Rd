@@ -21,7 +21,7 @@ knots and nonlinear term indicators) that are carried through to fits
 (using for example \code{lrm},\code{cph}, \code{ols},
 \code{psm}). \code{anova.rms}, \code{summary.rms}, \code{Predict},
 \code{survplot}, \code{fastbw}, \code{validate}, \code{specs},
-\code{which.influence}, \code{nomogram} and \code{latex.rms} use these 
+\code{which.influence}, \code{nomogram} and \code{latex.rms} use these
 attributes to automate certain analyses (e.g., automatic tests of linearity
 for each predictor are done by \code{anova.rms}).  Many of the functions
 are called implicitly.  Some S functions such as \code{ns} derive data-dependent
@@ -73,6 +73,10 @@ produce a vector of LaTeX character strings.  See
 \url{https://hbiostat.org/R/examples/gTrans/gTrans.html} for several examples of the
 use of \code{gTrans} including the use of \code{nonlinear} and
 \code{tex}.
+
+When multiple variables use the same function specified as the second argument too \code{gTrans}, an
+error will result due to the non-uniqueness of column names across predictors.  To prepend the base predictor
+name to each column name use \code{options(gTrans_basename = TRUE)}.
 
 A \code{makepredictcall} method is defined so that usage of the
 transformation functions outside of \code{rms} fitting functions will
@@ -161,7 +165,7 @@ options(knots=4, poly.degree=2)
 # options(fractied = 1.0)   # see rcspline.eval for details
 country <- factor(country.codes)
 blood.pressure <- cbind(sbp=systolic.bp, dbp=diastolic.bp)
-fit <- lrm(Y ~ sqrt(x1)*rcs(x2) + rcs(x3,c(5,10,15)) + 
+fit <- lrm(Y ~ sqrt(x1)*rcs(x2) + rcs(x3,c(5,10,15)) +
        lsp(x4,c(10,20)) + country + blood.pressure + poly(age,2))
 # sqrt(x1) is an implicit asis variable, but limits of x1, not sqrt(x1)
 #       are used for later plotting and effect estimation
