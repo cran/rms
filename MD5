@@ -1,6 +1,6 @@
-88e68ebe9ea3f8af5d5e93fc425a4705 *DESCRIPTION
+5c050382c7fd19a0356f282f30de21f4 *DESCRIPTION
 85f9290b3110acbba8de2bdcd41548c9 *NAMESPACE
-5bdda2638122fcc0e558b1bac6d8cf86 *NEWS
+33b27761b22251e9e235e4a9f46b1d55 *NEWS
 a5263ced794350451f27b08a43049789 *R/Function.rms.s
 6d92c0fd4ab1b779b8fb3bccf6e60d18 *R/Glm.r
 cd0b9fe3ffd9978f98bcc5f25f74d4cc *R/Gls.s
@@ -343,6 +343,7 @@ de14b6092676e92a63ce26a1cc6e0329 *man/validate.cph.Rd
 a4abe6c8b9f87f6e7d2be022b4ec2e1d *man/vif.Rd
 9a99f2660179334c51d4700ed6c46add *man/which.influence.Rd
 d3766ab6de08fc928c7253c043e013d5 *man/zzzrmsOverview.Rd
+b7083e49ae7cf3a27306099391e21d56 *src/Makevars
 45552e7b2305ec4a53fdd41a10559213 *src/init.c
 0a1959cd09fe08ff38aa772356ca0306 *src/lrmll.f90
 ce0bcaf5e15b9792ebb9f634476f90d7 *src/mlmats.f
